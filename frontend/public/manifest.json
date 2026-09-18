@@ -1,0 +1,17 @@
+{
+  "name": "Lojinha • WhatsApp Sales Cockpit",
+  "short_name": "Lojinha",
+  "description": "Cockpit de Vendas e CRM para WhatsApp com Funil Dinâmico",
+  "start_url": "/",
+  "display": "standalone",
+  "background_color": "#0b141a",
+  "theme_color": "#111b21",
+  "icons": [
+    {
+      "src": "/favicon.svg",
+      "sizes": "192x192 512x512",
+      "type": "image/svg+xml",
+      "purpose": "any maskable"
+    }
+  ]
+}

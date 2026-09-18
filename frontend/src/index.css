@@ -1,0 +1,135 @@
+@import "tailwindcss";
+
+/* ============================================================
+   LOGINHA DESIGN SYSTEM — v1.0
+   Brand: Loginha · "A tua loja, simples."
+   Paleta Oficial:
+     #C1F76B  Verde Principal (energia e crescimento)
+     #0F2D26  Verde Escuro (confiança e solidez)
+     #FDFEF8  Fundo / Texto Claro (leveza e clareza)
+     #27AE60  Apoio (destaques e botões)
+   Tipografia: Poppins (Google Fonts)
+   ============================================================ */
+
+@theme {
+  /* ── Cores da Marca ─────────────────────────────────────── */
+  --color-brand:               #C1F76B;
+  --color-brand-dark:          #0F2D26;
+  --color-brand-bg:            #FDFEF8;
+  --color-brand-support:       #27AE60;
+  --color-brand-hover:         #219653;
+
+  /* ── Superfícies Cockpit & Dashboard (Dark Mode Nativo) ── */
+  --color-surface-base:        #091E19;
+  --color-surface-panel:       #0F2D26;
+  --color-surface-column:      #14382F;
+  --color-surface-sub:         #0D2A23;
+  --color-surface-card:        #184339;
+  --color-surface-card-hover:  #1F5246;
+  --color-surface-input:       #13382F;
+  --color-surface-hover:       #1D4B3E;
+  --color-border-subtle:       #235447;
+  --color-border-focus:        #C1F76B;
+
+  /* ── Cores de Texto ────────────────────────────────────── */
+  --color-text-primary:        #FDFEF8;
+  --color-text-secondary:      #95BDB0;
+  --color-text-muted:          #578577;
+
+  /* ── Tipografia ────────────────────────────────────────── */
+  --font-sans: 'Poppins', system-ui, -apple-system, BlinkMacSystemFont, sans-serif;
+  --font-mono: 'JetBrains Mono', 'Fira Code', ui-monospace, monospace;
+}
+
+@variant hover (&:hover);
+
+@layer base {
+  * {
+    box-sizing: border-box;
+  }
+
+  html, body, #root {
+    height: 100%;
+    width: 100%;
+    margin: 0;
+    padding: 0;
+    overflow: hidden;
+    background-color: #091E19;
+    color: #FDFEF8;
+    font-family: 'Poppins', system-ui, -apple-system, BlinkMacSystemFont, sans-serif;
+    -webkit-font-smoothing: antialiased;
+    -moz-osx-font-smoothing: grayscale;
+  }
+
+  button:not(:disabled),
+  [role="button"]:not([aria-disabled="true"]),
+  a,
+  select,
+  summary {
+    cursor: pointer;
+  }
+
+  button,
+  [role="button"],
+  a,
+  .cursor-pointer {
+    transition-property: color, background-color, border-color, opacity, box-shadow, transform, filter;
+    transition-timing-function: cubic-bezier(0.4, 0, 0.2, 1);
+    transition-duration: 150ms;
+  }
+
+  button:not(:disabled):hover,
+  [role="button"]:not([aria-disabled="true"]):hover {
+    filter: brightness(1.08);
+  }
+
+  button:not(:disabled):active,
+  [role="button"]:not([aria-disabled="true"]):active {
+    filter: brightness(0.94);
+    transform: scale(0.98);
+  }
+
+  .cursor-pointer:hover {
+    filter: brightness(1.06);
+  }
+
+  .cursor-pointer:active {
+    filter: brightness(0.96);
+  }
+}
+
+/* ── Custom Scrollbar Loginha ──────────────────────────────── */
+::-webkit-scrollbar {
+  width: 6px;
+  height: 6px;
+}
+::-webkit-scrollbar-track {
+  background: transparent;
+}
+::-webkit-scrollbar-thumb {
+  background: rgba(193, 247, 107, 0.22);
+  border-radius: 4px;
+}
+::-webkit-scrollbar-thumb:hover {
+  background: rgba(193, 247, 107, 0.4);
+}
+
+.kanban-column-scroll::-webkit-scrollbar {
+  height: 6px;
+}
+
+/* ── Select Options ────────────────────────────────────────── */
+select option {
+  background-color: #14382F;
+  color: #FDFEF8;
+}
+
+.no-scrollbar::-webkit-scrollbar {
+  display: none;
+  width: 0;
+  height: 0;
+}
+.no-scrollbar {
+  -ms-overflow-style: none;
+  scrollbar-width: none;
+}
