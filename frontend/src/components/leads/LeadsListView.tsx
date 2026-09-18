@@ -214,16 +214,6 @@ export const LeadsListView: React.FC<LeadsListViewProps> = ({
 
                     <td className="p-3.5 text-right" onClick={(e) => e.stopPropagation()}>
                       <div className="flex items-center justify-end gap-1.5">
-                        {onDeleteLead && (
-                          <button
-                            type="button"
-                            onClick={() => onDeleteLead(lead)}
-                            className="p-1.5 rounded-xl bg-[#14382F] hover:bg-red-500/20 text-[#95BDB0] hover:text-red-400 border border-[#235447] hover:border-red-500/40 transition-all duration-150 hover:scale-105 active:scale-95 cursor-pointer"
-                            title="Excluir Lead permanentemente"
-                          >
-                            <Trash2 className="w-3.5 h-3.5" />
-                          </button>
-                        )}
                         <button
                           onClick={() => onSelectLeadForChat(lead)}
                           className={`px-3 py-1.5 font-semibold rounded-xl text-xs inline-flex items-center gap-1 transition-all duration-150 hover:scale-105 active:scale-95 cursor-pointer ${
@@ -235,6 +225,16 @@ export const LeadsListView: React.FC<LeadsListViewProps> = ({
                           <MessageSquare className="w-3.5 h-3.5" />
                           <span>{isSelected ? 'Fechar Chat' : 'Abrir Chat'}</span>
                         </button>
+                        {onDeleteLead && (
+                          <button
+                            type="button"
+                            onClick={() => onDeleteLead(lead)}
+                            className="p-1.5 rounded-xl bg-[#14382F] hover:bg-red-500/20 text-[#95BDB0] hover:text-red-400 border border-[#235447] hover:border-red-500/40 transition-all duration-150 hover:scale-105 active:scale-95 cursor-pointer"
+                            title="Excluir Lead permanentemente"
+                          >
+                            <Trash2 className="w-3.5 h-3.5" />
+                          </button>
+                        )}
                       </div>
                     </td>
                   </tr>

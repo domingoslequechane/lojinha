@@ -130,6 +130,10 @@ function CockpitWorkspace() {
 
   // SaaS Tenant-scoped State — start empty, always load from Supabase
   const [columns, setColumns] = useState<KanbanColumn[]>([]);
+  const columnsRef = useRef<KanbanColumn[]>([]);
+  useEffect(() => {
+    columnsRef.current = columns;
+  }, [columns]);
 
   const [leads, setLeads] = useState<ContactLead[]>([]);
 
@@ -292,7 +296,7 @@ function CockpitWorkspace() {
             } else if (incomingLead) {
               // Brand new lead card arriving in realtime
               const l = incomingLead;
-              const fallbackColId = columns[0]?.id || 'col-new';
+              const fallbackColId = columnsRef.current[0]?.id || 'col-new';
               return [
                 {
                   id: l.id || leadId,
@@ -336,7 +340,7 @@ function CockpitWorkspace() {
           chatService.markAsRead(l.id);
         }
 
-        const fallbackColId = columns[0]?.id || 'col-new';
+        const fallbackColId = columnsRef.current[0]?.id || 'col-new';
 
         if (eventType === 'INSERT') {
           setLeads((prev) => [
@@ -609,13 +613,26 @@ function CockpitWorkspace() {
       chatService.markAsRead(lead.id);
     }
 
-    // Carregar mensagens do Supabase se ainda não carregadas
+    // Carregar mensagens do Supabase e mesclar com estado local
     chatService.getMessages(lead.id).then((dbMsgs) => {
       if (dbMsgs.length > 0) {
-        setMessages((prev) => ({
-          ...prev,
-          [lead.id]: dbMsgs,
-        }));
+        setMessages((prev) => {
+          const existing = prev[lead.id] || [];
+          const map = new Map<string, ChatMessage>();
+          dbMsgs.forEach((m) => map.set(m.id, m));
+          existing.forEach((m) => {
+            if (!map.has(m.id)) {
+              map.set(m.id, m);
+            }
+          });
+          const combined = Array.from(map.values()).sort(
+            (a, b) => new Date(a.createdAt || 0).getTime() - new Date(b.createdAt || 0).getTime()
+          );
+          return {
+            ...prev,
+            [lead.id]: combined,
+          };
+        });
       }
     });
 
@@ -992,10 +1009,23 @@ function CockpitWorkspace() {
                     }
                     chatService.getMessages(l.id).then((dbMsgs) => {
                       if (dbMsgs.length > 0) {
-                        setMessages((prev) => ({
-                          ...prev,
-                          [l.id]: dbMsgs,
-                        }));
+                        setMessages((prev) => {
+                          const existing = prev[l.id] || [];
+                          const map = new Map<string, ChatMessage>();
+                          dbMsgs.forEach((m) => map.set(m.id, m));
+                          existing.forEach((m) => {
+                            if (!map.has(m.id)) {
+                              map.set(m.id, m);
+                            }
+                          });
+                          const combined = Array.from(map.values()).sort(
+                            (a, b) => new Date(a.createdAt || 0).getTime() - new Date(b.createdAt || 0).getTime()
+                          );
+                          return {
+                            ...prev,
+                            [l.id]: combined,
+                          };
+                        });
                       }
                     });
                   }
@@ -1018,7 +1048,6 @@ function CockpitWorkspace() {
                 onChangeColumn={handleMoveLead}
                 onOpenFollowUpModal={handleOpenFollowUp}
                 onUpdateLead={handleUpdateLead}
-                onDeleteLead={(l) => setLeadToDelete(l)}
                 onCloseChat={() => setSelectedLeadId(null)}
                 onNavigateToSettings={() => navigate('/store')}
               />
@@ -1061,7 +1090,6 @@ function CockpitWorkspace() {
                 onAddNewColumn={() => setIsColumnManagerOpen(true)}
                 onOpenFollowUpModal={handleOpenFollowUp}
                 onAddLeadToColumn={handleAddLeadToColumn}
-                onDeleteLead={(l) => setLeadToDelete(l)}
               />
             </div>
 
@@ -1078,7 +1106,6 @@ function CockpitWorkspace() {
                 onChangeColumn={handleMoveLead}
                 onOpenFollowUpModal={handleOpenFollowUp}
                 onUpdateLead={handleUpdateLead}
-                onDeleteLead={(l) => setLeadToDelete(l)}
                 onCloseChat={() => {
                   setSelectedLeadId(null);
                   setViewMode('kanban-only');

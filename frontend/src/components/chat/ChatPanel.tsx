@@ -138,7 +138,6 @@ interface ChatPanelProps {
   onChangeColumn: (leadId: string, newColumnId: string) => void;
   onOpenFollowUpModal: (lead: ContactLead) => void;
   onUpdateLead?: (updatedLead: ContactLead) => void;
-  onDeleteLead?: (lead: ContactLead) => void;
   onCloseChat: () => void;
   onNavigateToSettings?: () => void;
 }
@@ -154,7 +153,6 @@ export const ChatPanel: React.FC<ChatPanelProps> = ({
   onChangeColumn,
   onOpenFollowUpModal,
   onUpdateLead,
-  onDeleteLead,
   onCloseChat,
   onNavigateToSettings,
 }) => {
@@ -1020,19 +1018,7 @@ export const ChatPanel: React.FC<ChatPanelProps> = ({
             <Clock className="w-4 h-4" />
           </button>
 
-          {/* 5. Delete Lead in Cascade */}
-          {onDeleteLead && (
-            <button
-              type="button"
-              onClick={() => onDeleteLead(lead)}
-              className="p-2 rounded-xl border bg-[#0F2D26] border-[#235447] text-[#95BDB0] hover:text-red-400 hover:border-red-500/40 hover:bg-red-500/15 transition-all duration-150 hover:scale-105 active:scale-95 cursor-pointer"
-              title="Excluir Lead permanentemente (em cascata)"
-            >
-              <Trash2 className="w-4 h-4" />
-            </button>
-          )}
-
-          {/* 6. Close Panel button */}
+          {/* 5. Close Panel button */}
           <button
             onClick={onCloseChat}
             className="p-2 rounded-xl bg-[#0F2D26] border border-[#235447] text-[#95BDB0] hover:text-red-300 hover:bg-red-500/20 hover:border-red-500/40 transition-all duration-150 hover:scale-105 active:scale-95 cursor-pointer"

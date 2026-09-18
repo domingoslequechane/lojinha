@@ -7,8 +7,7 @@ import {
   Baby,
   MessageSquare,
   FileText,
-  Edit3,
-  Trash2
+  Edit3
 } from 'lucide-react';
 import { ContactLead, KanbanColumn } from '../../types';
 
@@ -19,7 +18,6 @@ interface KanbanCardProps {
   onSelect: (lead: ContactLead) => void;
   onDragStart: (e: React.DragEvent, leadId: string) => void;
   onOpenFollowUpModal: (lead: ContactLead) => void;
-  onDeleteLead?: (lead: ContactLead) => void;
 }
 
 export const KanbanCard: React.FC<KanbanCardProps> = ({
@@ -29,7 +27,6 @@ export const KanbanCard: React.FC<KanbanCardProps> = ({
   onSelect,
   onDragStart,
   onOpenFollowUpModal,
-  onDeleteLead,
 }) => {
   const hasUnread = (lead.unreadCount || 0) > 0;
 
@@ -76,27 +73,12 @@ export const KanbanCard: React.FC<KanbanCardProps> = ({
           </div>
         </div>
 
-        {/* Deal Value & Delete Button */}
-        <div className="flex flex-col items-end gap-1">
-          <div className="flex items-center gap-1.5">
-            {onDeleteLead && (
-              <button
-                type="button"
-                onClick={(e) => {
-                  e.stopPropagation();
-                  onDeleteLead(lead);
-                }}
-                className="opacity-0 group-hover:opacity-100 p-1 rounded-lg text-[#95BDB0] hover:text-red-400 hover:bg-red-500/20 transition-all cursor-pointer"
-                title="Excluir este lead (em cascata)"
-              >
-                <Trash2 className="w-3.5 h-3.5" />
-              </button>
-            )}
-            <span className="font-bold text-xs text-[#C1F76B] bg-[#C1F76B]/15 px-2 py-0.5 rounded-md border border-[#C1F76B]/30 inline-block shadow-xs">
-              {lead.dealValue.toLocaleString()} MT
-            </span>
-          </div>
-          <p className="text-[10px] text-[#95BDB0] mt-0.5">{lead.lastMessageTime}</p>
+        {/* Deal Value */}
+        <div className="text-right">
+          <span className="font-bold text-xs text-[#C1F76B] bg-[#C1F76B]/15 px-2 py-0.5 rounded-md border border-[#C1F76B]/30 inline-block shadow-xs">
+            {lead.dealValue.toLocaleString()} MT
+          </span>
+          <p className="text-[10px] text-[#95BDB0] mt-1">{lead.lastMessageTime}</p>
         </div>
       </div>
 

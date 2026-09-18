@@ -14,7 +14,7 @@ export interface RealtimeHandlers {
 function normalizeChatMessage(m: any): ChatMessage {
   return {
     id: m.id || `msg-${Date.now()}`,
-    contactId: m.lead_id || m.contactId,
+    contactId: m.lead_id || m.contactId || m.contact_id,
     fromMe: Boolean(m.from_me ?? m.fromMe),
     type: m.type || 'text',
     text: m.text ?? undefined,
@@ -34,6 +34,12 @@ let activeChannel: RealtimeChannel | null = null;
 let currentActiveStoreId: string = DEFAULT_STORE_ID;
 const registeredHandlers: Set<RealtimeHandlers> = new Set();
 
+function isStoreMatch(eventStoreId?: string): boolean {
+  if (!eventStoreId) return true;
+  if (!currentActiveStoreId || currentActiveStoreId === DEFAULT_STORE_ID) return true;
+  return eventStoreId === currentActiveStoreId;
+}
+
 export const realtimeService = {
   /**
    * Subscribe to real-time events for leads, messages, and whatsapp instances.
@@ -41,7 +47,7 @@ export const realtimeService = {
    */
   subscribe(handlers: RealtimeHandlers, storeId: string = DEFAULT_STORE_ID): () => void {
     registeredHandlers.add(handlers);
-    if (storeId && storeId !== DEFAULT_STORE_ID) {
+    if (storeId) {
       currentActiveStoreId = storeId;
     }
 
@@ -58,10 +64,7 @@ export const realtimeService = {
         .on('broadcast', { event: 'message:new' }, (eventPayload) => {
           const { message, lead, storeId: evStoreId } = (eventPayload.payload || {}) as any;
           if (!message) return;
-          if (evStoreId && currentActiveStoreId && evStoreId !== currentActiveStoreId && currentActiveStoreId !== DEFAULT_STORE_ID) {
-            // Belong to different store
-            return;
-          }
+          if (!isStoreMatch(evStoreId)) return;
           const normalized = normalizeChatMessage(message);
           registeredHandlers.forEach((h) => {
             try {
@@ -74,9 +77,7 @@ export const realtimeService = {
         .on('broadcast', { event: 'lead:change' }, (eventPayload) => {
           const { lead, eventType = 'UPDATE', storeId: evStoreId } = (eventPayload.payload || {}) as any;
           if (!lead) return;
-          if (evStoreId && currentActiveStoreId && evStoreId !== currentActiveStoreId && currentActiveStoreId !== DEFAULT_STORE_ID) {
-            return;
-          }
+          if (!isStoreMatch(evStoreId)) return;
           registeredHandlers.forEach((h) => {
             try {
               h.onLeadChange?.({ eventType, lead });
@@ -88,9 +89,7 @@ export const realtimeService = {
         .on('broadcast', { event: 'receipt:update' }, (eventPayload) => {
           const { phone, leadId, status, storeId: evStoreId } = (eventPayload.payload || {}) as any;
           if (!status) return;
-          if (evStoreId && currentActiveStoreId && evStoreId !== currentActiveStoreId && currentActiveStoreId !== DEFAULT_STORE_ID) {
-            return;
-          }
+          if (!isStoreMatch(evStoreId)) return;
           registeredHandlers.forEach((h) => {
             try {
               h.onReceiptUpdate?.({ phone, leadId, status });
@@ -102,9 +101,7 @@ export const realtimeService = {
         .on('broadcast', { event: 'message:deleted' }, (eventPayload) => {
           const { messageId, leadId, storeId: evStoreId } = (eventPayload.payload || {}) as any;
           if (!messageId) return;
-          if (evStoreId && currentActiveStoreId && evStoreId !== currentActiveStoreId && currentActiveStoreId !== DEFAULT_STORE_ID) {
-            return;
-          }
+          if (!isStoreMatch(evStoreId)) return;
           registeredHandlers.forEach((h) => {
             try {
               h.onMessageDeleted?.({ messageId, leadId });
@@ -126,9 +123,7 @@ export const realtimeService = {
           },
           (payload) => {
             const item = (payload.new || payload.old) as any;
-            if (item?.store_id && currentActiveStoreId && item.store_id !== currentActiveStoreId && currentActiveStoreId !== DEFAULT_STORE_ID) {
-              return;
-            }
+            if (!isStoreMatch(item?.store_id)) return;
             registeredHandlers.forEach((h) => {
               try {
                 h.onLeadChange?.({
@@ -150,9 +145,7 @@ export const realtimeService = {
           },
           (payload) => {
             const item = (payload.new || payload.old) as any;
-            if (item?.store_id && currentActiveStoreId && item.store_id !== currentActiveStoreId && currentActiveStoreId !== DEFAULT_STORE_ID) {
-              return;
-            }
+            if (!isStoreMatch(item?.store_id)) return;
             const normalized = normalizeChatMessage(item);
             registeredHandlers.forEach((h) => {
               try {

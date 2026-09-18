@@ -42,22 +42,47 @@ export default async function handler(req: any, res: any) {
   return res.status(200).json(result);
 }
 
-async function broadcastEvent(event: string, payload: any) {
-  try {
-    const ch = supabase.channel(`broadcast-webhook-${Date.now()}`);
-    ch.subscribe(async (status) => {
-      if (status === 'SUBSCRIBED') {
-        await ch.send({
-          type: "broadcast",
-          event,
-          payload,
-        });
-        supabase.removeChannel(ch);
-      }
-    });
-  } catch (err) {
-    console.warn("[Webhook Broadcast] Error broadcasting:", err);
-  }
+async function broadcastEvent(event: string, payload: any): Promise<void> {
+  return new Promise<void>((resolve) => {
+    try {
+      const ch = supabase.channel('lojinha-realtime-global');
+      const timer = setTimeout(() => {
+        try {
+          supabase.removeChannel(ch);
+        } catch (_) {}
+        resolve();
+      }, 3000);
+
+      ch.subscribe(async (status) => {
+        if (status === 'SUBSCRIBED') {
+          try {
+            await ch.send({
+              type: 'broadcast',
+              event,
+              payload,
+            });
+          } catch (err) {
+            console.warn('[Webhook Broadcast] Error sending:', err);
+          } finally {
+            clearTimeout(timer);
+            try {
+              supabase.removeChannel(ch);
+            } catch (_) {}
+            resolve();
+          }
+        } else if (status === 'CHANNEL_ERROR' || status === 'TIMED_OUT' || status === 'CLOSED') {
+          clearTimeout(timer);
+          try {
+            supabase.removeChannel(ch);
+          } catch (_) {}
+          resolve();
+        }
+      });
+    } catch (err) {
+      console.warn('[Webhook Broadcast] Error broadcasting:', err);
+      resolve();
+    }
+  });
 }
 
 async function processWebhook(payload: Record<string, any>) {
@@ -92,7 +117,9 @@ async function processWebhook(payload: Record<string, any>) {
     eventLower === "receive_message" ||
     eventLower === "messages.upsert" ||
     eventLower === "message.received" ||
-    eventLower === "messages_upsert"
+    eventLower === "messages_upsert" ||
+    eventLower.includes("message") ||
+    eventLower.includes("upsert")
   ) {
     return await handleIncomingMessage(instanceId, data, payload);
   } else {
