@@ -1,5 +1,5 @@
 import React, { useState } from 'react';
-import { Users, Search, MessageSquare, Clock, MapPin, Tag, Baby, FileSpreadsheet } from 'lucide-react';
+import { Users, Search, MessageSquare, Clock, MapPin, Tag, Baby, FileSpreadsheet, Trash2 } from 'lucide-react';
 import { ContactLead, KanbanColumn } from '../../types';
 import { CustomSelect } from '../common/CustomSelect';
 
@@ -10,6 +10,7 @@ interface LeadsListViewProps {
   onSelectLeadForChat: (lead: ContactLead) => void;
   onOpenFollowUpModal: (lead: ContactLead) => void;
   onOpenImportCsv?: () => void;
+  onDeleteLead?: (lead: ContactLead) => void;
 }
 
 export const LeadsListView: React.FC<LeadsListViewProps> = ({
@@ -19,6 +20,7 @@ export const LeadsListView: React.FC<LeadsListViewProps> = ({
   onSelectLeadForChat,
   onOpenFollowUpModal,
   onOpenImportCsv,
+  onDeleteLead,
 }) => {
   const [filterColumn, setFilterColumn] = useState<string>('all');
   const [filterQuery, setFilterQuery] = useState('');
@@ -211,17 +213,29 @@ export const LeadsListView: React.FC<LeadsListViewProps> = ({
                     </td>
 
                     <td className="p-3.5 text-right" onClick={(e) => e.stopPropagation()}>
-                      <button
-                        onClick={() => onSelectLeadForChat(lead)}
-                        className={`px-3 py-1.5 font-semibold rounded-xl text-xs inline-flex items-center gap-1 transition-all duration-150 hover:scale-105 active:scale-95 cursor-pointer ${
-                          isSelected
-                            ? 'bg-[#14382F] text-[#FDFEF8] border border-[#C1F76B] ring-1 ring-[#C1F76B] hover:bg-red-500/20 hover:border-red-500/40 hover:text-red-300'
-                            : 'bg-[#C1F76B] hover:bg-[#b0ec53] text-[#0F2D26] font-bold shadow-md shadow-[#C1F76B]/20 hover:shadow-[#C1F76B]/40'
-                        }`}
-                      >
-                        <MessageSquare className="w-3.5 h-3.5" />
-                        <span>{isSelected ? 'Fechar Chat' : 'Abrir Chat'}</span>
-                      </button>
+                      <div className="flex items-center justify-end gap-1.5">
+                        {onDeleteLead && (
+                          <button
+                            type="button"
+                            onClick={() => onDeleteLead(lead)}
+                            className="p-1.5 rounded-xl bg-[#14382F] hover:bg-red-500/20 text-[#95BDB0] hover:text-red-400 border border-[#235447] hover:border-red-500/40 transition-all duration-150 hover:scale-105 active:scale-95 cursor-pointer"
+                            title="Excluir Lead permanentemente"
+                          >
+                            <Trash2 className="w-3.5 h-3.5" />
+                          </button>
+                        )}
+                        <button
+                          onClick={() => onSelectLeadForChat(lead)}
+                          className={`px-3 py-1.5 font-semibold rounded-xl text-xs inline-flex items-center gap-1 transition-all duration-150 hover:scale-105 active:scale-95 cursor-pointer ${
+                            isSelected
+                              ? 'bg-[#14382F] text-[#FDFEF8] border border-[#C1F76B] ring-1 ring-[#C1F76B] hover:bg-red-500/20 hover:border-red-500/40 hover:text-red-300'
+                              : 'bg-[#C1F76B] hover:bg-[#b0ec53] text-[#0F2D26] font-bold shadow-md shadow-[#C1F76B]/20 hover:shadow-[#C1F76B]/40'
+                          }`}
+                        >
+                          <MessageSquare className="w-3.5 h-3.5" />
+                          <span>{isSelected ? 'Fechar Chat' : 'Abrir Chat'}</span>
+                        </button>
+                      </div>
                     </td>
                   </tr>
                 );

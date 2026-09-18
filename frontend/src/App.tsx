@@ -27,6 +27,7 @@ import { FollowUpModal } from './components/followup/FollowUpModal';
 import { FollowUpListModal } from './components/followup/FollowUpListModal';
 import { ColumnManagerModal } from './components/kanban/ColumnManagerModal';
 import { NewLeadModal } from './components/leads/NewLeadModal';
+import { DeleteLeadModal } from './components/leads/DeleteLeadModal';
 import { ImportCsvModal } from './components/leads/ImportCsvModal';
 import { MetricsView } from './components/metrics/MetricsView';
 import { LeadsListView } from './components/leads/LeadsListView';
@@ -171,6 +172,7 @@ function CockpitWorkspace() {
   const [isFollowUpModalOpen, setIsFollowUpModalOpen] = useState(false);
   const [isFollowUpListOpen, setIsFollowUpListOpen] = useState(false);
   const [leadForFollowUp, setLeadForFollowUp] = useState<ContactLead | null>(null);
+  const [leadToDelete, setLeadToDelete] = useState<ContactLead | null>(null);
 
   // 1. Initial Data Loading from Supabase (runs ONCE on mount / store switch — 0 polling loops)
   useEffect(() => {
@@ -799,6 +801,23 @@ function CockpitWorkspace() {
     kanbanService.updateLead(updatedLead.id, updatedLead);
   };
 
+  const handleConfirmDeleteLead = async (leadId: string) => {
+    // 1. Optimistic UI update
+    setLeads((prev) => prev.filter((l) => l.id !== leadId));
+    if (selectedLeadId === leadId) {
+      setSelectedLeadId(null);
+      setViewMode('kanban-only');
+    }
+    setMessages((prev) => {
+      const next = { ...prev };
+      delete next[leadId];
+      return next;
+    });
+
+    // 2. Cascade delete in Supabase (messages then lead)
+    await kanbanService.deleteLead(leadId);
+  };
+
   const handleAddLeadToColumn = (columnId: string) => {
     setNewLeadDefaultColumn(columnId);
     setIsNewLeadOpen(true);
@@ -982,6 +1001,7 @@ function CockpitWorkspace() {
                   }
                 }}
                 onOpenFollowUpModal={handleOpenFollowUp}
+                onDeleteLead={(l) => setLeadToDelete(l)}
               />
             </div>
 
@@ -998,6 +1018,7 @@ function CockpitWorkspace() {
                 onChangeColumn={handleMoveLead}
                 onOpenFollowUpModal={handleOpenFollowUp}
                 onUpdateLead={handleUpdateLead}
+                onDeleteLead={(l) => setLeadToDelete(l)}
                 onCloseChat={() => setSelectedLeadId(null)}
                 onNavigateToSettings={() => navigate('/store')}
               />
@@ -1040,6 +1061,7 @@ function CockpitWorkspace() {
                 onAddNewColumn={() => setIsColumnManagerOpen(true)}
                 onOpenFollowUpModal={handleOpenFollowUp}
                 onAddLeadToColumn={handleAddLeadToColumn}
+                onDeleteLead={(l) => setLeadToDelete(l)}
               />
             </div>
 
@@ -1056,6 +1078,7 @@ function CockpitWorkspace() {
                 onChangeColumn={handleMoveLead}
                 onOpenFollowUpModal={handleOpenFollowUp}
                 onUpdateLead={handleUpdateLead}
+                onDeleteLead={(l) => setLeadToDelete(l)}
                 onCloseChat={() => {
                   setSelectedLeadId(null);
                   setViewMode('kanban-only');
@@ -1103,6 +1126,13 @@ function CockpitWorkspace() {
         defaultColumnId={newLeadDefaultColumn}
         onClose={() => setIsNewLeadOpen(false)}
         onCreateLead={handleCreateLead}
+      />
+
+      <DeleteLeadModal
+        isOpen={!!leadToDelete}
+        lead={leadToDelete}
+        onClose={() => setLeadToDelete(null)}
+        onConfirmDelete={handleConfirmDeleteLead}
       />
 
       <ImportCsvModal

@@ -252,4 +252,35 @@ export const kanbanService = {
       stageHistory: data.stage_history || [],
     };
   },
+
+  // Delete lead in cascade (messages first, then lead)
+  async deleteLead(leadId: string): Promise<boolean> {
+    try {
+      // 1. Delete associated messages first
+      const { error: msgErr } = await supabase
+        .from('messages')
+        .delete()
+        .eq('lead_id', leadId);
+
+      if (msgErr) {
+        console.warn('Warning deleting associated messages for lead:', msgErr.message);
+      }
+
+      // 2. Delete the lead
+      const { error: leadErr } = await supabase
+        .from('leads')
+        .delete()
+        .eq('id', leadId);
+
+      if (leadErr) {
+        console.error('Error deleting lead from Supabase:', leadErr.message);
+        return false;
+      }
+
+      return true;
+    } catch (err) {
+      console.error('Cascade delete error:', err);
+      return false;
+    }
+  },
 };

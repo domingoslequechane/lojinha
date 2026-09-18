@@ -27,29 +27,39 @@ export const LoginPage: React.FC = () => {
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     setErrorMessage(null);
-    const result = await login(email, password);
-    if (result.success) {
-      if (result.requires2FA) {
-        setShow2FAModal(true);
-      } else if (result.onboardingCompleted) {
-        navigate('/cockpit');
+    try {
+      const result = await login(email, password);
+      if (result.success) {
+        if (result.requires2FA) {
+          setShow2FAModal(true);
+        } else if (result.onboardingCompleted) {
+          navigate('/cockpit', { replace: true });
+        } else {
+          navigate('/onboarding', { replace: true });
+        }
       } else {
-        navigate('/onboarding');
+        setErrorMessage(result.error || 'Falha ao realizar login.');
       }
-    } else {
-      setErrorMessage(result.error || 'Falha ao realizar login.');
+    } catch (err: any) {
+      console.error('Login error:', err);
+      setErrorMessage(err?.message || 'Erro inesperado ao realizar login.');
     }
   };
 
   const handleVerify2FA = async (e: React.FormEvent) => {
     e.preventDefault();
     setErrorMessage(null);
-    const result = await verifyWhatsApp2FA(twoFactorCode);
-    if (result.success) {
-      setShow2FAModal(false);
-      navigate('/cockpit');
-    } else {
-      setErrorMessage(result.error || 'Código 2FA incorreto.');
+    try {
+      const result = await verifyWhatsApp2FA(twoFactorCode);
+      if (result.success) {
+        setShow2FAModal(false);
+        navigate('/cockpit', { replace: true });
+      } else {
+        setErrorMessage(result.error || 'Código 2FA incorreto.');
+      }
+    } catch (err: any) {
+      console.error('2FA error:', err);
+      setErrorMessage(err?.message || 'Erro ao verificar código 2FA.');
     }
   };
 

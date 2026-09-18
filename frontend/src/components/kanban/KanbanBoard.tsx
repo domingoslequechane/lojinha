@@ -13,6 +13,7 @@ interface KanbanBoardProps {
   onAddNewColumn: () => void;
   onOpenFollowUpModal: (lead: ContactLead) => void;
   onAddLeadToColumn: (columnId: string) => void;
+  onDeleteLead?: (lead: ContactLead) => void;
 }
 
 export const KanbanBoard: React.FC<KanbanBoardProps> = ({
@@ -25,6 +26,7 @@ export const KanbanBoard: React.FC<KanbanBoardProps> = ({
   onAddNewColumn,
   onOpenFollowUpModal,
   onAddLeadToColumn,
+  onDeleteLead,
 }) => {
   // Sort columns by order
   const sortedColumns = [...columns].sort((a, b) => a.order - b.order);
@@ -52,6 +54,7 @@ export const KanbanBoard: React.FC<KanbanBoardProps> = ({
               onEditColumn={onEditColumn}
               onOpenFollowUpModal={onOpenFollowUpModal}
               onAddLeadToColumn={onAddLeadToColumn}
+              onDeleteLead={onDeleteLead}
             />
           );
         })}

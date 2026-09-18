@@ -12,6 +12,7 @@ interface KanbanColumnComponentProps {
   onEditColumn: (column: KanbanColumn) => void;
   onOpenFollowUpModal: (lead: ContactLead) => void;
   onAddLeadToColumn: (columnId: string) => void;
+  onDeleteLead?: (lead: ContactLead) => void;
 }
 
 export const KanbanColumnComponent: React.FC<KanbanColumnComponentProps> = ({
@@ -23,6 +24,7 @@ export const KanbanColumnComponent: React.FC<KanbanColumnComponentProps> = ({
   onEditColumn,
   onOpenFollowUpModal,
   onAddLeadToColumn,
+  onDeleteLead,
 }) => {
   const [isDragOver, setIsDragOver] = useState(false);
 
@@ -124,6 +126,7 @@ export const KanbanColumnComponent: React.FC<KanbanColumnComponentProps> = ({
               onSelect={onSelectLead}
               onDragStart={handleCardDragStart}
               onOpenFollowUpModal={onOpenFollowUpModal}
+              onDeleteLead={onDeleteLead}
             />
           ))
         )}
