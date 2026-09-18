@@ -28,13 +28,18 @@ export default async function handler(req: any, res: any) {
   const payload = req.body || {};
   console.log("[Webhook] Received event payload keys:", Object.keys(payload));
 
+  let result: any = { received: true };
   try {
-    await processWebhook(payload);
-  } catch (err) {
+    const processRes = await processWebhook(payload);
+    if (processRes) {
+      result = { received: true, ...processRes };
+    }
+  } catch (err: any) {
     console.error("[Webhook] Processing error:", err);
+    result = { received: false, error: err?.message };
   }
 
-  return res.status(200).json({ received: true });
+  return res.status(200).json(result);
 }
 
 async function broadcastEvent(event: string, payload: any) {
@@ -89,9 +94,10 @@ async function processWebhook(payload: Record<string, any>) {
     eventLower === "message.received" ||
     eventLower === "messages_upsert"
   ) {
-    await handleIncomingMessage(instanceId, data, payload);
+    return await handleIncomingMessage(instanceId, data, payload);
   } else {
     console.log(`[Webhook] Unhandled event: "${event}". Payload keys: ${Object.keys(payload).join(", ")}`);
+    return { unhandledEvent: event };
   }
 }
 
@@ -409,4 +415,13 @@ async function handleIncomingMessage(
       lead: finalLead,
     });
   }
+
+  return {
+    leadId,
+    isNewLead,
+    msgId: insertedMsg?.id,
+    msgError: msgError?.message,
+    phone,
+    contactName,
+  };
 }
