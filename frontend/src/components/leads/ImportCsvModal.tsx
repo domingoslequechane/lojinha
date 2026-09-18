@@ -393,23 +393,28 @@ export const ImportCsvModal: React.FC<ImportCsvModalProps> = ({
 
               {/* Preview Table */}
               <div>
-                <label className="text-xs font-bold text-[#95BDB0] uppercase tracking-wider block mb-1.5">
-                  Prévia dos primeiros contatos ({Math.min(5, parsedContacts.length)} de {parsedContacts.length}):
-                </label>
-                <div className="rounded-xl border border-[#235447] overflow-hidden bg-[#0F2D26]">
+                <div className="flex items-center justify-between mb-1.5">
+                  <label className="text-xs font-bold text-[#95BDB0] uppercase tracking-wider block">
+                    Prévia dos Contatos ({parsedContacts.length}):
+                  </label>
+                  <span className="text-[11px] text-[#95BDB0]/70">Role para ver todos</span>
+                </div>
+                <div className="rounded-xl border border-[#235447] overflow-hidden bg-[#0F2D26] max-h-64 overflow-y-auto">
                   <table className="w-full text-left text-xs">
-                    <thead className="bg-[#14382F] text-[#95BDB0] border-b border-[#235447]">
+                    <thead className="bg-[#14382F] text-[#95BDB0] border-b border-[#235447] sticky top-0 z-10 shadow-xs">
                       <tr>
-                        <th className="py-2 px-3">Nome</th>
-                        <th className="py-2 px-3">Telefone</th>
-                        <th className="py-2 px-3">Nota / Detalhe</th>
+                        <th className="py-2.5 px-3 w-10 text-center text-[#95BDB0]/70">#</th>
+                        <th className="py-2.5 px-3">Nome</th>
+                        <th className="py-2.5 px-3">Telefone</th>
+                        <th className="py-2.5 px-3">Nota / Detalhe</th>
                       </tr>
                     </thead>
                     <tbody className="divide-y divide-[#235447]/60 text-[#D1EAE0]">
-                      {parsedContacts.slice(0, 5).map((c, idx) => (
-                        <tr key={idx} className="hover:bg-[#14382F]/40">
+                      {parsedContacts.map((c, idx) => (
+                        <tr key={idx} className="hover:bg-[#14382F]/40 transition-colors">
+                          <td className="py-2 px-3 text-center text-[#95BDB0]/60 text-[11px] font-mono">{idx + 1}</td>
                           <td className="py-2 px-3 font-medium text-[#FDFEF8] truncate max-w-[140px]">{c.name}</td>
-                          <td className="py-2 px-3 text-[#95BDB0] truncate max-w-[120px]">{c.phone}</td>
+                          <td className="py-2 px-3 text-[#95BDB0] truncate max-w-[130px] font-mono">{c.phone}</td>
                           <td className="py-2 px-3 text-[#95BDB0]/80 truncate max-w-[150px]">{c.notes || '-'}</td>
                         </tr>
                       ))}
