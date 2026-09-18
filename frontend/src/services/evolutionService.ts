@@ -99,10 +99,11 @@ function mapRow(row: Record<string, unknown>): WhatsAppInstance {
 }
 
 function getWebhookUrl(): string {
-  if (typeof window !== 'undefined' && window.location.origin) {
-    return `${window.location.origin}/api/webhook`;
-  }
-  return 'https://www.lojinha.my/api/webhook';
+  // Use env var se definido; caso contrário, usa o domínio direto da Vercel
+  // (evita problemas de DNS onde www.lojinha.my ainda pode apontar para Hostinger)
+  const envUrl = import.meta.env.VITE_WEBHOOK_URL as string | undefined;
+  if (envUrl) return envUrl;
+  return 'https://lojinha-seven-chi.vercel.app/api/webhook';
 }
 
 export const evolutionService = {
