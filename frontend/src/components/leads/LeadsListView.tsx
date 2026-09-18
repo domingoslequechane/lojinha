@@ -213,7 +213,7 @@ export const LeadsListView: React.FC<LeadsListViewProps> = ({
                     </td>
 
                     <td className="p-3.5 text-right" onClick={(e) => e.stopPropagation()}>
-                      <div className="flex items-center justify-end gap-1.5">
+                      <div className="flex items-center justify-end gap-3.5">
                         <button
                           onClick={() => onSelectLeadForChat(lead)}
                           className={`px-3 py-1.5 font-semibold rounded-xl text-xs inline-flex items-center gap-1 transition-all duration-150 hover:scale-105 active:scale-95 cursor-pointer ${

@@ -160,7 +160,7 @@ export const ChatPanel: React.FC<ChatPanelProps> = ({
   const [inputText, setInputText] = useState('');
   const [attachedMedias, setAttachedMedias] = useState<{
     id: string;
-    type: 'image' | 'video';
+    type: 'image' | 'video' | 'audio';
     dataUrl: string;
     name: string;
     caption: string;
@@ -426,13 +426,14 @@ export const ChatPanel: React.FC<ChatPanelProps> = ({
     const readPromises = files.map((file) => {
       return new Promise<{
         id: string;
-        type: 'image' | 'video';
+        type: 'image' | 'video' | 'audio';
         dataUrl: string;
         name: string;
         caption: string;
       }>((resolve) => {
+        const isAudio = file.type.startsWith('audio/') || /\.(mp3|wav|ogg|m4a|aac|flac|opus|weba)$/i.test(file.name);
         const isVideo = file.type.startsWith('video/') || /\.(mp4|mov|avi|mkv|webm)$/i.test(file.name);
-        const msgType: 'image' | 'video' = isVideo ? 'video' : 'image';
+        const msgType: 'image' | 'video' | 'audio' = isAudio ? 'audio' : isVideo ? 'video' : 'image';
         const reader = new FileReader();
         reader.onload = (ev) => {
           resolve({
@@ -1127,7 +1128,7 @@ export const ChatPanel: React.FC<ChatPanelProps> = ({
                   ) : (
                     <>
                       {/* Media Image message */}
-                      {msg.type === 'image' && msg.mediaUrl && (() => {
+                      {msg.type === 'image' && msg.mediaUrl && !msg.mediaUrl.startsWith('data:audio') && !/\.(mp3|wav|ogg|m4a|aac|flac|opus)($|\?)/i.test(msg.mediaUrl) && (() => {
                         const expiryLabel = getMediaExpiryLabel(msg.createdAt);
                         return (
                           <div 
@@ -1209,75 +1210,82 @@ export const ChatPanel: React.FC<ChatPanelProps> = ({
                         );
                       })()}
 
-                      {/* Audio Voice Note message */}
-                      {msg.type === 'audio' && (
-                        <div className="flex items-center gap-3 py-1 pr-2 min-w-[230px]">
-                          <button
-                            type="button"
-                            onClick={() => toggleAudio(msg.id, msg.mediaUrl, msg.audioDuration)}
-                            className={`w-9 h-9 rounded-full flex items-center justify-center flex-shrink-0 transition-all shadow-md cursor-pointer ${
-                              playingAudioId === msg.id
-                                ? 'bg-[#219653] text-[#FDFEF8]'
-                                : 'bg-[#C1F76B] hover:bg-[#b0ec53] text-[#0F2D26]'
-                            }`}
-                            title={playingAudioId === msg.id ? 'Pausar áudio' : 'Ouvir nota de voz'}
-                          >
-                            {playingAudioId === msg.id ? (
-                              <Pause className="w-4 h-4 fill-current" />
-                            ) : (
-                              <Play className="w-4 h-4 fill-current ml-0.5" />
-                            )}
-                          </button>
-                          <div className="flex-1">
-                            {/* Smooth WhatsApp Waveform Track */}
-                            <div
-                              className="relative h-6 flex items-center cursor-pointer select-none py-1"
-                              onClick={(e) => {
-                                const rect = e.currentTarget.getBoundingClientRect();
-                                const clickPct = Math.max(0, Math.min(1, (e.clientX - rect.left) / rect.width));
-                                handleSeekAudio(msg.id, msg.mediaUrl, msg.audioDuration, clickPct);
-                              }}
+                      {/* Audio Voice Note or MP3 Media message */}
+                      {(msg.type === 'audio' || (msg.mediaUrl && (msg.mediaUrl.startsWith('data:audio') || /\.(mp3|wav|ogg|m4a|aac|flac|opus)($|\?)/i.test(msg.mediaUrl)))) && (
+                        <div className="flex flex-col gap-1.5 py-1 pr-2 min-w-[230px]">
+                          <div className="flex items-center gap-3">
+                            <button
+                              type="button"
+                              onClick={() => toggleAudio(msg.id, msg.mediaUrl, msg.audioDuration)}
+                              className={`w-9 h-9 rounded-full flex items-center justify-center flex-shrink-0 transition-all shadow-md cursor-pointer ${
+                                playingAudioId === msg.id
+                                  ? 'bg-[#219653] text-[#FDFEF8]'
+                                  : 'bg-[#C1F76B] hover:bg-[#b0ec53] text-[#0F2D26]'
+                              }`}
+                              title={playingAudioId === msg.id ? 'Pausar áudio' : 'Ouvir áudio'}
                             >
-                              {/* Waveform Bars */}
-                              <div className="flex items-center justify-between gap-[3px] h-full w-full">
-                                {[30, 60, 25, 80, 50, 95, 40, 70, 35, 90, 30, 65, 50, 35, 75, 45, 85, 60, 40, 75, 50, 80].map((val, idx, arr) => {
-                                  const barPct = (idx / (arr.length - 1)) * 100;
-                                  const isPlayed = (audioProgress[msg.id] || 0) >= barPct;
-                                  return (
-                                    <span
-                                      key={idx}
-                                      className={`w-[3px] rounded-full transition-colors duration-100 flex-shrink-0 ${
-                                        isPlayed
-                                          ? 'bg-[#C1F76B] shadow-xs shadow-[#C1F76B]/40'
-                                          : 'bg-[#95BDB0]/40'
-                                      }`}
-                                      style={{ height: `${val}%` }}
-                                    />
-                                  );
-                                })}
+                              {playingAudioId === msg.id ? (
+                                <Pause className="w-4 h-4 fill-current" />
+                              ) : (
+                                <Play className="w-4 h-4 fill-current ml-0.5" />
+                              )}
+                            </button>
+                            <div className="flex-1">
+                              {/* Smooth WhatsApp Waveform Track */}
+                              <div
+                                className="relative h-6 flex items-center cursor-pointer select-none py-1"
+                                onClick={(e) => {
+                                  const rect = e.currentTarget.getBoundingClientRect();
+                                  const clickPct = Math.max(0, Math.min(1, (e.clientX - rect.left) / rect.width));
+                                  handleSeekAudio(msg.id, msg.mediaUrl, msg.audioDuration, clickPct);
+                                }}
+                              >
+                                {/* Waveform Bars */}
+                                <div className="flex items-center justify-between gap-[3px] h-full w-full">
+                                  {[30, 60, 25, 80, 50, 95, 40, 70, 35, 90, 30, 65, 50, 35, 75, 45, 85, 60, 40, 75, 50, 80].map((val, idx, arr) => {
+                                    const barPct = (idx / (arr.length - 1)) * 100;
+                                    const isPlayed = (audioProgress[msg.id] || 0) >= barPct;
+                                    return (
+                                      <span
+                                        key={idx}
+                                        className={`w-[3px] rounded-full transition-colors duration-100 flex-shrink-0 ${
+                                          isPlayed
+                                            ? 'bg-[#C1F76B] shadow-xs shadow-[#C1F76B]/40'
+                                            : 'bg-[#95BDB0]/40'
+                                        }`}
+                                        style={{ height: `${val}%` }}
+                                      />
+                                    );
+                                  })}
+                                </div>
+
+                                {/* Scrubber thumb tracking current position */}
+                                {playingAudioId === msg.id && (
+                                  <span
+                                    className="absolute top-1/2 -translate-y-1/2 w-2 h-2 rounded-full bg-[#C1F76B] shadow-md shadow-[#C1F76B] pointer-events-none -ml-1 transition-[left] duration-75 ease-linear"
+                                    style={{ left: `${Math.min(98, Math.max(2, audioProgress[msg.id] || 0))}%` }}
+                                  />
+                                )}
                               </div>
 
-                              {/* Scrubber thumb tracking current position */}
-                              {playingAudioId === msg.id && (
-                                <span
-                                  className="absolute top-1/2 -translate-y-1/2 w-2 h-2 rounded-full bg-[#C1F76B] shadow-md shadow-[#C1F76B] pointer-events-none -ml-1 transition-[left] duration-75 ease-linear"
-                                  style={{ left: `${Math.min(98, Math.max(2, audioProgress[msg.id] || 0))}%` }}
-                                />
-                              )}
-                            </div>
-
-                            {/* Status & Realtime Countdown Timer */}
-                            <div className="flex items-center justify-between text-[10px] text-[#95BDB0] mt-0.5">
-                              <span className={playingAudioId === msg.id ? 'text-[#C1F76B] font-semibold' : ''}>
-                                {playingAudioId === msg.id ? 'Reproduzindo...' : 'Nota de voz'}
-                              </span>
-                              <span className={`font-mono ${playingAudioId === msg.id ? 'text-[#C1F76B] font-bold' : ''}`}>
-                                {playingAudioId === msg.id && audioRemaining[msg.id]
-                                  ? audioRemaining[msg.id]
-                                  : msg.audioDuration || '0:15'}
-                              </span>
+                              {/* Status & Realtime Countdown Timer */}
+                              <div className="flex items-center justify-between text-[10px] text-[#95BDB0] mt-0.5">
+                                <span className={playingAudioId === msg.id ? 'text-[#C1F76B] font-semibold' : ''}>
+                                  {playingAudioId === msg.id ? 'Reproduzindo...' : 'Áudio / MP3'}
+                                </span>
+                                <span className={`font-mono ${playingAudioId === msg.id ? 'text-[#C1F76B] font-bold' : ''}`}>
+                                  {playingAudioId === msg.id && audioRemaining[msg.id]
+                                    ? audioRemaining[msg.id]
+                                    : msg.audioDuration || '0:15'}
+                                </span>
+                              </div>
                             </div>
                           </div>
+                          {msg.mediaCaption && msg.mediaCaption.trim() && (
+                            <p className="text-xs text-[#FDFEF8]/90 mt-1 leading-relaxed">
+                              {msg.mediaCaption}
+                            </p>
+                          )}
                         </div>
                       )}
 
@@ -1536,10 +1544,15 @@ export const ChatPanel: React.FC<ChatPanelProps> = ({
                   >
                     {media.type === 'image' ? (
                       <img src={media.dataUrl} alt={media.name} className="w-full h-full object-cover" />
-                    ) : (
+                    ) : media.type === 'video' ? (
                       <div className="relative w-full h-full flex items-center justify-center bg-black">
                         <video src={media.dataUrl} className="w-full h-full object-cover opacity-80" />
                         <Play className="w-3.5 h-3.5 text-white fill-current absolute inset-0 m-auto drop-shadow" />
+                      </div>
+                    ) : (
+                      <div className="relative w-full h-full flex flex-col items-center justify-center bg-[#14382F] text-[#C1F76B] p-1">
+                        <Mic className="w-4 h-4 mb-0.5" />
+                        <span className="text-[8px] font-mono text-[#95BDB0] truncate max-w-full">Áudio</span>
                       </div>
                     )}
 

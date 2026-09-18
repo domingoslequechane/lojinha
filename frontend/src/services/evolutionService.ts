@@ -437,7 +437,8 @@ export const evolutionService = {
     type: 'image' | 'audio' | 'video' | 'document' = 'image',
     caption?: string,
     instanceId?: string,
-    storeId?: string
+    storeId?: string,
+    fileName?: string
   ): Promise<{ ok: boolean; mediaUrl?: string; whatsappMessageId?: string }> {
     let token: string | null = null;
     if (instanceId) {
@@ -475,13 +476,22 @@ export const evolutionService = {
       }
     }
 
+    // Se for arquivo de áudio MP3, WAV ou M4A, enviar com tipo document para a Evolution GO entregar sem erro de ffmpeg
+    let targetType: string = type;
+    let targetFileName = fileName;
+    if (type === 'audio' && (mimetype.includes('mpeg') || mimetype.includes('mp3') || mimetype.includes('wav') || mimetype.includes('m4a'))) {
+      targetType = 'document';
+      if (!targetFileName) targetFileName = 'audio.mp3';
+    }
+
     const payload: Record<string, unknown> = {
       number: cleanNumber,
       url: cleanMediaUrl,
-      type,
+      type: targetType,
       mimetype,
     };
     if (caption && caption.trim()) payload.caption = caption.trim();
+    if (targetFileName && targetFileName.trim()) payload.fileName = targetFileName.trim();
 
     const res = await fetch(`${EVOLUTION_API_URL}/send/media`, {
       method: 'POST',

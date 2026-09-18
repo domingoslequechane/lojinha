@@ -94,14 +94,46 @@ export const Sidebar: React.FC<SidebarProps> = ({
       {/* Brand Header */}
       <div className="h-16 flex items-center justify-between px-3 border-b border-[#235447]">
         {!collapsed && (
-          <div className="flex items-center overflow-hidden">
-            <LoginhaLogo size="sm" withTagline={true} />
+          <div className="flex items-center gap-2.5 overflow-hidden select-none">
+            <div className="w-8 h-8 rounded-lg flex items-center justify-center flex-shrink-0">
+              <img
+                src="/sidebar-icon.png"
+                alt="Lojinha"
+                className="w-full h-full object-contain drop-shadow-sm select-none"
+                draggable={false}
+              />
+            </div>
+            <div className="flex flex-col leading-tight">
+              <div className="flex items-center gap-1.5">
+                <span
+                  className="font-baloo font-bold tracking-normal text-lg"
+                  style={{
+                    color: '#FDFEF8',
+                    lineHeight: 1.1,
+                    whiteSpace: 'nowrap',
+                  }}
+                >
+                  Loj<span style={{ color: '#C1F76B' }}>inha</span>
+                </span>
+                <span className="text-[9px] font-extrabold uppercase px-1.5 py-0.5 rounded tracking-wide font-sans bg-[#C1F76B]/15 text-[#C1F76B] border border-[#C1F76B]/30">
+                  PRO
+                </span>
+              </div>
+              <span className="font-medium tracking-normal text-[9px] text-[#95BDB0]">
+                A tua loja, simples.
+              </span>
+            </div>
           </div>
         )}
 
         {collapsed && (
-          <div className="mx-auto">
-            <LoginhaIcon size={32} />
+          <div className="mx-auto w-8 h-8 flex items-center justify-center">
+            <img
+              src="/sidebar-icon.png"
+              alt="Lojinha"
+              className="w-full h-full object-contain drop-shadow-sm select-none"
+              draggable={false}
+            />
           </div>
         )}
 
