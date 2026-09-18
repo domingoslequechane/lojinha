@@ -5,7 +5,8 @@ import {
   SlidersHorizontal, 
   Wifi, 
   Clock,
-  FileSpreadsheet
+  FileSpreadsheet,
+  CopySlash
 } from 'lucide-react';
 
 interface HeaderProps {
@@ -15,6 +16,7 @@ interface HeaderProps {
   onOpenNewLead: () => void;
   onOpenFollowUpList: () => void;
   onOpenImportCsv?: () => void;
+  onOpenDeduplicate?: () => void;
   pendingFollowUpsCount: number;
   totalFilteredLeads: number;
   activeInstanceName?: string;
@@ -29,6 +31,7 @@ export const Header: React.FC<HeaderProps> = ({
   onOpenNewLead,
   onOpenFollowUpList,
   onOpenImportCsv,
+  onOpenDeduplicate,
   pendingFollowUpsCount,
   totalFilteredLeads,
   activeInstanceName = 'Vendas Tablets',
@@ -114,6 +117,18 @@ export const Header: React.FC<HeaderProps> = ({
 
       {/* Right: Actions */}
       <div className="flex items-center gap-2.5">
+        {/* Varredura de Duplicados */}
+        {onOpenDeduplicate && (
+          <button
+            onClick={onOpenDeduplicate}
+            className="flex items-center gap-1.5 px-3 py-2 bg-[#14382F] hover:bg-amber-500/20 hover:border-amber-400/50 text-amber-300 rounded-xl text-xs font-medium border border-[#235447] transition-all duration-150 hover:scale-105 active:scale-95 cursor-pointer shadow-xs"
+            title="Escanear e limpar leads duplicados por telefone"
+          >
+            <CopySlash className="w-3.5 h-3.5 text-amber-400" />
+            <span className="hidden xl:inline">Varredura</span>
+          </button>
+        )}
+
         {/* Importar CSV */}
         {onOpenImportCsv && (
           <button

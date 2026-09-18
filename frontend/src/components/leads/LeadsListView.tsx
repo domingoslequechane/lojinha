@@ -1,5 +1,5 @@
 import React, { useState } from 'react';
-import { Users, Search, MessageSquare, Clock, MapPin, Tag, Baby, FileSpreadsheet, Trash2 } from 'lucide-react';
+import { Users, Search, MessageSquare, Clock, MapPin, Tag, Baby, FileSpreadsheet, Trash2, CopySlash } from 'lucide-react';
 import { ContactLead, KanbanColumn } from '../../types';
 import { CustomSelect } from '../common/CustomSelect';
 
@@ -10,6 +10,7 @@ interface LeadsListViewProps {
   onSelectLeadForChat: (lead: ContactLead) => void;
   onOpenFollowUpModal: (lead: ContactLead) => void;
   onOpenImportCsv?: () => void;
+  onOpenDeduplicate?: () => void;
   onDeleteLead?: (lead: ContactLead) => void;
 }
 
@@ -20,6 +21,7 @@ export const LeadsListView: React.FC<LeadsListViewProps> = ({
   onSelectLeadForChat,
   onOpenFollowUpModal,
   onOpenImportCsv,
+  onOpenDeduplicate,
   onDeleteLead,
 }) => {
   const [filterColumn, setFilterColumn] = useState<string>('all');
@@ -49,7 +51,7 @@ export const LeadsListView: React.FC<LeadsListViewProps> = ({
         </div>
 
         {/* Filter controls */}
-        <div className="flex items-center gap-2">
+        <div className="flex items-center gap-2 flex-wrap">
           <CustomSelect
             value={filterColumn}
             onChange={setFilterColumn}
@@ -71,6 +73,17 @@ export const LeadsListView: React.FC<LeadsListViewProps> = ({
             placeholder="Filtrar por nome..."
             className="bg-[#0F2D26] text-xs text-[#FDFEF8] px-3 py-2 rounded-xl border border-[#235447] focus:outline-none focus:border-[#C1F76B]"
           />
+
+          {onOpenDeduplicate && (
+            <button
+              onClick={onOpenDeduplicate}
+              className="flex items-center gap-1.5 px-3.5 py-2 bg-[#14382F] hover:bg-amber-500/20 hover:border-amber-400/50 text-amber-300 rounded-xl text-xs font-bold border border-[#235447] transition-all duration-150 hover:scale-105 active:scale-95 cursor-pointer shadow-xs whitespace-nowrap"
+              title="Escanear e remover leads repetidos pelo número de telefone"
+            >
+              <CopySlash className="w-3.5 h-3.5" />
+              <span>Varredura de Duplicados</span>
+            </button>
+          )}
 
           {onOpenImportCsv && (
             <button

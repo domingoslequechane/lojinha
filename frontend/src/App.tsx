@@ -29,6 +29,7 @@ import { ColumnManagerModal } from './components/kanban/ColumnManagerModal';
 import { NewLeadModal } from './components/leads/NewLeadModal';
 import { DeleteLeadModal } from './components/leads/DeleteLeadModal';
 import { ImportCsvModal } from './components/leads/ImportCsvModal';
+import { DeduplicateLeadsModal } from './components/leads/DeduplicateLeadsModal';
 import { MetricsView } from './components/metrics/MetricsView';
 import { LeadsListView } from './components/leads/LeadsListView';
 import { QuickRepliesView } from './components/quickreplies/QuickRepliesView';
@@ -172,6 +173,7 @@ function CockpitWorkspace() {
   const [isColumnManagerOpen, setIsColumnManagerOpen] = useState(false);
   const [isNewLeadOpen, setIsNewLeadOpen] = useState(false);
   const [isImportCsvOpen, setIsImportCsvOpen] = useState(false);
+  const [isDeduplicateOpen, setIsDeduplicateOpen] = useState(false);
   const [newLeadDefaultColumn, setNewLeadDefaultColumn] = useState<string | undefined>();
   const [isFollowUpModalOpen, setIsFollowUpModalOpen] = useState(false);
   const [isFollowUpListOpen, setIsFollowUpListOpen] = useState(false);
@@ -835,6 +837,27 @@ function CockpitWorkspace() {
     await kanbanService.deleteLead(leadId);
   };
 
+  const handleDeleteDuplicateLeads = async (leadIdsToDelete: string[]): Promise<boolean> => {
+    if (leadIdsToDelete.length === 0) return true;
+    const idSet = new Set(leadIdsToDelete);
+
+    // 1. Optimistic UI update
+    setLeads((prev) => prev.filter((l) => !idSet.has(l.id)));
+    if (selectedLeadId && idSet.has(selectedLeadId)) {
+      setSelectedLeadId(null);
+      setViewMode('kanban-only');
+    }
+    setMessages((prev) => {
+      const next = { ...prev };
+      leadIdsToDelete.forEach((id) => delete next[id]);
+      return next;
+    });
+
+    // 2. Cascade batch delete from Supabase
+    const { success } = await kanbanService.deleteMultipleLeads(leadIdsToDelete);
+    return success > 0;
+  };
+
   const handleAddLeadToColumn = (columnId: string) => {
     setNewLeadDefaultColumn(columnId);
     setIsNewLeadOpen(true);
@@ -976,6 +999,7 @@ function CockpitWorkspace() {
             setIsNewLeadOpen(true);
           }}
           onOpenImportCsv={() => setIsImportCsvOpen(true)}
+          onOpenDeduplicate={() => setIsDeduplicateOpen(true)}
           onOpenFollowUpList={() => setIsFollowUpListOpen(true)}
           pendingFollowUpsCount={leadsWithFollowUp.length}
           totalFilteredLeads={filteredLeads.length}
@@ -996,6 +1020,7 @@ function CockpitWorkspace() {
                 columns={columns}
                 selectedLeadId={selectedLeadId}
                 onOpenImportCsv={() => setIsImportCsvOpen(true)}
+                onOpenDeduplicate={() => setIsDeduplicateOpen(true)}
                 onSelectLeadForChat={(l) => {
                   if (selectedLeadId === l.id) {
                     setSelectedLeadId(null);
@@ -1170,6 +1195,14 @@ function CockpitWorkspace() {
         onSuccess={(newLeads) => {
           setLeads((prev) => [...newLeads, ...prev]);
         }}
+      />
+
+      <DeduplicateLeadsModal
+        isOpen={isDeduplicateOpen}
+        onClose={() => setIsDeduplicateOpen(false)}
+        leads={leads}
+        columns={columns}
+        onDeleteDuplicateLeads={handleDeleteDuplicateLeads}
       />
     </div>
   );

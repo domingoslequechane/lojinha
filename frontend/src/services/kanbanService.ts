@@ -283,4 +283,36 @@ export const kanbanService = {
       return false;
     }
   },
+
+  // Batch delete leads in cascade
+  async deleteMultipleLeads(leadIds: string[]): Promise<{ success: number; failed: number }> {
+    if (!leadIds || leadIds.length === 0) return { success: 0, failed: 0 };
+    try {
+      // 1. Delete associated messages first
+      const { error: msgErr } = await supabase
+        .from('messages')
+        .delete()
+        .in('lead_id', leadIds);
+
+      if (msgErr) {
+        console.warn('Warning batch deleting associated messages:', msgErr.message);
+      }
+
+      // 2. Delete leads
+      const { error: leadErr } = await supabase
+        .from('leads')
+        .delete()
+        .in('id', leadIds);
+
+      if (leadErr) {
+        console.error('Error batch deleting leads:', leadErr.message);
+        return { success: 0, failed: leadIds.length };
+      }
+
+      return { success: leadIds.length, failed: 0 };
+    } catch (err) {
+      console.error('Batch delete exception:', err);
+      return { success: 0, failed: leadIds.length };
+    }
+  },
 };
