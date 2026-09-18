@@ -388,7 +388,6 @@ async function handleIncomingMessage(
       timestamp: timeStr,
       full_date: dateStr,
       status: fromMe ? "sent" : "delivered",
-      whatsapp_message_id: whatsappMessageId,
     })
     .select()
     .single();
