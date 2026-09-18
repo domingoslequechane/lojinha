@@ -98,6 +98,13 @@ function mapRow(row: Record<string, unknown>): WhatsAppInstance {
   };
 }
 
+function getWebhookUrl(): string {
+  if (typeof window !== 'undefined' && window.location.origin) {
+    return `${window.location.origin}/api/webhook`;
+  }
+  return 'https://www.lojinha.my/api/webhook';
+}
+
 export const evolutionService = {
   // ----------------------------------------------------------------
   // Instance management
@@ -199,7 +206,8 @@ export const evolutionService = {
       console.warn('[Evolution] Supabase insert warning:', dbError.message);
     }
 
-    // 3. Iniciar conexão para gerar QR Code
+    // 3. Iniciar conexão configurando o Webhook da Vercel para receber mensagens
+    const webhookUrl = getWebhookUrl();
     try {
       await fetch(`${EVOLUTION_API_URL}/instance/connect`, {
         method: 'POST',
@@ -208,6 +216,7 @@ export const evolutionService = {
           apikey: instanceToken,
         },
         body: JSON.stringify({
+          webhookUrl,
           subscribe: ['ALL'],
           immediate: true,
         }),
@@ -217,7 +226,7 @@ export const evolutionService = {
     return mapRow(payload);
   },
 
-  /** Busca QR Code atual (base64 PNG e código de pareamento) para uma instância */
+  /** Busca QR Code atual (base64 PNG e código de pareamento) diretamente da Evolution GO */
   async getQrCode(instanceId: string): Promise<{ qrcode: string; code: string } | null> {
     const token = await getInstanceToken(instanceId);
     if (!token) return null;
@@ -241,30 +250,40 @@ export const evolutionService = {
     }
   },
 
-  /** Força reconexão — aciona connect e busca QR Code diretamente */
+  /** Força reconexão — aciona connect com Webhook e busca QR Code diretamente da Evolution GO */
   async reconnectInstance(instanceId: string): Promise<{ ok: boolean; qrcode?: string; code?: string; connected?: boolean }> {
     const token = await getInstanceToken(instanceId);
     if (!token) return { ok: false };
 
+    const webhookUrl = getWebhookUrl();
     try {
-      await fetch(`${EVOLUTION_API_URL}/instance/connect`, {
+      const connectRes = await fetch(`${EVOLUTION_API_URL}/instance/connect`, {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json',
           apikey: token,
         },
         body: JSON.stringify({
+          webhookUrl,
           subscribe: ['ALL'],
           immediate: true,
         }),
       });
 
-      const qr = await this.getQrCode(instanceId);
-      return {
-        ok: true,
-        qrcode: qr?.qrcode,
-        code: qr?.code,
-      };
+      // Polling rápido para pegar o novo QR recém-gerado
+      for (let attempt = 0; attempt < 5; attempt++) {
+        await new Promise((resolve) => setTimeout(resolve, 600));
+        const qr = await this.getQrCode(instanceId);
+        if (qr && qr.qrcode) {
+          return {
+            ok: true,
+            qrcode: qr.qrcode,
+            code: qr.code,
+          };
+        }
+      }
+
+      return { ok: true };
     } catch {
       return { ok: false };
     }

@@ -145,6 +145,7 @@ export const WhatsAppInstancesView: React.FC<WhatsAppInstancesViewProps> = ({
     // Fast polling fallback every 2.5s while connection modal is open
     const pollTimer = window.setInterval(async () => {
       try {
+        // 1. Check live connection status
         const list = await evolutionService.getInstances(storeId || 'default');
         const found = list.find((i) => i.id === selectedForQr.id);
         if (found && found.status === 'connected') {
@@ -152,6 +153,14 @@ export const WhatsAppInstancesView: React.FC<WhatsAppInstancesViewProps> = ({
           setIsQrLoading(false);
           setInstList(list);
           onSaveInstances(list);
+          return;
+        }
+
+        // 2. Fetch fresh live QR Code directly from Evolution GO
+        const freshQr = await evolutionService.getQrCode(selectedForQr.id);
+        if (freshQr?.qrcode) {
+          setQrBase64(freshQr.qrcode);
+          setIsQrLoading(false);
         }
       } catch {}
     }, 2500);
