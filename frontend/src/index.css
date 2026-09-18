@@ -38,7 +38,12 @@
 
   /* ── Tipografia ────────────────────────────────────────── */
   --font-sans: 'Poppins', system-ui, -apple-system, BlinkMacSystemFont, sans-serif;
+  --font-baloo: 'Baloo 2', 'Poppins', cursive, sans-serif;
   --font-mono: 'JetBrains Mono', 'Fira Code', ui-monospace, monospace;
+}
+
+.font-baloo {
+  font-family: 'Baloo 2', 'Poppins', cursive, sans-serif;
 }
 
 @variant hover (&:hover);

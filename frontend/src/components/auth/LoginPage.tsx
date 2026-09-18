@@ -1,7 +1,6 @@
 import React, { useState } from 'react';
 import { Link, useNavigate } from 'react-router-dom';
 import { 
-  Store,
   Mail, 
   Lock, 
   Eye, 
@@ -13,6 +12,7 @@ import {
   AlertCircle,
 } from 'lucide-react';
 import { useAuth } from '../../context/AuthContext';
+import { LojinhaIcon } from '../common/LoginhaLogo';
 
 export const LoginPage: React.FC = () => {
   const navigate = useNavigate();
@@ -77,13 +77,10 @@ export const LoginPage: React.FC = () => {
 
         {/* Brand */}
         <div className="flex flex-col items-center text-center mb-6">
-          <div className="w-14 h-14 rounded-2xl flex items-center justify-center mb-3.5 shadow-xl"
-            style={{ background: 'linear-gradient(135deg, #27AE60, #C1F76B)', color: '#0F2D26' }}>
-            <Store className="w-7 h-7" />
-          </div>
-          <h1 className="text-xl font-bold flex items-center gap-2" style={{ color: 'var(--color-text-primary)' }}>
-            Loginha
-            <span className="text-xs px-2 py-0.5 rounded-md font-semibold"
+          <LojinhaIcon size={56} className="mb-3" />
+          <h1 className="font-baloo font-bold text-2xl flex items-center gap-2" style={{ color: 'var(--color-text-primary)' }}>
+            Loj<span style={{ color: '#C1F76B' }}>inha</span>
+            <span className="text-xs px-2 py-0.5 rounded-md font-sans font-semibold"
               style={{ color: '#C1F76B', backgroundColor: 'rgba(193,247,107,0.12)', border: '1px solid rgba(193,247,107,0.25)' }}>
               PRO
             </span>
