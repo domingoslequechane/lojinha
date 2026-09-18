@@ -1,6 +1,6 @@
 import React, { useState } from 'react';
 import { useNavigate } from 'react-router-dom';
-import { Store, ShoppingBag, Sparkles, MapPin, Smartphone, ArrowRight, AlertCircle, Check } from 'lucide-react';
+import { Store, ShoppingBag, Sparkles, MapPin, Smartphone, ArrowRight, AlertCircle, LogOut } from 'lucide-react';
 import { useAuth } from '../../context/AuthContext';
 import { CustomSelect } from '../common/CustomSelect';
 
@@ -19,7 +19,7 @@ const MOZ_PROVINCES = [
 
 export const OnboardingPage: React.FC = () => {
   const navigate = useNavigate();
-  const { user, completeOnboarding, isLoading } = useAuth();
+  const { user, completeOnboarding, logout, isLoading } = useAuth();
 
   const [storeName, setStoreName] = useState('');
   const [slogan, setSlogan] = useState('');
@@ -170,10 +170,19 @@ export const OnboardingPage: React.FC = () => {
           </button>
         </form>
 
-        <div className="mt-4 text-center">
+        <div className="mt-4 text-center space-y-3">
           <p className="text-[11px]" style={{ color: 'var(--color-text-secondary)' }}>
             Você poderá alterar estes dados em <strong>Minha Loja</strong> e <strong>Minha Conta</strong>.
           </p>
+          <button
+            type="button"
+            onClick={() => { logout?.(); navigate('/login'); }}
+            className="inline-flex items-center gap-1.5 text-[11px] font-medium px-3 py-1.5 rounded-lg transition-all duration-150 hover:opacity-80 cursor-pointer"
+            style={{ color: '#95BDB0', backgroundColor: 'rgba(255,255,255,0.05)', border: '1px solid rgba(255,255,255,0.08)' }}
+          >
+            <LogOut className="w-3.5 h-3.5" />
+            Sair da conta
+          </button>
         </div>
       </div>
     </div>

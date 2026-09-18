@@ -78,8 +78,8 @@ export const LoginPage: React.FC = () => {
         {/* Brand */}
         <div className="flex flex-col items-center text-center mb-6">
           <LojinhaIcon size={56} className="mb-3" />
-          <h1 className="font-baloo font-bold text-2xl flex items-center gap-2" style={{ color: 'var(--color-text-primary)' }}>
-            Loj<span style={{ color: '#C1F76B' }}>inha</span>
+          <h1 className="font-baloo font-bold text-2xl flex items-center gap-2" style={{ color: 'var(--color-text-primary)', whiteSpace: 'nowrap' }}>
+            <span>{'Loj'}<span style={{ color: '#C1F76B' }}>{'inha'}</span></span>
             <span className="text-xs px-2 py-0.5 rounded-md font-sans font-semibold"
               style={{ color: '#C1F76B', backgroundColor: 'rgba(193,247,107,0.12)', border: '1px solid rgba(193,247,107,0.25)' }}>
               PRO

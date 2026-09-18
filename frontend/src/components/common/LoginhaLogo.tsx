@@ -47,15 +47,14 @@ export const LojinhaLogo: React.FC<LoginhaLogoProps> = ({
       <LojinhaIcon size={iconSize} className="flex-shrink-0" />
       <div className="flex flex-col leading-tight">
         <div className="flex items-center gap-1.5">
-          <span 
-            className={`font-baloo font-bold tracking-normal ${textSize}`} 
-            style={{ 
+          <span
+            className={`font-baloo font-bold tracking-normal ${textSize}`}
+            style={{
               color: theme === 'light' ? '#0F2D26' : '#FDFEF8',
-              lineHeight: 1.1 
+              lineHeight: 1.1,
+              whiteSpace: 'nowrap',
             }}
-          >
-            Loj<span style={{ color: '#C1F76B' }}>inha</span>
-          </span>
+          >{'Loj'}<span style={{ color: '#C1F76B' }}>{'inha'}</span></span>
           <span
             className="text-[9px] font-extrabold uppercase px-1.5 py-0.5 rounded tracking-wide font-sans"
             style={{
