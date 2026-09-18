@@ -12,6 +12,18 @@ const supabaseKey =
 
 const supabase = createClient(supabaseUrl, supabaseKey);
 
+// Global channel for instant broadcast
+let realtimeChannel: any = null;
+function getRealtimeChannel() {
+  if (!realtimeChannel) {
+    realtimeChannel = supabase.channel("lojinha-realtime-global", {
+      config: { broadcast: { ack: false } },
+    });
+    realtimeChannel.subscribe();
+  }
+  return realtimeChannel;
+}
+
 export default async function handler(req: any, res: any) {
   res.setHeader("Access-Control-Allow-Origin", "*");
   res.setHeader("Access-Control-Allow-Methods", "GET, POST, OPTIONS");
@@ -26,14 +38,28 @@ export default async function handler(req: any, res: any) {
   }
 
   const payload = req.body || {};
-  console.log("[Webhook] Full payload:", JSON.stringify(payload));
+  console.log("[Webhook] Received event payload keys:", Object.keys(payload));
 
+  // Acknowledge immediately (200)
   res.status(200).json({ received: true });
 
   try {
     await processWebhook(payload);
   } catch (err) {
     console.error("[Webhook] Processing error:", err);
+  }
+}
+
+async function broadcastEvent(event: string, payload: any) {
+  try {
+    const ch = getRealtimeChannel();
+    await ch.send({
+      type: "broadcast",
+      event,
+      payload,
+    });
+  } catch (err) {
+    console.warn("[Webhook Broadcast] Error broadcasting:", err);
   }
 }
 
@@ -49,9 +75,18 @@ async function processWebhook(payload: Record<string, any>) {
   console.log(`[Webhook] Event: "${event}" | Instance: "${instanceId}"`);
   const eventLower = event.toLowerCase();
 
-  if (eventLower === "connected" || eventLower === "pairsuccess" || eventLower === "open" || eventLower === "connection") {
+  if (
+    eventLower === "connected" ||
+    eventLower === "pairsuccess" ||
+    eventLower === "open" ||
+    eventLower === "connection"
+  ) {
     await handleConnected(instanceId, data);
-  } else if (eventLower === "loggedout" || eventLower === "close" || eventLower === "disconnected") {
+  } else if (
+    eventLower === "loggedout" ||
+    eventLower === "close" ||
+    eventLower === "disconnected"
+  ) {
     await handleDisconnected(instanceId);
   } else if (
     eventLower === "message" ||
@@ -59,11 +94,12 @@ async function processWebhook(payload: Record<string, any>) {
     eventLower === "send_message" ||
     eventLower === "receive_message" ||
     eventLower === "messages.upsert" ||
-    eventLower === "message.received"
+    eventLower === "message.received" ||
+    eventLower === "messages_upsert"
   ) {
     await handleIncomingMessage(instanceId, data, payload);
   } else {
-    console.log(`[Webhook] Unhandled event: "${event}". Keys: ${Object.keys(payload).join(", ")}`);
+    console.log(`[Webhook] Unhandled event: "${event}". Payload keys: ${Object.keys(payload).join(", ")}`);
   }
 }
 
@@ -75,19 +111,39 @@ async function handleConnected(instanceId: string, data: Record<string, any>) {
     const n = rawJid.split("@")[0].split(":")[0].replace(/\D/g, "");
     if (n) phone = `+${n}`;
   }
-  const { error } = await supabase
+  const { data: updatedInst, error } = await supabase
     .from("whatsapp_instances")
     .update({ status: "connected", ...(phone ? { phone } : {}), last_connected: "Agora mesmo" })
-    .eq("id", instanceId);
+    .eq("id", instanceId)
+    .select()
+    .single();
+
+  if (updatedInst) {
+    await broadcastEvent("whatsapp:instance:change", {
+      storeId: updatedInst.store_id,
+      eventType: "UPDATE",
+      instance: updatedInst,
+    });
+  }
   console.log(`[Webhook] Connected ${instanceId} phone=${phone} err=${error?.message}`);
 }
 
 async function handleDisconnected(instanceId: string) {
   if (!instanceId) return;
-  await supabase
+  const { data: updatedInst } = await supabase
     .from("whatsapp_instances")
     .update({ status: "disconnected", phone: null, last_connected: "Desconectado" })
-    .eq("id", instanceId);
+    .eq("id", instanceId)
+    .select()
+    .single();
+
+  if (updatedInst) {
+    await broadcastEvent("whatsapp:instance:change", {
+      storeId: updatedInst.store_id,
+      eventType: "UPDATE",
+      instance: updatedInst,
+    });
+  }
   console.log(`[Webhook] Disconnected ${instanceId}`);
 }
 
@@ -96,7 +152,10 @@ async function handleIncomingMessage(
   data: Record<string, any>,
   fullPayload: Record<string, any>
 ) {
-  if (!instanceId) { console.log("[Webhook] No instanceId"); return; }
+  if (!instanceId) {
+    console.log("[Webhook] No instanceId in message payload");
+    return;
+  }
 
   const info = data?.Info || data?.info || data?.key || {};
   const msgObj = data?.Message || data?.message || data?.body || {};
@@ -104,7 +163,10 @@ async function handleIncomingMessage(
   const isGroup =
     info?.IsGroup || info?.isGroup ||
     (info?.remoteJid || info?.RemoteJid || "").includes("@g.us");
-  if (isGroup) { console.log("[Webhook] Group message, skipping"); return; }
+  if (isGroup) {
+    console.log("[Webhook] Group message, skipping");
+    return;
+  }
 
   const fromMe: boolean = info?.IsFromMe ?? info?.fromMe ?? info?.from_me ?? data?.fromMe ?? false;
 
@@ -131,7 +193,7 @@ async function handleIncomingMessage(
     cleanDigits = String(anyPhone).replace(/\D/g, "");
   }
   if (!cleanDigits) {
-    console.log("[Webhook] Cannot extract phone. Data keys:", Object.keys(data));
+    console.log("[Webhook] Cannot extract phone from message. Data keys:", Object.keys(data));
     return;
   }
 
@@ -139,23 +201,41 @@ async function handleIncomingMessage(
   const contactName =
     info?.PushName || info?.pushName || info?.notify || info?.FullName ||
     data?.pushName || data?.name || phone;
-  console.log(`[Webhook] Message: phone=${phone} name=${contactName} fromMe=${fromMe}`);
 
+  console.log(`[Webhook] Processing message: phone=${phone}, name=${contactName}, fromMe=${fromMe}`);
+
+  // Fetch store ID for this WhatsApp instance
   const { data: instRow } = await supabase
-    .from("whatsapp_instances").select("store_id").eq("id", instanceId).single();
-  if (!instRow?.store_id) { console.log(`[Webhook] No store for instance ${instanceId}`); return; }
+    .from("whatsapp_instances")
+    .select("store_id")
+    .eq("id", instanceId)
+    .single();
+
+  if (!instRow?.store_id) {
+    console.log(`[Webhook] No store found for instance ${instanceId}`);
+    return;
+  }
   const storeId = instRow.store_id;
 
+  // Extract text and media
   let text = "";
   let type: "text" | "image" | "audio" | "video" | "document" = "text";
   let mediaUrl: string | null = null;
   let mediaCaption: string | null = null;
+  let audioDuration: string | null = null;
 
   if (typeof msgObj === "string") {
     text = msgObj;
   } else {
-    text = msgObj?.conversation || msgObj?.extendedTextMessage?.text ||
-      msgObj?.text || msgObj?.body || data?.text || data?.body || "";
+    text =
+      msgObj?.conversation ||
+      msgObj?.extendedTextMessage?.text ||
+      msgObj?.text ||
+      msgObj?.body ||
+      data?.text ||
+      data?.body ||
+      "";
+
     const mediaType = info?.MediaType || info?.mediaType || "";
     if (mediaType === "image" || msgObj?.imageMessage) {
       type = "image";
@@ -165,10 +245,19 @@ async function handleIncomingMessage(
         : msgObj?.imageMessage?.url || null;
     } else if (mediaType === "video" || msgObj?.videoMessage) {
       type = "video";
+      mediaCaption = msgObj?.videoMessage?.caption || null;
       mediaUrl = msgObj?.videoMessage?.url || null;
     } else if (mediaType === "audio" || msgObj?.audioMessage) {
       type = "audio";
-      mediaUrl = msgObj?.audioMessage?.url || null;
+      const seconds = msgObj.audioMessage?.seconds || 0;
+      if (seconds > 0) {
+        const mins = Math.floor(seconds / 60);
+        const secs = seconds % 60;
+        audioDuration = `${mins}:${secs.toString().padStart(2, "0")}`;
+      }
+      mediaUrl = msgObj?.base64
+        ? `data:audio/ogg;base64,${msgObj.base64}`
+        : msgObj?.audioMessage?.url || null;
     }
   }
 
@@ -176,55 +265,156 @@ async function handleIncomingMessage(
   const ts = typeof tsRaw === "number" && tsRaw < 1e12 ? new Date(tsRaw * 1000) : new Date(tsRaw);
   const timeStr = ts.toLocaleTimeString("pt-PT", { hour: "2-digit", minute: "2-digit" });
   const dateStr = ts.toLocaleDateString("pt-PT");
+  const whatsappMessageId: string | null = info?.ID || info?.MessageID || data?.id || null;
 
+  // Find or create lead safely using maybeSingle (avoids single() crash when multiple rows exist)
   const { data: existingLead } = await supabase
-    .from("leads").select("id, unread_count, name")
-    .eq("store_id", storeId).eq("phone", phone).single();
+    .from("leads")
+    .select("*")
+    .eq("store_id", storeId)
+    .eq("phone", phone)
+    .order("created_at", { ascending: false })
+    .limit(1)
+    .maybeSingle();
 
   let leadId: string;
+  let finalLead: any = null;
+  let isNewLead = false;
+
+  const lastMsgText =
+    text ||
+    (type === "image"
+      ? fromMe ? "Foto enviada" : "Foto recebida"
+      : type === "video"
+      ? fromMe ? "Vídeo enviado" : "Vídeo recebido"
+      : type === "audio"
+      ? fromMe ? "Áudio enviado" : "Áudio recebido"
+      : "Mensagem");
+
   if (existingLead) {
     leadId = existingLead.id;
-    console.log(`[Webhook] Existing lead: ${leadId}`);
-  } else {
-    const { data: firstCol } = await supabase
-      .from("kanban_columns").select("id")
-      .eq("store_id", storeId).order("order_index", { ascending: true }).limit(1).single();
-
-    const lastMsgPreview = text || (type === "image" ? "Foto" : type === "video" ? "Video" : type === "audio" ? "Audio" : "Mensagem");
-    const { data: newLead, error: leadError } = await supabase
-      .from("leads").insert({
-        store_id: storeId, name: contactName, phone,
-        column_id: firstCol?.id || null,
-        unread_count: fromMe ? 0 : 1,
-        last_message: lastMsgPreview,
+    const newUnread = fromMe ? existingLead.unread_count : (existingLead.unread_count || 0) + 1;
+    
+    const { data: updatedLead } = await supabase
+      .from("leads")
+      .update({
+        name: contactName && contactName !== phone ? contactName : existingLead.name,
+        last_message: lastMsgText,
         last_message_time: timeStr,
         last_message_timestamp: Date.now(),
-        deal_value: 0, tags: [],
-      }).select("id").single();
+        unread_count: newUnread,
+        updated_at: new Date().toISOString(),
+      })
+      .eq("id", leadId)
+      .select()
+      .single();
 
-    if (leadError || !newLead) { console.error("[Webhook] Lead insert error:", leadError?.message); return; }
+    finalLead = updatedLead || {
+      ...existingLead,
+      last_message: lastMsgText,
+      last_message_time: timeStr,
+      last_message_timestamp: Date.now(),
+      unread_count: newUnread,
+    };
+    console.log(`[Webhook] Updated existing lead: ${leadId} (${phone})`);
+  } else {
+    // Find first kanban column for this store
+    const { data: firstCol } = await supabase
+      .from("kanban_columns")
+      .select("id")
+      .eq("store_id", storeId)
+      .order("order_index", { ascending: true })
+      .limit(1)
+      .maybeSingle();
+
+    const targetColumnId = firstCol?.id || null;
+
+    const { data: newLead, error: leadError } = await supabase
+      .from("leads")
+      .insert({
+        store_id: storeId,
+        name: contactName || phone,
+        phone,
+        column_id: targetColumnId,
+        unread_count: fromMe ? 0 : 1,
+        last_message: lastMsgText,
+        last_message_time: timeStr,
+        last_message_timestamp: Date.now(),
+        deal_value: 0,
+        tags: [],
+      })
+      .select()
+      .single();
+
+    if (leadError || !newLead) {
+      console.error("[Webhook] Lead insert error:", leadError?.message);
+      return;
+    }
+
     leadId = newLead.id;
-    console.log(`[Webhook] Created lead: ${leadId}`);
+    finalLead = newLead;
+    isNewLead = true;
+    console.log(`[Webhook] Created new lead: ${leadId} (${phone})`);
   }
 
+  // Deduplicate recent sent messages from CRM
   if (fromMe && text) {
     const tenSecAgo = new Date(Date.now() - 10000).toISOString();
-    const { data: recent } = await supabase.from("messages").select("id")
-      .eq("lead_id", leadId).eq("from_me", true).eq("text", text).gte("created_at", tenSecAgo).limit(1);
-    if (recent && recent.length > 0) { console.log("[Webhook] Duplicate, skipping"); return; }
+    const { data: recent } = await supabase
+      .from("messages")
+      .select("id")
+      .eq("lead_id", leadId)
+      .eq("from_me", true)
+      .eq("text", text)
+      .gte("created_at", tenSecAgo)
+      .limit(1);
+
+    if (recent && recent.length > 0) {
+      console.log("[Webhook] Duplicate sent message, skipping insert");
+      return;
+    }
   }
 
-  const { error: msgError } = await supabase.from("messages").insert({
-    store_id: storeId, lead_id: leadId, from_me: fromMe, type,
-    text: text || null, media_url: mediaUrl, media_caption: mediaCaption,
-    timestamp: timeStr, full_date: dateStr, status: fromMe ? "sent" : "delivered",
-  });
-  console.log(`[Webhook] Inserted message. Error: ${msgError?.message}`);
+  // Insert message into database
+  const { data: insertedMsg, error: msgError } = await supabase
+    .from("messages")
+    .insert({
+      store_id: storeId,
+      lead_id: leadId,
+      from_me: fromMe,
+      type,
+      text: text || null,
+      media_url: mediaUrl,
+      media_caption: mediaCaption,
+      audio_duration: audioDuration,
+      timestamp: timeStr,
+      full_date: dateStr,
+      status: fromMe ? "sent" : "delivered",
+      whatsapp_message_id: whatsappMessageId,
+    })
+    .select()
+    .single();
 
-  const lastMsgText = text || (type === "image" ? (fromMe ? "Foto enviada" : "Foto") : type === "video" ? "Video" : type === "audio" ? "Audio" : "Mensagem");
-  await supabase.from("leads").update({
-    last_message: lastMsgText, last_message_time: timeStr,
-    last_message_timestamp: Date.now(),
-    ...(!fromMe ? { unread_count: (existingLead?.unread_count || 0) + 1 } : {}),
-  }).eq("id", leadId);
+  if (msgError) {
+    console.error("[Webhook] Insert message error:", msgError.message);
+  } else {
+    console.log(`[Webhook] Message inserted: ${insertedMsg?.id}`);
+  }
+
+  // Broadcast instantly to all connected frontends
+  if (finalLead) {
+    await broadcastEvent("lead:change", {
+      storeId,
+      eventType: isNewLead ? "INSERT" : "UPDATE",
+      lead: finalLead,
+    });
+  }
+
+  if (insertedMsg) {
+    await broadcastEvent("message:new", {
+      storeId,
+      message: insertedMsg,
+      lead: finalLead,
+    });
+  }
 }

@@ -32,8 +32,15 @@ export const KanbanBoard: React.FC<KanbanBoardProps> = ({
   return (
     <div className="flex-1 h-full min-h-0 overflow-x-auto overflow-y-hidden pl-4 py-3 pr-0 bg-[#091E19] kanban-column-scroll select-none">
       <div className="flex items-stretch gap-4 h-full w-max min-w-full pr-4 pb-1">
-        {sortedColumns.map((col) => {
-          const colLeads = leads.filter((lead) => lead.columnId === col.id);
+        {sortedColumns.map((col, index) => {
+          const colLeads = leads.filter((lead) => {
+            if (lead.columnId === col.id) return true;
+            // Fallback: If lead has no columnId or its columnId is not in any active column, place it in the first column
+            if (index === 0 && (!lead.columnId || !sortedColumns.some((c) => c.id === lead.columnId))) {
+              return true;
+            }
+            return false;
+          });
           return (
             <KanbanColumnComponent
               key={col.id}

@@ -118,32 +118,19 @@ function CockpitWorkspace() {
     navigate('/login');
   };
 
-  // Clean legacy mock data from past runs
+  // Clean legacy mock data AND stale column/lead caches that may have mock IDs (col-new, etc.)
   useEffect(() => {
     localStorage.removeItem('lojinha_leads');
     localStorage.removeItem('lojinha_messages');
-  }, []);
+    // Remove stale column and lead caches — Supabase is always the source of truth
+    localStorage.removeItem(`lojinha_columns_${currentStoreId}`);
+    localStorage.removeItem(`lojinha_leads_${currentStoreId}`);
+  }, [currentStoreId]);
 
-  // SaaS Tenant-scoped State
-  const [columns, setColumns] = useState<KanbanColumn[]>(() => {
-    const saved = localStorage.getItem(`lojinha_columns_${currentStoreId}`);
-    if (saved) {
-      try {
-        return JSON.parse(saved) as KanbanColumn[];
-      } catch {}
-    }
-    return initialColumns;
-  });
+  // SaaS Tenant-scoped State — start empty, always load from Supabase
+  const [columns, setColumns] = useState<KanbanColumn[]>([]);
 
-  const [leads, setLeads] = useState<ContactLead[]>(() => {
-    const saved = localStorage.getItem(`lojinha_leads_${currentStoreId}`);
-    if (saved) {
-      try {
-        return JSON.parse(saved) as ContactLead[];
-      } catch {}
-    }
-    return [];
-  });
+  const [leads, setLeads] = useState<ContactLead[]>([]);
 
   const [messages, setMessages] = useState<Record<string, ChatMessage[]>>(() => {
     const saved = localStorage.getItem(`lojinha_messages_${currentStoreId}`);
@@ -303,13 +290,14 @@ function CockpitWorkspace() {
             } else if (incomingLead) {
               // Brand new lead card arriving in realtime
               const l = incomingLead;
+              const fallbackColId = columns[0]?.id || 'col-new';
               return [
                 {
                   id: l.id || leadId,
                   name: l.name || message.contactId,
                   phone: l.phone || '',
                   avatar: l.avatar || undefined,
-                  columnId: l.column_id || 'col-new',
+                  columnId: l.column_id || fallbackColId,
                   unreadCount: isCurrentlyActive || message.fromMe ? 0 : 1,
                   lastMessage: msgPreview,
                   lastMessageTime: message.timestamp || 'Agora',
@@ -346,6 +334,8 @@ function CockpitWorkspace() {
           chatService.markAsRead(l.id);
         }
 
+        const fallbackColId = columns[0]?.id || 'col-new';
+
         if (eventType === 'INSERT') {
           setLeads((prev) => [
             {
@@ -353,7 +343,7 @@ function CockpitWorkspace() {
               name: l.name || '',
               phone: l.phone || '',
               avatar: l.avatar || undefined,
-              columnId: l.column_id || 'col-new',
+              columnId: l.column_id || fallbackColId,
               unreadCount: isCurrentlyActive ? 0 : (l.unread_count || 0),
               lastMessage: l.last_message || '',
               lastMessageTime: l.last_message_time || 'Agora',
