@@ -192,6 +192,7 @@ export const ChatPanel: React.FC<ChatPanelProps> = ({
 
   // Maximized Media Lightbox & Gallery state
   const [viewingMediaIndex, setViewingMediaIndex] = useState<number | null>(null);
+  const [audioError, setAudioError] = useState<string | null>(null);
 
   // Refs
   const messagesEndRef = useRef<HTMLDivElement>(null);
@@ -618,7 +619,8 @@ export const ChatPanel: React.FC<ChatPanelProps> = ({
       }, 1000);
     } catch (err) {
       console.error('Microphone access error:', err);
-      alert('Não foi possível abrir o microfone. Por favor, permita o acesso ao microfone no navegador.');
+      setAudioError('Não foi possível aceder ao microfone. Por favor, permita o microfone no navegador.');
+      setTimeout(() => setAudioError(null), 5000);
     }
   };
 
@@ -1635,86 +1637,95 @@ export const ChatPanel: React.FC<ChatPanelProps> = ({
             </div>
           </div>
         ) : (
-          <div className="p-3 flex items-center gap-2">
-            <button
-              type="button"
-              onClick={() => {
-                setShowEmojiPicker(!showEmojiPicker);
-                setShowAttachMenu(false);
-              }}
-              className={`p-2 rounded-xl transition-all duration-150 hover:scale-110 active:scale-90 cursor-pointer ${
-                showEmojiPicker
-                  ? 'text-[#C1F76B] bg-[#14382F]'
-                  : 'text-[#95BDB0] hover:text-[#FDFEF8] hover:bg-[#14382F]'
-              }`}
-              title="Inserir Emoji"
-            >
-              <Smile className="w-5 h-5" />
-            </button>
-
-            <button
-              type="button"
-              onClick={() => {
-                setShowAttachMenu(!showAttachMenu);
-                setShowEmojiPicker(false);
-              }}
-              className={`p-2 rounded-xl transition-all duration-150 hover:scale-110 active:scale-90 cursor-pointer ${
-                showAttachMenu
-                  ? 'text-[#C1F76B] bg-[#14382F]'
-                  : 'text-[#95BDB0] hover:text-[#FDFEF8] hover:bg-[#14382F]'
-              }`}
-              title="Anexar Fotos, Produtos ou Informações"
-            >
-              <Paperclip className="w-5 h-5" />
-            </button>
-
-            {/* Input box with auto-adjusting height starting compact at 42px */}
-            <textarea
-              ref={textareaRef}
-              rows={1}
-              value={currentInputValue}
-              onChange={(e) => handleTextChange(e.target.value)}
-              onInput={(e) => {
-                const target = e.currentTarget;
-                target.style.height = 'auto';
-                target.style.height = `${Math.min(Math.max(42, target.scrollHeight), 128)}px`;
-              }}
-              onKeyDown={handleKeyDown}
-              placeholder={
-                attachedMedias.length > 0
-                  ? attachedMedias.length === 1
-                    ? "Adicione uma legenda (opcional)..."
-                    : `Legenda da mídia selecionada (${attachedMedias.findIndex(m => m.id === (activeMedia?.id || attachedMedias[0]?.id)) + 1}/${attachedMedias.length}) [opcional]...`
-                  : "Digite uma mensagem ou digite / para atalhos..."
-              }
-              className="flex-1 min-h-[42px] max-h-32 bg-[#2D6B5A] text-sm text-[#FDFEF8] placeholder-[#95BDB0] px-3.5 py-2.5 rounded-2xl border border-transparent focus:border-[#C1F76B] focus:outline-none resize-none transition-[height] duration-75 leading-snug"
-            />
-
-
-            {inputText.trim() || attachedMedias.length > 0 ? (
-              <button
-                type="button"
-                onClick={handleSend}
-                className="w-10 h-10 rounded-xl bg-[#C1F76B] hover:bg-[#219653] hover:brightness-110 text-[#0F2D26] flex items-center justify-center transition-all duration-150 hover:scale-105 active:scale-95 cursor-pointer shadow-md hover:shadow-[#C1F76B]/40 flex-shrink-0"
-                title={
-                  attachedMedias.length > 0
-                    ? `Enviar ${attachedMedias.length} mídia(s)`
-                    : "Enviar mensagem"
-                }
-              >
-                <Send className="w-4 h-4 ml-0.5" />
-              </button>
-            ) : (
-              <button
-                type="button"
-                onClick={handleStartRecording}
-                className="w-10 h-10 rounded-xl bg-[#2D6B5A] hover:bg-[#C1F76B] text-[#95BDB0] hover:text-[#FDFEF8] flex items-center justify-center transition-all duration-150 hover:scale-105 active:scale-95 cursor-pointer flex-shrink-0"
-                title="Gravar / Enviar Nota de Voz"
-              >
-                <Mic className="w-5 h-5" />
-              </button>
+          <>
+            {audioError && (
+              <div className="mx-3 mt-2 p-2.5 rounded-xl bg-red-500/15 border border-red-500/30 text-red-200 text-xs flex items-center gap-2 animate-in fade-in">
+                <AlertCircle className="w-4 h-4 text-red-400 flex-shrink-0" />
+                <span>{audioError}</span>
+              </div>
             )}
-          </div>
+
+            <div className="p-3 flex items-center gap-2">
+              <button
+                type="button"
+                onClick={() => {
+                  setShowEmojiPicker(!showEmojiPicker);
+                  setShowAttachMenu(false);
+                }}
+                className={`p-2 rounded-xl transition-all duration-150 hover:scale-110 active:scale-90 cursor-pointer ${
+                  showEmojiPicker
+                    ? 'text-[#C1F76B] bg-[#14382F]'
+                    : 'text-[#95BDB0] hover:text-[#FDFEF8] hover:bg-[#14382F]'
+                }`}
+                title="Inserir Emoji"
+              >
+                <Smile className="w-5 h-5" />
+              </button>
+
+              <button
+                type="button"
+                onClick={() => {
+                  setShowAttachMenu(!showAttachMenu);
+                  setShowEmojiPicker(false);
+                }}
+                className={`p-2 rounded-xl transition-all duration-150 hover:scale-110 active:scale-90 cursor-pointer ${
+                  showAttachMenu
+                    ? 'text-[#C1F76B] bg-[#14382F]'
+                    : 'text-[#95BDB0] hover:text-[#FDFEF8] hover:bg-[#14382F]'
+                }`}
+                title="Anexar Fotos, Produtos ou Informações"
+              >
+                <Paperclip className="w-5 h-5" />
+              </button>
+
+              {/* Input box with auto-adjusting height starting compact at 42px */}
+              <textarea
+                ref={textareaRef}
+                rows={1}
+                value={currentInputValue}
+                onChange={(e) => handleTextChange(e.target.value)}
+                onInput={(e) => {
+                  const target = e.currentTarget;
+                  target.style.height = 'auto';
+                  target.style.height = `${Math.min(Math.max(42, target.scrollHeight), 128)}px`;
+                }}
+                onKeyDown={handleKeyDown}
+                placeholder={
+                  attachedMedias.length > 0
+                    ? attachedMedias.length === 1
+                      ? "Adicione uma legenda (opcional)..."
+                      : `Legenda da mídia selecionada (${attachedMedias.findIndex(m => m.id === (activeMedia?.id || attachedMedias[0]?.id)) + 1}/${attachedMedias.length}) [opcional]...`
+                    : "Digite uma mensagem ou digite / para atalhos..."
+                }
+                className="flex-1 min-h-[42px] max-h-32 bg-[#2D6B5A] text-sm text-[#FDFEF8] placeholder-[#95BDB0] px-3.5 py-2.5 rounded-2xl border border-transparent focus:border-[#C1F76B] focus:outline-none resize-none transition-[height] duration-75 leading-snug"
+              />
+
+
+              {inputText.trim() || attachedMedias.length > 0 ? (
+                <button
+                  type="button"
+                  onClick={handleSend}
+                  className="w-10 h-10 rounded-xl bg-[#C1F76B] hover:bg-[#219653] hover:brightness-110 text-[#0F2D26] flex items-center justify-center transition-all duration-150 hover:scale-105 active:scale-95 cursor-pointer shadow-md hover:shadow-[#C1F76B]/40 flex-shrink-0"
+                  title={
+                    attachedMedias.length > 0
+                      ? `Enviar ${attachedMedias.length} mídia(s)`
+                      : "Enviar mensagem"
+                  }
+                >
+                  <Send className="w-4 h-4 ml-0.5" />
+                </button>
+              ) : (
+                <button
+                  type="button"
+                  onClick={handleStartRecording}
+                  className="w-10 h-10 rounded-xl bg-[#2D6B5A] hover:bg-[#C1F76B] text-[#95BDB0] hover:text-[#FDFEF8] flex items-center justify-center transition-all duration-150 hover:scale-105 active:scale-95 cursor-pointer flex-shrink-0"
+                  title="Gravar / Enviar Nota de Voz"
+                >
+                  <Mic className="w-5 h-5" />
+                </button>
+              )}
+            </div>
+          </>
         )}
       </div>
 

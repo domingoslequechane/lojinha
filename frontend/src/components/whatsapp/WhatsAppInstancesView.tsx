@@ -49,6 +49,8 @@ export const WhatsAppInstancesView: React.FC<WhatsAppInstancesViewProps> = ({
   const [pairingCode, setPairingCode] = useState<string | null>(null);
   const [isRefreshingQr, setIsRefreshingQr] = useState(false);
   const [isCreatingInstance, setIsCreatingInstance] = useState(false);
+  const [createError, setCreateError] = useState<string | null>(null);
+  const [pairingError, setPairingError] = useState<string | null>(null);
 
   const [connectionSuccess, setConnectionSuccess] = useState<{ name: string; phone?: string } | null>(null);
 
@@ -200,17 +202,18 @@ export const WhatsAppInstancesView: React.FC<WhatsAppInstancesViewProps> = ({
   // Generate real Pairing Code from Evolution GO
   const handleGeneratePairingCode = async () => {
     if (!selectedForQr) return;
+    setPairingError(null);
     try {
       const cleanPhone = pairingPhoneNumber.replace(/\D/g, '');
       if (cleanPhone.length < 8) {
-        alert('Por favor digite um número válido com código do país (ex: +258 84 000 0000).');
+        setPairingError('Por favor digite um número válido com código do país (ex: +258 84 000 0000).');
         return;
       }
       const code = await evolutionService.getPairingCode(selectedForQr.id, pairingPhoneNumber);
       setPairingCode(code);
-    } catch (err) {
+    } catch (err: any) {
       console.error('Failed to generate pairing code:', err);
-      alert('Não foi possível gerar o código. Verifique se o telemóvel está correto.');
+      setPairingError(err?.message || 'Não foi possível gerar o código. Verifique se o telemóvel está correto.');
     }
   };
 
@@ -220,6 +223,7 @@ export const WhatsAppInstancesView: React.FC<WhatsAppInstancesViewProps> = ({
     if (!newInstanceName.trim() || isCreatingInstance) return;
 
     setIsCreatingInstance(true);
+    setCreateError(null);
     try {
       const newInst = await evolutionService.createInstance(storeId || 'default', newInstanceName.trim());
       const updated = [...instList, newInst];
@@ -228,9 +232,12 @@ export const WhatsAppInstancesView: React.FC<WhatsAppInstancesViewProps> = ({
       setNewInstanceName('');
       setIsNewInstanceModalOpen(false);
       handleOpenConnect(newInst);
-    } catch (err) {
+    } catch (err: any) {
       console.error('Failed to create instance:', err);
-      alert('Erro ao criar instância na Evolution GO. Verifique se o servidor backend está online.');
+      setCreateError(
+        err?.message ||
+        'Não foi possível conectar ao servidor backend. Verifique se o backend está ativo e configurado corretamente.'
+      );
     } finally {
       setIsCreatingInstance(false);
     }
@@ -705,6 +712,13 @@ export const WhatsAppInstancesView: React.FC<WhatsAppInstancesViewProps> = ({
                         </div>
                       </div>
 
+                      {pairingError && (
+                        <div className="p-3 rounded-xl bg-red-500/15 border border-red-500/30 text-red-200 text-xs flex items-center gap-2 animate-in fade-in">
+                          <AlertCircle className="w-4 h-4 text-red-400 flex-shrink-0" />
+                          <span>{pairingError}</span>
+                        </div>
+                      )}
+
                       {pairingCode && (
                         <div className="p-4 rounded-2xl bg-[#0B241D] border border-[#C1F76B]/40 text-center space-y-2">
                           <p className="text-xs text-[#95BDB0]">Digite este código no seu telemóvel:</p>
@@ -761,7 +775,10 @@ export const WhatsAppInstancesView: React.FC<WhatsAppInstancesViewProps> = ({
                 Criar Nova Instância WhatsApp
               </h3>
               <button
-                onClick={() => setIsNewInstanceModalOpen(false)}
+                onClick={() => {
+                  setIsNewInstanceModalOpen(false);
+                  setCreateError(null);
+                }}
                 className="p-1.5 rounded-lg text-[#95BDB0] hover:text-[#FDFEF8] hover:bg-[#14382F] transition-colors"
                 title="Fechar"
               >
@@ -770,6 +787,13 @@ export const WhatsAppInstancesView: React.FC<WhatsAppInstancesViewProps> = ({
             </div>
 
             <form onSubmit={handleCreateInstance} className="p-5 space-y-4">
+              {createError && (
+                <div className="p-3 rounded-xl bg-red-500/15 border border-red-500/30 text-red-200 text-xs flex items-start gap-2.5 animate-in fade-in">
+                  <AlertCircle className="w-4 h-4 text-red-400 flex-shrink-0 mt-0.5" />
+                  <span className="leading-snug">{createError}</span>
+                </div>
+              )}
+
               <div>
                 <label className="text-[11px] font-semibold text-[#95BDB0] block mb-1">
                   Nome da Instância *
@@ -778,7 +802,10 @@ export const WhatsAppInstancesView: React.FC<WhatsAppInstancesViewProps> = ({
                   type="text"
                   required
                   value={newInstanceName}
-                  onChange={(e) => setNewInstanceName(e.target.value)}
+                  onChange={(e) => {
+                    setNewInstanceName(e.target.value);
+                    if (createError) setCreateError(null);
+                  }}
                   placeholder="Ex: Linha 2 - Atendimento Matola"
                   className="w-full bg-[#14382F] text-xs text-[#FDFEF8] px-3.5 py-2.5 rounded-xl border border-[#2D6B5A] focus:border-[#C1F76B] focus:outline-none"
                 />
@@ -795,7 +822,10 @@ export const WhatsAppInstancesView: React.FC<WhatsAppInstancesViewProps> = ({
               <div className="pt-3 border-t border-[#235447] flex items-center justify-end gap-2">
                 <button
                   type="button"
-                  onClick={() => setIsNewInstanceModalOpen(false)}
+                  onClick={() => {
+                    setIsNewInstanceModalOpen(false);
+                    setCreateError(null);
+                  }}
                   className="px-4 py-2 rounded-xl text-xs font-medium text-[#95BDB0] hover:text-[#FDFEF8]"
                 >
                   Cancelar
