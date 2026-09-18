@@ -12,18 +12,6 @@ const supabaseKey =
 
 const supabase = createClient(supabaseUrl, supabaseKey);
 
-// Global channel for instant broadcast
-let realtimeChannel: any = null;
-function getRealtimeChannel() {
-  if (!realtimeChannel) {
-    realtimeChannel = supabase.channel("lojinha-realtime-global", {
-      config: { broadcast: { ack: false } },
-    });
-    realtimeChannel.subscribe();
-  }
-  return realtimeChannel;
-}
-
 export default async function handler(req: any, res: any) {
   res.setHeader("Access-Control-Allow-Origin", "*");
   res.setHeader("Access-Control-Allow-Methods", "GET, POST, OPTIONS");
@@ -40,23 +28,27 @@ export default async function handler(req: any, res: any) {
   const payload = req.body || {};
   console.log("[Webhook] Received event payload keys:", Object.keys(payload));
 
-  // Acknowledge immediately (200)
-  res.status(200).json({ received: true });
-
   try {
     await processWebhook(payload);
   } catch (err) {
     console.error("[Webhook] Processing error:", err);
   }
+
+  return res.status(200).json({ received: true });
 }
 
 async function broadcastEvent(event: string, payload: any) {
   try {
-    const ch = getRealtimeChannel();
-    await ch.send({
-      type: "broadcast",
-      event,
-      payload,
+    const ch = supabase.channel(`broadcast-webhook-${Date.now()}`);
+    ch.subscribe(async (status) => {
+      if (status === 'SUBSCRIBED') {
+        await ch.send({
+          type: "broadcast",
+          event,
+          payload,
+        });
+        supabase.removeChannel(ch);
+      }
     });
   } catch (err) {
     console.warn("[Webhook Broadcast] Error broadcasting:", err);
