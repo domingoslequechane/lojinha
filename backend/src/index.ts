@@ -21,11 +21,24 @@ app.use(express.urlencoded({ extended: true, limit: '100mb' }));
 // Static media files serving (videos, photos, audios)
 app.use('/uploads', express.static(path.join(__dirname, '../uploads')));
 
-const allowedOriginsRaw = (process.env.ALLOWED_ORIGINS ?? 'http://localhost:5173').trim();
-const allowAllOrigins = allowedOriginsRaw === '*';
-const allowedOrigins = allowedOriginsRaw.split(',').map((o) => o.trim());
+const defaultAllowed = [
+  'http://localhost:5173',
+  'http://localhost:3000',
+  'http://localhost:8080',
+  'https://lojinha.my',
+  'https://www.lojinha.my',
+  'http://lojinha.my',
+  'http://www.lojinha.my',
+];
 
-// Localtunnel bypass — evita que o tunnel exija clique no browser antes de aceitar requests
+const allowedOriginsRaw = (process.env.ALLOWED_ORIGINS ?? '').trim();
+const allowAllOrigins = allowedOriginsRaw === '*';
+const configuredOrigins = allowedOriginsRaw
+  ? allowedOriginsRaw.split(',').map((o) => o.trim().replace(/\/$/, ''))
+  : [];
+const allowedOrigins = Array.from(new Set([...defaultAllowed, ...configuredOrigins]));
+
+// Localtunnel / Tunnel headers
 app.use((_req, res, next) => {
   res.setHeader('Bypass-Tunnel-Reminder', 'yes');
   next();
@@ -34,15 +47,28 @@ app.use((_req, res, next) => {
 app.use(
   cors({
     origin: (origin, callback) => {
-      // Permite chamadas sem origin (ex: curl, Postman, webhook)
-      if (!origin || allowAllOrigins || allowedOrigins.includes(origin)) {
+      // Permite chamadas sem origin (ex: curl, Postman, webhook interno da Evolution)
+      if (!origin || allowAllOrigins) {
+        callback(null, true);
+        return;
+      }
+
+      const normalized = origin.replace(/\/$/, '');
+      const isAllowed =
+        allowedOrigins.includes(normalized) ||
+        normalized.endsWith('lojinha.my') ||
+        normalized.includes('lojinha.my');
+
+      if (isAllowed) {
         callback(null, true);
       } else {
+        console.warn(`[CORS] Request blocked from unauthorized origin: ${origin}`);
         callback(new Error(`CORS: origin not allowed — ${origin}`));
       }
     },
     methods: ['GET', 'POST', 'DELETE', 'PATCH', 'OPTIONS'],
-    allowedHeaders: ['Content-Type', 'x-internal-secret', 'x-store-id'],
+    allowedHeaders: ['Content-Type', 'x-internal-secret', 'x-store-id', 'Authorization'],
+    credentials: true,
   })
 );
 
