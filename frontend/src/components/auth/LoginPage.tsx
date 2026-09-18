@@ -5,10 +5,8 @@ import {
   Lock, 
   Eye, 
   EyeOff, 
-  ArrowRight, 
-  ShieldCheck, 
-  Smartphone, 
-  Zap,
+  ArrowRight,
+  Smartphone,
   AlertCircle,
 } from 'lucide-react';
 import { useAuth } from '../../context/AuthContext';
@@ -169,19 +167,18 @@ export const LoginPage: React.FC = () => {
         </div>
       </div>
 
-      {/* Feature Pills */}
-      <div className="mt-8 flex flex-wrap items-center justify-center gap-3 text-xs max-w-lg text-center"
-        style={{ color: 'var(--color-text-secondary)' }}>
-        {[
-          { icon: <Smartphone className="w-3.5 h-3.5 text-emerald-400" />, label: 'WhatsApp Evolution API' },
-          { icon: <Zap className="w-3.5 h-3.5 text-amber-400" />, label: 'Respostas Rápidas em 1 Toque' },
-          { icon: <ShieldCheck className="w-3.5 h-3.5 text-sky-400" />, label: 'M-Pesa & e-Mola' },
-        ].map(({ icon, label }) => (
-          <span key={label} className="flex items-center gap-1.5 px-3 py-1 rounded-full"
-            style={{ backgroundColor: 'var(--color-surface-raised)', border: '1px solid var(--color-border)' }}>
-            {icon}{label}
-          </span>
-        ))}
+      {/* Footer credit */}
+      <div className="mt-8 text-center text-[11px]" style={{ color: 'var(--color-text-muted)' }}>
+        Desenvolvido por{' '}
+        <a
+          href="https://onixagence.com"
+          target="_blank"
+          rel="noopener noreferrer"
+          className="font-semibold transition-opacity hover:opacity-80"
+          style={{ color: 'var(--color-text-secondary)' }}
+        >
+          Onix Agence
+        </a>
       </div>
 
       {/* 2FA Modal */}
