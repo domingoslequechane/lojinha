@@ -49,13 +49,15 @@ async function processWebhook(payload: Record<string, any>) {
   console.log(`[Webhook] Event: "${event}" | Instance: "${instanceId}"`);
   const eventLower = event.toLowerCase();
 
-  if (eventLower === "connected" || eventLower === "pairsuccess" || eventLower === "open") {
+  if (eventLower === "connected" || eventLower === "pairsuccess" || eventLower === "open" || eventLower === "connection") {
     await handleConnected(instanceId, data);
   } else if (eventLower === "loggedout" || eventLower === "close" || eventLower === "disconnected") {
     await handleDisconnected(instanceId);
   } else if (
     eventLower === "message" ||
     eventLower === "sendmessage" ||
+    eventLower === "send_message" ||
+    eventLower === "receive_message" ||
     eventLower === "messages.upsert" ||
     eventLower === "message.received"
   ) {
