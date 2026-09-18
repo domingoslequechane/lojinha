@@ -47,20 +47,41 @@ export const ImportCsvModal: React.FC<ImportCsvModalProps> = ({
   const [importStats, setImportStats] = useState<{ total: number; success: number } | null>(null);
 
   const cleanPhone = (raw: string): string => {
+    if (!raw) return '';
     const digits = raw.replace(/\D/g, '');
-    if (!digits) return raw;
+    if (!digits) return raw.trim();
     if (raw.trim().startsWith('+')) {
       return `+${digits}`;
     }
-    // If 9 digits starting with 8 (common in Mozambique 82, 84, 85, 86, 87)
+    // If 9 digits starting with 8 (Mozambique cell: 82, 83, 84, 85, 86, 87)
     if (digits.length === 9 && digits.startsWith('8')) {
       return `+258${digits}`;
     }
-    // If starts with 258
-    if (digits.startsWith('258') && digits.length === 12) {
+    // If 12 digits starting with 258
+    if (digits.startsWith('258') && (digits.length === 12 || digits.length === 11)) {
       return `+${digits}`;
     }
     return `+${digits}`;
+  };
+
+  const splitCsvLine = (line: string, delimiter: string): string[] => {
+    const result: string[] = [];
+    let current = '';
+    let inQuotes = false;
+
+    for (let i = 0; i < line.length; i++) {
+      const char = line[i];
+      if (char === '"' || char === "'") {
+        inQuotes = !inQuotes;
+      } else if (char === delimiter && !inQuotes) {
+        result.push(current.trim().replace(/^["']|["']$/g, ''));
+        current = '';
+      } else {
+        current += char;
+      }
+    }
+    result.push(current.trim().replace(/^["']|["']$/g, ''));
+    return result;
   };
 
   const parseCsvContent = (text: string): ParsedContact[] => {
@@ -80,9 +101,9 @@ export const ImportCsvModal: React.FC<ImportCsvModalProps> = ({
 
     if (lines.length === 0) return [];
 
-    const headers = lines[0]
-      .split(delimiter)
-      .map((h) => h.replace(/^["']|["']$/g, '').trim().toLowerCase());
+    const headers = splitCsvLine(lines[0], delimiter).map((h) =>
+      h.toLowerCase().normalize('NFD').replace(/[\u0300-\u036f]/g, '').trim()
+    );
 
     let nameIdx = -1;
     let phoneIdx = -1;
@@ -90,44 +111,85 @@ export const ImportCsvModal: React.FC<ImportCsvModalProps> = ({
     let valIdx = -1;
     let locIdx = -1;
 
+    const phoneHeaders = [
+      'telefone', 'tel', 'phone', 'celular', 'cel', 'whatsapp', 'numero', 'mobile',
+      'telemovel', 'fone', 'msisdn', 'cell', 'cellphone', 'wa', 'number', 'telm', 'contacto'
+    ];
+    const nameHeaders = [
+      'nome', 'name', 'cliente', 'lead', 'fullname', 'full_name', 'nome_completo',
+      'primeiro_nome', 'first_name', 'user', 'usuario', 'contato', 'contact'
+    ];
+    const notesHeaders = [
+      'nota', 'notas', 'note', 'notes', 'observacao', 'observacoes', 'obs',
+      'detalhe', 'detalhes', 'mensagem', 'msg', 'descricao', 'description'
+    ];
+    const valHeaders = ['valor', 'deal', 'preco', 'price', 'valor_venda', 'quantia', 'deal_value', 'value'];
+    const locHeaders = ['cidade', 'local', 'localizacao', 'address', 'endereco', 'provincia', 'bairro'];
+
     headers.forEach((h, idx) => {
-      if (['nome', 'name', 'cliente', 'contato', 'contact', 'lead'].includes(h)) nameIdx = idx;
-      if (['telefone', 'tel', 'phone', 'celular', 'cel', 'whatsapp', 'número', 'numero', 'mobile'].includes(h)) phoneIdx = idx;
-      if (['nota', 'notas', 'note', 'notes', 'observação', 'observacao', 'obs'].includes(h)) notesIdx = idx;
-      if (['valor', 'deal', 'preço', 'preco', 'price'].includes(h)) valIdx = idx;
-      if (['cidade', 'local', 'localização', 'localizacao', 'address', 'endereço', 'endereco'].includes(h)) locIdx = idx;
+      if (nameHeaders.includes(h) && nameIdx === -1) nameIdx = idx;
+      if (phoneHeaders.includes(h) && phoneIdx === -1) phoneIdx = idx;
+      if (notesHeaders.includes(h) && notesIdx === -1) notesIdx = idx;
+      if (valHeaders.includes(h) && valIdx === -1) valIdx = idx;
+      if (locHeaders.includes(h) && locIdx === -1) locIdx = idx;
     });
 
-    const hasHeader = nameIdx !== -1 || phoneIdx !== -1;
+    const hasHeader = nameIdx !== -1 || phoneIdx !== -1 || notesIdx !== -1;
     const startIndex = hasHeader ? 1 : 0;
 
-    if (!hasHeader) {
-      nameIdx = 0;
-      phoneIdx = 1;
-      notesIdx = 2;
+    // Auto-detect columns if not mapped by headers
+    if (phoneIdx === -1 && lines.length > startIndex) {
+      const sampleCols = splitCsvLine(lines[startIndex], delimiter);
+      for (let c = 0; c < sampleCols.length; c++) {
+        const digits = sampleCols[c].replace(/\D/g, '');
+        if (digits.length >= 8 && c !== nameIdx) {
+          phoneIdx = c;
+          break;
+        }
+      }
+      if (phoneIdx === -1 && sampleCols.length > 1) {
+        phoneIdx = 1;
+      }
+    }
+
+    if (nameIdx === -1) {
+      nameIdx = phoneIdx === 0 ? (lines[0].split(delimiter).length > 1 ? 1 : 0) : 0;
     }
 
     const results: ParsedContact[] = [];
 
     for (let i = startIndex; i < lines.length; i++) {
       const line = lines[i];
-      // Split preserving quotes if simple
-      const cols = line.split(delimiter).map((c) => c.replace(/^["']|["']$/g, '').trim());
+      const cols = splitCsvLine(line, delimiter);
 
-      const name = cols[nameIdx] || `Contato ${i + 1}`;
-      const rawPhone = cols[phoneIdx] || '';
+      let rawName = nameIdx !== -1 && cols[nameIdx] !== undefined ? cols[nameIdx] : '';
+      let rawPhone = phoneIdx !== -1 && cols[phoneIdx] !== undefined ? cols[phoneIdx] : '';
       const notes = notesIdx !== -1 ? cols[notesIdx] : undefined;
       const valRaw = valIdx !== -1 ? cols[valIdx] : undefined;
       const location = locIdx !== -1 ? cols[locIdx] : undefined;
 
-      if (!rawPhone && !name) continue;
+      if (!rawPhone && !rawName) continue;
+
+      // Swap if name is a phone number and phone is empty or non-numeric
+      const nameDigits = rawName.replace(/\D/g, '');
+      const phoneDigits = rawPhone.replace(/\D/g, '');
+      if (nameDigits.length >= 8 && phoneDigits.length < 6) {
+        if (!rawPhone) {
+          rawPhone = rawName;
+          rawName = `Contato ${i + 1}`;
+        } else {
+          const temp = rawName;
+          rawName = rawPhone;
+          rawPhone = temp;
+        }
+      }
 
       const phone = cleanPhone(rawPhone);
       const dealValue = valRaw ? parseFloat(valRaw.replace(/[^0-9.]/g, '')) || 0 : 0;
 
       results.push({
-        name,
-        phone: phone || rawPhone || '+258840000000',
+        name: rawName || `Contato ${i + 1}`,
+        phone: phone || rawPhone,
         notes: notes || undefined,
         dealValue,
         location,
