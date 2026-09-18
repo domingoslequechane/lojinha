@@ -93,7 +93,7 @@ export const KanbanCard: React.FC<KanbanCardProps> = ({
         </div>
       ) : (
         <div className="flex items-center gap-1 text-[10px] text-[#95BDB0]/70 mb-1.5 px-0.5">
-          <CheckCheck className="w-3 h-3 text-[#C1F76B]" />
+          <CheckCheck className="w-3 h-3 text-[#C1F76B]/80" />
           <span>Mensagens lidas</span>
         </div>
       )}

@@ -243,7 +243,7 @@ export const ImportCsvModal: React.FC<ImportCsvModalProps> = ({
         phone: c.phone,
         columnId: selectedColumnId,
         unreadCount: 0,
-        lastMessage: c.notes || 'Início de conversa (Importado via CSV)',
+        lastMessage: c.notes || 'Contato importado via CSV',
         lastMessageTime: 'Agora',
         lastMessageTimestamp: now,
         dealValue: c.dealValue || 0,
