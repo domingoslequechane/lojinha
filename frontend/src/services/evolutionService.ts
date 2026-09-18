@@ -457,13 +457,27 @@ export const evolutionService = {
     }
 
     const cleanNumber = phone.replace(/\D/g, '');
+    let cleanMediaUrl = mediaUrl;
     let mimetype = 'image/jpeg';
     if (type === 'video') mimetype = 'video/mp4';
     else if (type === 'audio') mimetype = 'audio/ogg';
 
+    if (mediaUrl.startsWith('data:')) {
+      const match = mediaUrl.match(/^data:([^;]+);base64,(.+)$/s);
+      if (match) {
+        mimetype = match[1];
+        cleanMediaUrl = match[2];
+      } else {
+        const commaIndex = mediaUrl.indexOf(',');
+        if (commaIndex !== -1) {
+          cleanMediaUrl = mediaUrl.substring(commaIndex + 1);
+        }
+      }
+    }
+
     const payload: Record<string, unknown> = {
       number: cleanNumber,
-      url: mediaUrl,
+      url: cleanMediaUrl,
       type,
       mimetype,
     };
@@ -480,6 +494,7 @@ export const evolutionService = {
 
     if (!res.ok) {
       const err = await res.json().catch(() => ({ error: res.statusText }));
+      console.error('[Evolution] sendMedia error:', err);
       throw new Error(err.error || err.message || 'Falha ao enviar mídia no WhatsApp');
     }
 
@@ -487,7 +502,7 @@ export const evolutionService = {
     return {
       ok: true,
       mediaUrl,
-      whatsappMessageId: json?.data?.id || json?.id,
+      whatsappMessageId: json?.data?.Info?.ID || json?.data?.id || json?.id,
     };
   },
 
