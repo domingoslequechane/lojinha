@@ -89,14 +89,23 @@ export const KanbanBoard: React.FC<KanbanBoardProps> = ({
     >
       <div className="flex items-stretch gap-4 h-full w-max min-w-full pr-4 pb-1">
         {sortedColumns.map((col, index) => {
-          const colLeads = leads.filter((lead) => {
-            if (lead.columnId === col.id) return true;
-            // Fallback: If lead has no columnId or its columnId is not in any active column, place it in the first column
-            if (index === 0 && (!lead.columnId || !sortedColumns.some((c) => c.id === lead.columnId))) {
-              return true;
-            }
-            return false;
-          });
+          const colLeads = leads
+            .filter((lead) => {
+              if (lead.columnId === col.id) return true;
+              // Fallback: If lead has no columnId or its columnId is not in any active column, place it in the first column
+              if (index === 0 && (!lead.columnId || !sortedColumns.some((c) => c.id === lead.columnId))) {
+                return true;
+              }
+              return false;
+            })
+            .sort((a, b) => {
+              // 1. Leads with unread messages always come first (like WhatsApp)
+              const aUnread = (a.unreadCount || 0) > 0 ? 1 : 0;
+              const bUnread = (b.unreadCount || 0) > 0 ? 1 : 0;
+              if (bUnread !== aUnread) return bUnread - aUnread;
+              // 2. Then sort by most recent message timestamp (newest first)
+              return (Number(b.lastMessageTimestamp) || 0) - (Number(a.lastMessageTimestamp) || 0);
+            });
           return (
             <KanbanColumnComponent
               key={col.id}
