@@ -1,5 +1,5 @@
 import React, { useState, useEffect } from 'react';
-import { SlidersHorizontal, Plus, Trash2, ArrowUp, ArrowDown, X, Check, Clock, Pencil, Loader2 } from 'lucide-react';
+import { SlidersHorizontal, Plus, Trash2, ArrowUp, ArrowDown, X, Check, Clock, Pencil, Loader2, Lock } from 'lucide-react';
 import { KanbanColumn } from '../../types';
 import { ConfirmModal } from '../common/ConfirmModal';
 import { generateUUID } from '../../services/kanbanService';
@@ -38,13 +38,18 @@ export const ColumnManagerModal: React.FC<ColumnManagerModalProps> = ({
 
   // Sync state whenever modal opens or parent columns change
   useEffect(() => {
-    setCols([...columns].sort((a, b) => a.order - b.order));
+    const sorted = [...columns].sort((a, b) => a.order - b.order);
+    // Ensure first column displays as 'Novo Contacto'
+    if (sorted.length > 0 && (sorted[0].title === 'Novo Lead (WhatsApp)' || sorted[0].title === 'Novo Lead')) {
+      sorted[0] = { ...sorted[0], title: 'Novo Contacto' };
+    }
+    setCols(sorted);
     setEditingColId(null);
   }, [columns, isOpen]);
 
   // New column creation form
   const [newTitle, setNewTitle] = useState('');
-  const [newColor, setNewColor] = useState(colorPalette[0]);
+  const [newColor, setNewColor] = useState(colorPalette[1]);
   const [newSla, setNewSla] = useState(4);
 
   // Inline editing state for an existing column
@@ -57,6 +62,9 @@ export const ColumnManagerModal: React.FC<ColumnManagerModalProps> = ({
   const [isSaving, setIsSaving] = useState(false);
 
   const startEditing = (col: KanbanColumn) => {
+    // The first column (Novo Contacto) cannot be edited or altered
+    if (cols.length > 0 && cols[0].id === col.id) return;
+
     setEditingColId(col.id);
     setEditTitle(col.title);
     setEditColor(col.color);
@@ -85,8 +93,12 @@ export const ColumnManagerModal: React.FC<ColumnManagerModalProps> = ({
   };
 
   const handleMove = (index: number, direction: 'up' | 'down') => {
+    // Column at index 0 (Novo Contacto) is permanently fixed at position 0
+    if (index === 0) return;
+
     const targetIndex = direction === 'up' ? index - 1 : index + 1;
-    if (targetIndex < 0 || targetIndex >= cols.length) return;
+    // Cannot move above index 1 (cannot swap with index 0)
+    if (targetIndex < 1 || targetIndex >= cols.length) return;
 
     const newCols = [...cols];
     const temp = newCols[index];
@@ -115,6 +127,21 @@ export const ColumnManagerModal: React.FC<ColumnManagerModalProps> = ({
   });
 
   const handleDelete = (id: string) => {
+    // First column (Novo Contacto) cannot be deleted
+    if (cols.length > 0 && cols[0].id === id) {
+      setConfirmModal({
+        isOpen: true,
+        title: 'Etapa Obrigatória',
+        message: 'A etapa "Novo Contacto" é o ponto de entrada oficial do sistema para novas conversas e não pode ser eliminada nem alterada.',
+        confirmText: 'Entendi',
+        cancelText: 'Fechar',
+        confirmVariant: 'primary',
+        iconType: 'alert',
+        onConfirm: () => setConfirmModal((prev) => ({ ...prev, isOpen: false })),
+      });
+      return;
+    }
+
     if (cols.length <= 1) {
       setConfirmModal({
         isOpen: true,
@@ -183,6 +210,13 @@ export const ColumnManagerModal: React.FC<ColumnManagerModalProps> = ({
       );
     }
 
+    // Ensure first column is always properly named Novo Contacto and order is 0
+    if (finalCols.length > 0) {
+      if (finalCols[0].title === 'Novo Lead (WhatsApp)' || finalCols[0].title === 'Novo Lead') {
+        finalCols[0].title = 'Novo Contacto';
+      }
+    }
+
     setIsSaving(true);
     try {
       await onSaveColumns(finalCols);
@@ -205,7 +239,7 @@ export const ColumnManagerModal: React.FC<ColumnManagerModalProps> = ({
             </div>
             <div>
               <h3 className="font-bold text-sm text-[#FDFEF8]">Gerenciar Colunas do Funil</h3>
-              <p className="text-xs text-[#95BDB0]">Crie, edite, ordene e configure o SLA de cada etapa</p>
+              <p className="text-xs text-[#95BDB0]">Personalize as etapas do seu processo comercial</p>
             </div>
           </div>
           <button
@@ -220,7 +254,8 @@ export const ColumnManagerModal: React.FC<ColumnManagerModalProps> = ({
         {/* Existing Columns List */}
         <div className="p-5 max-h-80 overflow-y-auto space-y-2">
           {cols.map((col, idx) => {
-            const isEditingThis = editingColId === col.id;
+            const isDefaultCol = idx === 0;
+            const isEditingThis = editingColId === col.id && !isDefaultCol;
 
             if (isEditingThis) {
               return (
@@ -295,7 +330,11 @@ export const ColumnManagerModal: React.FC<ColumnManagerModalProps> = ({
             return (
               <div
                 key={col.id}
-                className="p-3 bg-[#14382F] border border-[#235447] rounded-2xl flex items-center justify-between gap-3 hover:border-[#2D6B5A] transition-colors"
+                className={`p-3 rounded-2xl flex items-center justify-between gap-3 transition-colors ${
+                  isDefaultCol
+                    ? 'bg-[#14382F]/90 border border-[#2D6B5A]'
+                    : 'bg-[#14382F] border border-[#235447] hover:border-[#2D6B5A]'
+                }`}
               >
                 <div className="flex items-center gap-3 truncate">
                   <span
@@ -303,45 +342,65 @@ export const ColumnManagerModal: React.FC<ColumnManagerModalProps> = ({
                     style={{ backgroundColor: col.color }}
                   />
                   <div className="truncate">
-                    <p className="font-semibold text-xs text-[#FDFEF8] truncate">{col.title}</p>
+                    <div className="flex items-center gap-2">
+                      <p className="font-semibold text-xs text-[#FDFEF8] truncate">{col.title}</p>
+                      {isDefaultCol && (
+                        <span className="flex items-center gap-1 text-[10px] text-[#C1F76B] bg-[#0F2D26] border border-[#27AE60]/40 px-2 py-0.5 rounded-full font-bold">
+                          <Lock className="w-2.5 h-2.5" />
+                          Fixa
+                        </span>
+                      )}
+                    </div>
                     <p className="text-[10px] text-[#95BDB0] flex items-center gap-1 mt-0.5">
                       <Clock className="w-2.5 h-2.5 text-amber-400" />
                       <span>SLA: {col.slaHours}h sem resposta</span>
+                      {isDefaultCol && <span className="text-[#95BDB0]/70">• Entrada de novos contactos</span>}
                     </p>
                   </div>
                 </div>
 
                 <div className="flex items-center gap-1 flex-shrink-0">
-                  <button
-                    disabled={idx === 0}
-                    onClick={() => handleMove(idx, 'up')}
-                    className="p-1.5 text-[#95BDB0] hover:text-[#FDFEF8] disabled:opacity-20 rounded-lg hover:bg-[#184339] transition-colors"
-                    title="Mover para a esquerda / cima"
-                  >
-                    <ArrowUp className="w-3.5 h-3.5" />
-                  </button>
-                  <button
-                    disabled={idx === cols.length - 1}
-                    onClick={() => handleMove(idx, 'down')}
-                    className="p-1.5 text-[#95BDB0] hover:text-[#FDFEF8] disabled:opacity-20 rounded-lg hover:bg-[#184339] transition-colors"
-                    title="Mover para a direita / baixo"
-                  >
-                    <ArrowDown className="w-3.5 h-3.5" />
-                  </button>
-                  <button
-                    onClick={() => startEditing(col)}
-                    className="p-1.5 text-[#95BDB0] hover:text-[#C1F76B] rounded-lg hover:bg-[#184339] transition-colors"
-                    title="Editar nome, cor ou SLA desta etapa"
-                  >
-                    <Pencil className="w-3.5 h-3.5" />
-                  </button>
-                  <button
-                    onClick={() => handleDelete(col.id)}
-                    className="p-1.5 text-red-400 hover:text-red-300 rounded-lg hover:bg-red-500/10 transition-colors ml-0.5"
-                    title="Excluir Coluna"
-                  >
-                    <Trash2 className="w-3.5 h-3.5" />
-                  </button>
+                  {isDefaultCol ? (
+                    <span
+                      className="text-[11px] text-[#95BDB0]/80 bg-[#0F2D26]/70 px-2.5 py-1 rounded-lg border border-[#235447]/60 font-medium cursor-default"
+                      title="A etapa inicial de novo contacto é obrigatória e não pode ser editada ou eliminada."
+                    >
+                      Padrão do Sistema
+                    </span>
+                  ) : (
+                    <>
+                      <button
+                        disabled={idx <= 1}
+                        onClick={() => handleMove(idx, 'up')}
+                        className="p-1.5 text-[#95BDB0] hover:text-[#FDFEF8] disabled:opacity-20 rounded-lg hover:bg-[#184339] transition-colors"
+                        title="Mover para a esquerda / cima"
+                      >
+                        <ArrowUp className="w-3.5 h-3.5" />
+                      </button>
+                      <button
+                        disabled={idx === cols.length - 1}
+                        onClick={() => handleMove(idx, 'down')}
+                        className="p-1.5 text-[#95BDB0] hover:text-[#FDFEF8] disabled:opacity-20 rounded-lg hover:bg-[#184339] transition-colors"
+                        title="Mover para a direita / baixo"
+                      >
+                        <ArrowDown className="w-3.5 h-3.5" />
+                      </button>
+                      <button
+                        onClick={() => startEditing(col)}
+                        className="p-1.5 text-[#95BDB0] hover:text-[#C1F76B] rounded-lg hover:bg-[#184339] transition-colors"
+                        title="Editar nome, cor ou SLA desta etapa"
+                      >
+                        <Pencil className="w-3.5 h-3.5" />
+                      </button>
+                      <button
+                        onClick={() => handleDelete(col.id)}
+                        className="p-1.5 text-red-400 hover:text-red-300 rounded-lg hover:bg-red-500/10 transition-colors ml-0.5"
+                        title="Excluir Coluna"
+                      >
+                        <Trash2 className="w-3.5 h-3.5" />
+                      </button>
+                    </>
+                  )}
                 </div>
               </div>
             );

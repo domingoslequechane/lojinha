@@ -1,41 +1,13 @@
 import { KanbanColumn, ContactLead, ChatMessage, QuickReply, WhatsAppInstance, StoreSettings } from '../types';
 
-// Default starter columns for new stores (SaaS Template)
+// Default starter column for all stores (Single mandatory entry column: Novo Contacto)
 export const initialColumns: KanbanColumn[] = [
   {
     id: 'col-new',
-    title: 'Novo Lead (WhatsApp)',
+    title: 'Novo Contacto',
     color: '#38bdf8',
     order: 0,
     slaHours: 1,
-  },
-  {
-    id: 'col-demo',
-    title: 'Em Demonstração / Catálogo',
-    color: '#a78bfa',
-    order: 1,
-    slaHours: 3,
-  },
-  {
-    id: 'col-validation',
-    title: 'Validação c/ Família',
-    color: '#f59e0b',
-    order: 2,
-    slaHours: 24,
-  },
-  {
-    id: 'col-freight',
-    title: 'Localização / Frete',
-    color: '#eab308',
-    order: 3,
-    slaHours: 4,
-  },
-  {
-    id: 'col-scheduled',
-    title: 'Agendado (Salário / Reserva)',
-    color: '#27AE60',
-    order: 4,
-    slaHours: 48,
   },
 ];
 

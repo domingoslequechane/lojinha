@@ -181,14 +181,10 @@ BEGIN
     VALUES (NEW.id)
     ON CONFLICT (store_id) DO NOTHING;
 
-    -- 2. Cria as 5 colunas padrão do funil de vendas
+    -- 2. Cria a coluna inicial padrão do funil de vendas (Novo Contacto)
     INSERT INTO public.kanban_columns (store_id, title, color, order_index, sla_hours)
     VALUES 
-      (NEW.id, 'Novo Lead (WhatsApp)', '#38bdf8', 0, 1),
-      (NEW.id, 'Em Demonstração / Catálogo', '#a78bfa', 1, 3),
-      (NEW.id, 'Validação c/ Família', '#f59e0b', 2, 24),
-      (NEW.id, 'Localização / Frete', '#eab308', 3, 4),
-      (NEW.id, 'Agendado (Salário / Reserva)', '#27AE60', 4, 48);
+      (NEW.id, 'Novo Contacto', '#38bdf8', 0, 1);
 
     -- 3. Cria respostas rápidas padrão para agilizar atendimento
     INSERT INTO public.quick_replies (store_id, shortcut, title, category, content)

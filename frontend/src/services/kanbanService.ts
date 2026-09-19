@@ -44,7 +44,9 @@ export const kanbanService = {
 
     return (data || []).map((col) => ({
       id: col.id,
-      title: col.title,
+      title: col.order_index === 0 && (col.title === 'Novo Lead (WhatsApp)' || col.title === 'Novo Lead')
+        ? 'Novo Contacto'
+        : col.title,
       color: col.color,
       order: col.order_index,
       slaHours: col.sla_hours,
@@ -62,13 +64,13 @@ export const kanbanService = {
         return { success: false, columns: [], deletedColumnIds: [], error: 'Pelo menos uma etapa é necessária' };
       }
 
-      // 1. Normalize each column with valid UUID and order
+      // 1. Normalize each column with valid UUID and order (index 0 is always the fixed Novo Contacto entry point)
       const normalizedColumns: KanbanColumn[] = columns.map((col, idx) => ({
         ...col,
         id: isValidUUID(col.id) ? col.id : generateUUID(),
         order: idx,
-        slaHours: Number(col.slaHours) || 24,
-        title: col.title.trim(),
+        slaHours: idx === 0 ? (col.slaHours || 1) : (Number(col.slaHours) || 24),
+        title: idx === 0 ? 'Novo Contacto' : col.title.trim(),
       }));
 
       const activeIds = new Set(normalizedColumns.map((c) => c.id));
@@ -85,7 +87,8 @@ export const kanbanService = {
       }
 
       const existingDbIds = (existingRows || []).map((r) => r.id);
-      const deletedColumnIds = existingDbIds.filter((id) => !activeIds.has(id));
+      // Index 0 column can never be deleted
+      const deletedColumnIds = existingDbIds.filter((id) => !activeIds.has(id) && id !== fallbackColumnId);
 
       // 3. Handle deletions:
       if (deletedColumnIds.length > 0) {
