@@ -791,21 +791,281 @@ export const ChatPanel: React.FC<ChatPanelProps> = ({
       )
     : [];
 
+  // Helper to render Notes Popover
+  const renderNotesPopoverContent = () => (
+    <div className="absolute right-0 mt-1.5 z-50 w-72 max-w-[calc(100vw-24px)] bg-[#0F2D26] border border-[#235447] rounded-2xl shadow-2xl p-3 animate-in fade-in zoom-in-95 duration-150 text-left">
+      <div className="flex items-center justify-between pb-2 border-b border-[#235447] mb-2">
+        <div className="flex items-center gap-1.5 text-xs font-bold text-[#FDFEF8]">
+          <FileText className="w-3.5 h-3.5 text-[#C1F76B]" />
+          <span>Nota & Follow-up</span>
+        </div>
+        <button
+          type="button"
+          onClick={() => {
+            setShowNotesPopover(false);
+            onOpenFollowUpModal(lead);
+          }}
+          className="p-1 rounded-lg bg-[#14382F] hover:bg-[#235447] text-[#C1F76B] hover:text-[#FDFEF8] transition-colors cursor-pointer"
+          title="Editar Nota"
+        >
+          <Pencil className="w-3.5 h-3.5" />
+        </button>
+      </div>
+
+      {lead.followUpDate && (
+        <div className="flex items-center gap-1.5 bg-amber-500/10 border border-amber-500/30 rounded-lg px-2.5 py-1 text-[11px] font-semibold text-amber-300 mb-2">
+          <Clock className="w-3 h-3 text-amber-400 flex-shrink-0" />
+          <span>Agendado para: {lead.followUpDate}</span>
+        </div>
+      )}
+
+      {lead.followUpNotes ? (
+        <p className="text-xs text-[#E3F2ED] whitespace-pre-line leading-relaxed max-h-40 overflow-y-auto pr-1">
+          {lead.followUpNotes}
+        </p>
+      ) : (
+        <p className="text-xs text-[#95BDB0]/70 italic py-2">
+          Nenhuma nota registrada. Clique na caneta para anotar detalhes.
+        </p>
+      )}
+
+      <div className="mt-3 pt-2 border-t border-[#235447]">
+        <button
+          type="button"
+          onClick={() => {
+            setShowNotesPopover(false);
+            onOpenFollowUpModal(lead);
+          }}
+          className="w-full py-1.5 px-3 rounded-xl bg-[#14382F] hover:bg-[#1C4E41] text-[#C1F76B] hover:text-[#FDFEF8] text-xs font-semibold flex items-center justify-center gap-1.5 transition-colors cursor-pointer border border-[#235447]"
+        >
+          <Pencil className="w-3 h-3" />
+          <span>{lead.followUpNotes ? 'Editar Nota' : '+ Adicionar Nota'}</span>
+        </button>
+      </div>
+    </div>
+  );
+
+  // Helper to render Journey Popover
+  const renderJourneyPopoverContent = () => (
+    <div className="absolute right-0 mt-1.5 z-50 w-80 max-w-[calc(100vw-24px)] bg-[#0F2D26] border border-[#235447] rounded-2xl shadow-2xl p-3 animate-in fade-in zoom-in-95 duration-150 text-left">
+      <div className="flex items-center justify-between pb-2 border-b border-[#235447] mb-2.5">
+        <div className="flex items-center gap-1.5 text-xs font-bold text-[#FDFEF8]">
+          <TrendingUp className="w-3.5 h-3.5 text-[#C1F76B]" />
+          <span>Jornada no Funil</span>
+        </div>
+        <span className="text-[10px] font-semibold text-[#95BDB0] bg-[#14382F] px-2 py-0.5 rounded-full">
+          {lead.stageHistory?.length || 1} {lead.stageHistory?.length === 1 ? 'movimento' : 'movimentos'}
+        </span>
+      </div>
+
+      {/* Timeline Dots Strip */}
+      <div className="flex items-center gap-1 overflow-x-auto py-2 px-2 mb-2.5 bg-[#14382F]/60 rounded-xl border border-[#235447]/60">
+        <div className="w-2.5 h-2.5 rounded-full bg-blue-400 flex-shrink-0" title="Entrada do Lead" />
+        <div className="h-px w-2.5 bg-[#2D6B5A] flex-shrink-0" />
+        {(lead.stageHistory || []).map((entry, idx) => {
+          const color = columns.find((c) => c.id === entry.toColumnId)?.color || '#C1F76B';
+          return (
+            <React.Fragment key={idx}>
+              <div
+                className="w-2.5 h-2.5 rounded-full border border-white/20 flex-shrink-0"
+                style={{ backgroundColor: color }}
+                title={`${entry.fromColumnTitle} → ${entry.toColumnTitle}`}
+              />
+              <div className="h-px w-2.5 bg-[#2D6B5A] flex-shrink-0" />
+            </React.Fragment>
+          );
+        })}
+        <div
+          className="w-3.5 h-3.5 rounded-full border-2 border-white flex-shrink-0 animate-pulse"
+          style={{ backgroundColor: currentColumn?.color || '#C1F76B' }}
+          title={`Etapa Atual: ${currentColumn?.title}`}
+        />
+      </div>
+
+      {/* History List */}
+      <div className="space-y-1.5 max-h-48 overflow-y-auto pr-1">
+        {(lead.stageHistory || []).map((entry, idx) => {
+          const color = columns.find((c) => c.id === entry.toColumnId)?.color || '#C1F76B';
+          return (
+            <div key={idx} className="flex items-start justify-between text-[11px] p-1.5 rounded-lg bg-[#14382F] border border-[#235447]">
+              <div className="flex items-center gap-1.5 truncate">
+                <span className="w-2 h-2 rounded-full flex-shrink-0" style={{ backgroundColor: color }} />
+                <span className="truncate text-[#FDFEF8] font-medium">{entry.toColumnTitle.replace(/^[^ ]+ /, '')}</span>
+              </div>
+              <span className="text-[10px] text-[#95BDB0] flex-shrink-0">{entry.movedAtLabel}</span>
+            </div>
+          );
+        })}
+      </div>
+
+      {/* Current Stage Summary */}
+      <div className="mt-2.5 pt-2 border-t border-[#235447] flex items-center justify-between text-[11px]">
+        <span className="text-[#95BDB0]">Fase Atual:</span>
+        <span className="font-bold flex items-center gap-1.5 text-[#FDFEF8]">
+          <span className="w-2 h-2 rounded-full" style={{ backgroundColor: currentColumn?.color || '#C1F76B' }} />
+          {currentColumn?.title.replace(/^[^ ]+ /, '')}
+        </span>
+      </div>
+    </div>
+  );
+
   return (
     <div className="w-full md:w-[480px] md:min-w-[420px] lg:w-[500px] h-full bg-[#091E19] border-l border-[#235447] flex flex-col z-20 shadow-2xl transition-all duration-200 animate-in fade-in slide-in-from-right-4 relative overflow-hidden">
-      {/* Chat Top Header */}
-      <div className="h-16 bg-[#14382F] px-3.5 flex items-center justify-between border-b border-[#235447] select-none">
-        <div className="flex items-center gap-2.5 truncate">
-          {/* Mobile Back Button (WhatsApp Style) */}
+      {/* 1. Mobile Chat Header (Row 1: Back + Avatar + Name & Phone in ONE SINGLE line + Close X) */}
+      <div className="md:hidden h-14 bg-[#14382F] px-2.5 flex items-center justify-between gap-2 border-b border-[#235447]/60 select-none flex-shrink-0">
+        <div className="flex items-center gap-2 min-w-0 flex-1">
+          {/* Mobile Back Button */}
           <button
             type="button"
             onClick={onCloseChat}
-            className="md:hidden p-1.5 -ml-1 rounded-xl text-[#95BDB0] hover:text-[#C1F76B] hover:bg-[#0F2D26] active:scale-95 transition-all flex items-center justify-center cursor-pointer flex-shrink-0"
+            className="p-1 -ml-1 text-[#95BDB0] hover:text-[#C1F76B] active:scale-95 transition-all flex items-center justify-center cursor-pointer flex-shrink-0"
             title="Voltar ao Funil"
           >
             <ChevronLeft className="w-6 h-6 stroke-[2.5]" />
           </button>
 
+          {/* Avatar */}
+          <div className="relative flex-shrink-0">
+            {lead.avatar ? (
+              <img
+                src={lead.avatar}
+                alt={lead.name}
+                className="w-9 h-9 rounded-full object-cover border border-[#2D6B5A]"
+                onError={(e) => { (e.target as HTMLImageElement).style.display = 'none'; }}
+              />
+            ) : (
+              <div className="w-9 h-9 rounded-full bg-[#0F2D26] border border-[#2D6B5A] flex items-center justify-center text-xs font-bold text-[#C1F76B]">
+                {lead.name ? lead.name.trim().charAt(0).toUpperCase() : '#'}
+              </div>
+            )}
+            <span className="absolute bottom-0 right-0 w-2 h-2 rounded-full bg-[#C1F76B] ring-2 ring-[#14382F]" />
+          </div>
+
+          {/* Name and Phone on a SINGLE LINE */}
+          <div className="flex items-center gap-1.5 min-w-0 flex-1 truncate">
+            <h3 className="font-bold text-sm text-[#FDFEF8] truncate">
+              {lead.name}
+            </h3>
+            {lead.phone && (
+              <a
+                href={formatPhoneForCall(lead.phone)}
+                className="text-xs text-[#95BDB0] hover:text-[#C1F76B] flex-shrink-0 font-medium transition-colors"
+                title={`Ligar para ${lead.phone}`}
+              >
+                • {lead.phone}
+              </a>
+            )}
+          </div>
+        </div>
+
+        {/* Close Chat Button */}
+        <button
+          type="button"
+          onClick={onCloseChat}
+          className="p-1.5 rounded-xl bg-[#0F2D26] border border-[#235447] text-[#95BDB0] hover:text-red-300 hover:bg-red-500/20 hover:border-red-500/40 transition-all flex-shrink-0"
+          title="Fechar Chat"
+        >
+          <X className="w-4 h-4" />
+        </button>
+      </div>
+
+      {/* 2. Mobile Action Buttons Bar (Row 2: Action buttons underneath) */}
+      <div className="md:hidden flex items-center justify-between gap-1.5 px-3 py-1.5 bg-[#0F2D26] border-b border-[#235447] select-none flex-shrink-0">
+        {/* Direct Call Button */}
+        {lead.phone && (
+          <a
+            href={formatPhoneForCall(lead.phone)}
+            className="flex-1 py-1.5 px-2.5 rounded-xl bg-[#14382F] hover:bg-[#C1F76B] text-[#C1F76B] hover:text-[#0F2D26] border border-[#235447] hover:border-[#C1F76B] text-xs font-bold flex items-center justify-center gap-1.5 transition-all shadow-xs"
+            title={`Ligar para ${lead.name || lead.phone}`}
+          >
+            <Phone className="w-3.5 h-3.5" />
+            <span>Ligar</span>
+          </a>
+        )}
+
+        {/* Column Stage Switcher (aligned left so it opens to the right on mobile) */}
+        <CustomSelect
+          variant="dot-only"
+          value={lead.columnId}
+          onChange={(newColId) => onChangeColumn(lead.id, newColId)}
+          options={columns.map((col) => ({
+            value: col.id,
+            label: col.title,
+            color: col.color,
+          }))}
+          align="left"
+        />
+
+        {/* Edit Lead Info */}
+        <button
+          type="button"
+          onClick={() => setIsEditModalOpen(true)}
+          className="p-2 rounded-xl border bg-[#14382F] border-[#235447] text-[#95BDB0] hover:text-[#C1F76B] hover:border-[#C1F76B] transition-all duration-150 active:scale-95"
+          title="Editar Informações do Cliente"
+        >
+          <Pencil className="w-4 h-4" />
+        </button>
+
+        {/* Notes & Follow-up Button + Popover */}
+        <div className="relative">
+          <button
+            type="button"
+            onClick={() => {
+              setShowNotesPopover(!showNotesPopover);
+              setShowJourneyPopover(false);
+            }}
+            className={`p-2 rounded-xl border relative transition-all duration-150 active:scale-95 ${
+              showNotesPopover || lead.followUpNotes
+                ? 'bg-[#14382F] border-[#C1F76B] text-[#C1F76B] ring-1 ring-[#C1F76B]/30'
+                : 'bg-[#14382F] border-[#235447] text-[#95BDB0]'
+            }`}
+            title={lead.followUpNotes ? "Ver/Editar Notas" : "Adicionar Notas"}
+          >
+            <FileText className="w-4 h-4" />
+            {lead.followUpNotes && (
+              <span className="absolute top-1 right-1 w-1.5 h-1.5 rounded-full bg-[#C1F76B]" />
+            )}
+          </button>
+          {showNotesPopover && renderNotesPopoverContent()}
+        </div>
+
+        {/* Funnel Journey Button + Popover */}
+        <div className="relative">
+          <button
+            type="button"
+            onClick={() => {
+              setShowJourneyPopover(!showJourneyPopover);
+              setShowNotesPopover(false);
+            }}
+            className={`p-2 rounded-xl border relative transition-all duration-150 active:scale-95 ${
+              showJourneyPopover
+                ? 'bg-[#14382F] border-[#C1F76B] text-[#C1F76B] ring-1 ring-[#C1F76B]/30'
+                : 'bg-[#14382F] border-[#235447] text-[#95BDB0]'
+            }`}
+            title="Jornada no Funil"
+          >
+            <TrendingUp className="w-4 h-4" />
+          </button>
+          {showJourneyPopover && renderJourneyPopoverContent()}
+        </div>
+
+        {/* Follow-up Schedule Button */}
+        <button
+          onClick={() => onOpenFollowUpModal(lead)}
+          className={`p-2 rounded-xl border transition-all duration-150 active:scale-95 ${
+            lead.followUpDate
+              ? 'bg-amber-500/10 border-amber-500/40 text-amber-400'
+              : 'bg-[#14382F] border-[#235447] text-[#95BDB0]'
+          }`}
+          title={lead.followUpDate ? `Follow-up: ${lead.followUpDate}` : "Agendar Follow-up"}
+        >
+          <Clock className="w-4 h-4" />
+        </button>
+      </div>
+
+      {/* 3. Desktop Chat Top Header (Hidden on mobile, visible on md+) */}
+      <div className="hidden md:flex h-16 bg-[#14382F] px-3.5 items-center justify-between border-b border-[#235447] select-none flex-shrink-0">
+        <div className="flex items-center gap-2.5 truncate">
           <div className="relative flex-shrink-0">
             {lead.avatar ? (
               <img
@@ -844,9 +1104,8 @@ export const ChatPanel: React.FC<ChatPanelProps> = ({
           </div>
         </div>
 
-        {/* Header Actions */}
+        {/* Desktop Header Actions */}
         <div className="flex items-center gap-1.5 flex-shrink-0">
-          {/* Direct Phone Call Button */}
           {lead.phone && (
             <a
               href={formatPhoneForCall(lead.phone)}
@@ -854,11 +1113,10 @@ export const ChatPanel: React.FC<ChatPanelProps> = ({
               title={`Fazer ligação para ${lead.name || lead.phone}`}
             >
               <Phone className="w-4 h-4" />
-              <span className="hidden sm:inline text-xs font-bold">Ligar</span>
+              <span className="text-xs font-bold">Ligar</span>
             </a>
           )}
 
-          {/* 1. Quick Column / Funnel Stage Switcher (Color Dot Trigger) */}
           <CustomSelect
             variant="dot-only"
             value={lead.columnId}
@@ -871,7 +1129,6 @@ export const ChatPanel: React.FC<ChatPanelProps> = ({
             align="right"
           />
 
-          {/* 2. Edit Customer Info (Caneta para editar informações do cliente) */}
           <button
             type="button"
             onClick={() => setIsEditModalOpen(true)}
@@ -881,7 +1138,6 @@ export const ChatPanel: React.FC<ChatPanelProps> = ({
             <Pencil className="w-4 h-4" />
           </button>
 
-          {/* 3. Customer Notes & Follow-up Icon with Dropdown Popover */}
           <div className="relative">
             <button
               type="button"
@@ -901,63 +1157,9 @@ export const ChatPanel: React.FC<ChatPanelProps> = ({
                 <span className="absolute top-1.5 right-1.5 w-1.5 h-1.5 rounded-full bg-[#C1F76B] shadow-xs shadow-[#C1F76B]" />
               )}
             </button>
-
-            {/* Notes Dropdown Popover */}
-            {showNotesPopover && (
-              <div className="absolute right-0 mt-1.5 z-50 w-72 bg-[#0F2D26] border border-[#235447] rounded-2xl shadow-2xl p-3 animate-in fade-in zoom-in-95 duration-150 text-left">
-                <div className="flex items-center justify-between pb-2 border-b border-[#235447] mb-2">
-                  <div className="flex items-center gap-1.5 text-xs font-bold text-[#FDFEF8]">
-                    <FileText className="w-3.5 h-3.5 text-[#C1F76B]" />
-                    <span>Nota & Follow-up</span>
-                  </div>
-                  <button
-                    type="button"
-                    onClick={() => {
-                      setShowNotesPopover(false);
-                      onOpenFollowUpModal(lead);
-                    }}
-                    className="p-1 rounded-lg bg-[#14382F] hover:bg-[#235447] text-[#C1F76B] hover:text-[#FDFEF8] transition-colors cursor-pointer"
-                    title="Editar Nota"
-                  >
-                    <Pencil className="w-3.5 h-3.5" />
-                  </button>
-                </div>
-
-                {lead.followUpDate && (
-                  <div className="flex items-center gap-1.5 bg-amber-500/10 border border-amber-500/30 rounded-lg px-2.5 py-1 text-[11px] font-semibold text-amber-300 mb-2">
-                    <Clock className="w-3 h-3 text-amber-400 flex-shrink-0" />
-                    <span>Agendado para: {lead.followUpDate}</span>
-                  </div>
-                )}
-
-                {lead.followUpNotes ? (
-                  <p className="text-xs text-[#E3F2ED] whitespace-pre-line leading-relaxed max-h-40 overflow-y-auto pr-1">
-                    {lead.followUpNotes}
-                  </p>
-                ) : (
-                  <p className="text-xs text-[#95BDB0]/70 italic py-2">
-                    Nenhuma nota registrada. Clique na caneta para anotar detalhes.
-                  </p>
-                )}
-
-                <div className="mt-3 pt-2 border-t border-[#235447]">
-                  <button
-                    type="button"
-                    onClick={() => {
-                      setShowNotesPopover(false);
-                      onOpenFollowUpModal(lead);
-                    }}
-                    className="w-full py-1.5 px-3 rounded-xl bg-[#14382F] hover:bg-[#1C4E41] text-[#C1F76B] hover:text-[#FDFEF8] text-xs font-semibold flex items-center justify-center gap-1.5 transition-colors cursor-pointer border border-[#235447]"
-                  >
-                    <Pencil className="w-3 h-3" />
-                    <span>{lead.followUpNotes ? 'Editar Nota' : '+ Adicionar Nota'}</span>
-                  </button>
-                </div>
-              </div>
-            )}
+            {showNotesPopover && renderNotesPopoverContent()}
           </div>
 
-          {/* 3. Funnel Journey Icon with Dropdown Popover */}
           <div className="relative">
             <button
               type="button"
@@ -974,73 +1176,9 @@ export const ChatPanel: React.FC<ChatPanelProps> = ({
             >
               <TrendingUp className="w-4 h-4" />
             </button>
-
-            {/* Journey Dropdown Popover */}
-            {showJourneyPopover && (
-              <div className="absolute right-0 mt-1.5 z-50 w-80 bg-[#0F2D26] border border-[#235447] rounded-2xl shadow-2xl p-3 animate-in fade-in zoom-in-95 duration-150 text-left">
-                <div className="flex items-center justify-between pb-2 border-b border-[#235447] mb-2.5">
-                  <div className="flex items-center gap-1.5 text-xs font-bold text-[#FDFEF8]">
-                    <TrendingUp className="w-3.5 h-3.5 text-[#C1F76B]" />
-                    <span>Jornada no Funil</span>
-                  </div>
-                  <span className="text-[10px] font-semibold text-[#95BDB0] bg-[#14382F] px-2 py-0.5 rounded-full">
-                    {lead.stageHistory?.length || 1} {lead.stageHistory?.length === 1 ? 'movimento' : 'movimentos'}
-                  </span>
-                </div>
-
-                {/* Timeline Dots Strip */}
-                <div className="flex items-center gap-1 overflow-x-auto py-2 px-2 mb-2.5 bg-[#14382F]/60 rounded-xl border border-[#235447]/60">
-                  <div className="w-2.5 h-2.5 rounded-full bg-blue-400 flex-shrink-0" title="Entrada do Lead" />
-                  <div className="h-px w-2.5 bg-[#2D6B5A] flex-shrink-0" />
-                  {(lead.stageHistory || []).map((entry, idx) => {
-                    const color = columns.find((c) => c.id === entry.toColumnId)?.color || '#C1F76B';
-                    return (
-                      <React.Fragment key={idx}>
-                        <div
-                          className="w-2.5 h-2.5 rounded-full border border-white/20 flex-shrink-0"
-                          style={{ backgroundColor: color }}
-                          title={`${entry.fromColumnTitle} → ${entry.toColumnTitle}`}
-                        />
-                        <div className="h-px w-2.5 bg-[#2D6B5A] flex-shrink-0" />
-                      </React.Fragment>
-                    );
-                  })}
-                  <div
-                    className="w-3.5 h-3.5 rounded-full border-2 border-white flex-shrink-0 animate-pulse"
-                    style={{ backgroundColor: currentColumn?.color || '#C1F76B' }}
-                    title={`Etapa Atual: ${currentColumn?.title}`}
-                  />
-                </div>
-
-                {/* History List */}
-                <div className="space-y-1.5 max-h-48 overflow-y-auto pr-1">
-                  {(lead.stageHistory || []).map((entry, idx) => {
-                    const color = columns.find((c) => c.id === entry.toColumnId)?.color || '#C1F76B';
-                    return (
-                      <div key={idx} className="flex items-start justify-between text-[11px] p-1.5 rounded-lg bg-[#14382F] border border-[#235447]">
-                        <div className="flex items-center gap-1.5 truncate">
-                          <span className="w-2 h-2 rounded-full flex-shrink-0" style={{ backgroundColor: color }} />
-                          <span className="truncate text-[#FDFEF8] font-medium">{entry.toColumnTitle.replace(/^[^ ]+ /, '')}</span>
-                        </div>
-                        <span className="text-[10px] text-[#95BDB0] flex-shrink-0">{entry.movedAtLabel}</span>
-                      </div>
-                    );
-                  })}
-                </div>
-
-                {/* Current Stage Summary */}
-                <div className="mt-2.5 pt-2 border-t border-[#235447] flex items-center justify-between text-[11px]">
-                  <span className="text-[#95BDB0]">Fase Atual:</span>
-                  <span className="font-bold flex items-center gap-1.5 text-[#FDFEF8]">
-                    <span className="w-2 h-2 rounded-full" style={{ backgroundColor: currentColumn?.color || '#C1F76B' }} />
-                    {currentColumn?.title.replace(/^[^ ]+ /, '')}
-                  </span>
-                </div>
-              </div>
-            )}
+            {showJourneyPopover && renderJourneyPopoverContent()}
           </div>
 
-          {/* 4. Follow-up schedule button */}
           <button
             onClick={() => onOpenFollowUpModal(lead)}
             className={`p-2 rounded-xl border transition-all duration-150 hover:scale-105 active:scale-95 cursor-pointer ${
@@ -1053,7 +1191,6 @@ export const ChatPanel: React.FC<ChatPanelProps> = ({
             <Clock className="w-4 h-4" />
           </button>
 
-          {/* 5. Close Panel button */}
           <button
             onClick={onCloseChat}
             className="p-2 rounded-xl bg-[#0F2D26] border border-[#235447] text-[#95BDB0] hover:text-red-300 hover:bg-red-500/20 hover:border-red-500/40 transition-all duration-150 hover:scale-105 active:scale-95 cursor-pointer"

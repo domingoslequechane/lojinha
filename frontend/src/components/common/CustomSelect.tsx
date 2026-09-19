@@ -34,9 +34,28 @@ export const CustomSelect: React.FC<CustomSelectProps> = ({
   variant = 'default',
 }) => {
   const [isOpen, setIsOpen] = useState(false);
+  const [effectiveAlign, setEffectiveAlign] = useState<'left' | 'right'>(align);
   const containerRef = useRef<HTMLDivElement>(null);
 
   const selectedOption = options.find((opt) => opt.value === value);
+
+  useEffect(() => {
+    setEffectiveAlign(align);
+  }, [align]);
+
+  // Smart auto-alignment to prevent popover cut-off on screen edges
+  useEffect(() => {
+    if (isOpen && containerRef.current) {
+      const rect = containerRef.current.getBoundingClientRect();
+      if (align === 'right' && rect.right < 240) {
+        setEffectiveAlign('left');
+      } else if (align === 'left' && rect.left + 240 > window.innerWidth) {
+        setEffectiveAlign('right');
+      } else {
+        setEffectiveAlign(align);
+      }
+    }
+  }, [isOpen, align]);
 
   // Close when clicking outside
   useEffect(() => {
@@ -133,8 +152,8 @@ export const CustomSelect: React.FC<CustomSelectProps> = ({
       {/* Dropdown Menu Popover */}
       {isOpen && (
         <div
-          className={`absolute mt-1.5 z-50 ${isDotOnly ? 'w-56' : 'min-w-full w-full'} max-h-64 overflow-y-auto rounded-2xl bg-[#0F2D26] border border-[#235447] shadow-2xl p-1.5 animate-in fade-in zoom-in-95 duration-150 ${
-            align === 'right' ? 'right-0' : 'left-0'
+          className={`absolute mt-1.5 z-50 ${isDotOnly ? 'w-56' : 'min-w-full w-full'} max-w-[calc(100vw-24px)] max-h-64 overflow-y-auto rounded-2xl bg-[#0F2D26] border border-[#235447] shadow-2xl p-1.5 animate-in fade-in zoom-in-95 duration-150 ${
+            effectiveAlign === 'right' ? 'right-0' : 'left-0'
           } ${dropdownClassName}`}
         >
           {options.map((option) => {
