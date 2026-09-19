@@ -37,7 +37,7 @@ export const KanbanCard: React.FC<KanbanCardProps> = ({
       draggable
       onDragStart={(e) => onDragStart(e, lead.id)}
       onClick={() => onSelect(lead)}
-      className={`group relative p-3 rounded-2xl cursor-pointer transition-all duration-150 select-none border hover:scale-[1.015] active:scale-[0.99] ${
+      className={`group relative p-3 rounded-2xl cursor-pointer transition-all duration-150 border hover:scale-[1.015] active:scale-[0.99] ${
         isSelected
           ? 'bg-[#1E5044] border-[#C1F76B] shadow-lg shadow-[#C1F76B]/20 ring-1 ring-[#C1F76B]'
           : hasUnread

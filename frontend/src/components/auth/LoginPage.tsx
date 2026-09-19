@@ -70,7 +70,7 @@ export const LoginPage: React.FC = () => {
   };
 
   return (
-    <div className="min-h-screen w-full flex flex-col justify-center items-center p-4 relative overflow-hidden select-none"
+    <div className="min-h-screen w-full flex flex-col justify-center items-center p-4 relative overflow-hidden"
       style={{ backgroundColor: 'var(--color-surface-base)', color: 'var(--color-text-primary)' }}>
 
       {/* Glow Orbs */}

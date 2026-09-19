@@ -52,7 +52,7 @@ export const ConfirmModal: React.FC<ConfirmModalProps> = ({
   };
 
   return (
-    <div className="fixed inset-0 bg-black/80 backdrop-blur-xs flex items-center justify-center p-4 z-50 select-none animate-in fade-in duration-150">
+    <div className="fixed inset-0 bg-black/80 backdrop-blur-xs flex items-center justify-center p-4 z-50 animate-in fade-in duration-150">
       <div className="bg-[#0F2D26] border border-[#235447] rounded-3xl w-full max-w-sm overflow-hidden shadow-2xl p-6 text-center animate-in zoom-in-95 duration-150 space-y-4">
         {/* Icon Circle */}
         <div className="w-14 h-14 mx-auto rounded-2xl bg-[#14382F] border border-[#2D6B5A] flex items-center justify-center shadow-inner">

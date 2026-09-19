@@ -197,7 +197,7 @@ export const MetricsView: React.FC<MetricsViewProps> = ({ columns, leads }) => {
   const salesD = generateSplinePath(salesPoints);
 
   return (
-    <div className="flex-1 h-full overflow-y-auto p-3 sm:p-6 bg-[#091E19] space-y-4 sm:space-y-6 select-none font-sans">
+    <div className="flex-1 h-full overflow-y-auto p-3 sm:p-6 bg-[#091E19] space-y-4 sm:space-y-6 font-sans">
       {/* Top Header & Period Selector */}
       <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4">
         <div>

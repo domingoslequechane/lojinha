@@ -1001,7 +1001,7 @@ function CockpitWorkspace() {
   };
 
   return (
-    <div className="flex h-screen w-screen bg-[#091E19] text-[#FDFEF8] overflow-hidden select-none font-sans">
+    <div className="flex h-[100dvh] w-full bg-[#091E19] text-[#FDFEF8] overflow-hidden font-sans">
       {/* 1. Left Sidebar Navigation */}
       <Sidebar
         collapsed={sidebarCollapsed}
@@ -1018,7 +1018,7 @@ function CockpitWorkspace() {
       />
 
       {/* Main Workspace Area */}
-      <div className="flex-1 flex flex-col h-full overflow-hidden pb-16 md:pb-0">
+      <div className="flex-1 flex flex-col h-full overflow-hidden pb-[calc(4rem+env(safe-area-inset-bottom,0px))] md:pb-0">
         {/* 2. Top Header with Search, Status and Quick Actions */}
         <Header
           searchTerm={searchTerm}

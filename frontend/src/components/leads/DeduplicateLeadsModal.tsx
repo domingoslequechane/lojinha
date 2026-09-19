@@ -260,7 +260,7 @@ export const DeduplicateLeadsModal: React.FC<DeduplicateLeadsModalProps> = ({
   const totalCopiesToDelete = selectedToDelete.size;
 
   return (
-    <div className="fixed inset-0 bg-black/80 backdrop-blur-xs flex items-center justify-center p-4 z-50 select-none animate-in fade-in">
+    <div className="fixed inset-0 bg-black/80 backdrop-blur-xs flex items-center justify-center p-4 z-50 animate-in fade-in">
       <div className="bg-[#091E19] border border-[#235447] rounded-3xl w-full max-w-3xl overflow-hidden shadow-2xl flex flex-col max-h-[90vh]">
         {/* Header */}
         <div className="p-4 bg-[#14382F] border-b border-[#235447] flex items-center justify-between">

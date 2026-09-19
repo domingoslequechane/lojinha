@@ -32,7 +32,7 @@ export const DeleteLeadModal: React.FC<DeleteLeadModalProps> = ({
   };
 
   return (
-    <div className="fixed inset-0 bg-black/80 backdrop-blur-xs flex items-center justify-center p-4 z-50 select-none animate-in fade-in duration-150">
+    <div className="fixed inset-0 bg-black/80 backdrop-blur-xs flex items-center justify-center p-4 z-50 animate-in fade-in duration-150">
       <div className="bg-[#091E19] border border-red-500/30 rounded-3xl w-full max-w-md overflow-hidden shadow-2xl shadow-black/60 flex flex-col scale-in-95 duration-150">
         {/* Header */}
         <div className="p-4 bg-red-950/40 border-b border-red-500/20 flex items-center justify-between">

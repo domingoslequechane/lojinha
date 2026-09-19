@@ -85,7 +85,7 @@ export const KanbanBoard: React.FC<KanbanBoardProps> = ({
   return (
     <div
       ref={boardRef}
-      className="flex-1 h-full min-h-0 overflow-x-auto overflow-y-hidden px-3 sm:pl-4 sm:pr-0 py-3 bg-[#091E19] kanban-column-scroll select-none snap-x snap-mandatory sm:snap-none"
+      className="flex-1 h-full min-h-0 overflow-x-auto overflow-y-hidden px-3 sm:pl-4 sm:pr-0 py-3 bg-[#091E19] kanban-column-scroll snap-x snap-mandatory sm:snap-none"
     >
       <div className="flex items-stretch gap-3 sm:gap-4 h-full w-max min-w-full pr-3 sm:pr-4 pb-1">
         {sortedColumns.map((col, index) => {

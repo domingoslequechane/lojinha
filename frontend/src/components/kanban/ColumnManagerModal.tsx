@@ -229,7 +229,7 @@ export const ColumnManagerModal: React.FC<ColumnManagerModalProps> = ({
   };
 
   return (
-    <div className="fixed inset-0 bg-black/70 backdrop-blur-xs flex items-center justify-center p-4 z-50 select-none">
+    <div className="fixed inset-0 bg-black/70 backdrop-blur-xs flex items-center justify-center p-4 z-50">
       <div className="bg-[#0F2D26] border border-[#235447] rounded-3xl w-full max-w-lg overflow-hidden shadow-2xl animate-in fade-in zoom-in duration-200">
         {/* Header */}
         <div className="p-4 bg-[#14382F] border-b border-[#235447] flex items-center justify-between">

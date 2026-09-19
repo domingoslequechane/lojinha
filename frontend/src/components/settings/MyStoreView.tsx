@@ -311,7 +311,7 @@ export const MyStoreView: React.FC<MyStoreViewProps> = ({
 • *Ponto de Retirada:* ${formData.shippingSettings?.pickupAddress || 'A combinar'}${formData.shippingSettings?.shippingNotes ? `\n\nℹ️ *Observação:* ${formData.shippingSettings.shippingNotes}` : ''}`.trim();
 
   return (
-    <div className="flex-1 h-full overflow-y-auto p-3 sm:p-6 bg-[#091E19] space-y-4 sm:space-y-6 select-none font-sans">
+    <div className="flex-1 h-full overflow-y-auto p-3 sm:p-6 bg-[#091E19] space-y-4 sm:space-y-6 font-sans">
       {/* Top Header */}
       <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4">
         <div>

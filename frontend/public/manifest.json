@@ -3,7 +3,10 @@
   "short_name": "Lojinha",
   "description": "Cockpit de Vendas e CRM para WhatsApp com Funil Dinâmico",
   "start_url": "/",
+  "scope": "/",
   "display": "standalone",
+  "display_override": ["standalone", "window-controls-overlay", "minimal-ui"],
+  "orientation": "any",
   "background_color": "#0F2D26",
   "theme_color": "#0F2D26",
   "icons": [

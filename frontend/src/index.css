@@ -54,16 +54,22 @@
   }
 
   html, body, #root {
-    height: 100%;
+    min-height: 100%;
+    min-height: 100dvh;
     width: 100%;
     margin: 0;
     padding: 0;
-    overflow: hidden;
     background-color: #091E19;
     color: #FDFEF8;
     font-family: 'Poppins', system-ui, -apple-system, BlinkMacSystemFont, sans-serif;
     -webkit-font-smoothing: antialiased;
     -moz-osx-font-smoothing: grayscale;
+  }
+
+  /* Natural, beautiful text selection */
+  ::selection {
+    background-color: rgba(193, 247, 107, 0.35);
+    color: #FDFEF8;
   }
 
   button:not(:disabled),
@@ -137,4 +143,15 @@ select option {
 .no-scrollbar {
   -ms-overflow-style: none;
   scrollbar-width: none;
+}
+
+/* ── Safe Area Insets for Modern Mobile Displays ── */
+.pb-safe {
+  padding-bottom: env(safe-area-inset-bottom, 0px);
+}
+.pt-safe {
+  padding-top: env(safe-area-inset-top, 0px);
+}
+.mb-safe {
+  margin-bottom: env(safe-area-inset-bottom, 0px);
 }

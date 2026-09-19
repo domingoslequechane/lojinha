@@ -269,7 +269,7 @@ export const ChatPanel: React.FC<ChatPanelProps> = ({
 
   if (!lead) {
     return (
-      <div className="w-[480px] min-w-[420px] h-full bg-[#0F2D26] border-l border-[#235447] hidden md:flex flex-col items-center justify-center p-8 text-center select-none">
+      <div className="w-[480px] min-w-[420px] h-full bg-[#0F2D26] border-l border-[#235447] hidden md:flex flex-col items-center justify-center p-8 text-center">
         <div className="w-20 h-20 rounded-full bg-[#14382F] flex items-center justify-center text-[#C1F76B] mb-4">
           <Zap className="w-10 h-10" />
         </div>
@@ -912,7 +912,7 @@ export const ChatPanel: React.FC<ChatPanelProps> = ({
   return (
     <div className="w-full md:w-[480px] md:min-w-[420px] lg:w-[500px] h-full bg-[#091E19] border-l border-[#235447] flex flex-col z-20 shadow-2xl transition-all duration-200 animate-in fade-in slide-in-from-right-4 relative overflow-hidden">
       {/* 1. Mobile Chat Header (Row 1: Back + Avatar + Name & Phone in ONE SINGLE line + Close X) */}
-      <div className="md:hidden h-14 bg-[#14382F] px-2.5 flex items-center justify-between gap-2 border-b border-[#235447]/60 select-none flex-shrink-0">
+      <div className="md:hidden h-14 bg-[#14382F] px-2.5 flex items-center justify-between gap-2 border-b border-[#235447]/60 flex-shrink-0">
         <div className="flex items-center gap-2 min-w-0 flex-1">
           {/* Mobile Back Button */}
           <button
@@ -938,7 +938,7 @@ export const ChatPanel: React.FC<ChatPanelProps> = ({
                 {lead.name ? lead.name.trim().charAt(0).toUpperCase() : '#'}
               </div>
             )}
-            <span className="absolute bottom-0 right-0 w-2 h-2 rounded-full bg-[#C1F76B] ring-2 ring-[#14382F]" />
+            <span className="absolute bottom-0 right-0 w-2.5 h-2.5 rounded-full bg-[#C1F76B] ring-2 ring-[#14382F]" />
           </div>
 
           {/* Name on top, contact/phone underneath */}
@@ -971,7 +971,7 @@ export const ChatPanel: React.FC<ChatPanelProps> = ({
       </div>
 
       {/* 2. Mobile Action Buttons Bar (Row 2: Action buttons underneath) */}
-      <div className="md:hidden flex items-center justify-between gap-1.5 px-3 py-1.5 bg-[#0F2D26] border-b border-[#235447] select-none flex-shrink-0">
+      <div className="md:hidden flex items-center justify-between gap-1.5 px-3 py-1.5 bg-[#0F2D26] border-b border-[#235447] flex-shrink-0">
         {/* Direct Call Button */}
         {lead.phone && (
           <a
@@ -1065,7 +1065,7 @@ export const ChatPanel: React.FC<ChatPanelProps> = ({
       </div>
 
       {/* 3. Desktop Chat Top Header (Hidden on mobile, visible on md+) */}
-      <div className="hidden md:flex h-16 bg-[#14382F] px-3.5 items-center justify-between border-b border-[#235447] select-none flex-shrink-0">
+      <div className="hidden md:flex h-16 bg-[#14382F] px-3.5 items-center justify-between border-b border-[#235447] flex-shrink-0">
         <div className="flex items-center gap-2.5 truncate">
           <div className="relative flex-shrink-0">
             {lead.avatar ? (

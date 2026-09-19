@@ -37,7 +37,7 @@ export const OnboardingPage: React.FC = () => {
   const onBlur  = (e: React.FocusEvent<HTMLInputElement | HTMLSelectElement>) => e.currentTarget.style.borderColor = 'var(--color-border)';
 
   return (
-    <div className="min-h-screen w-full flex flex-col justify-center items-center p-4 relative overflow-hidden select-none"
+    <div className="min-h-screen w-full flex flex-col justify-center items-center p-4 relative overflow-hidden"
       style={{ backgroundColor: 'var(--color-surface-base)', color: 'var(--color-text-primary)' }}>
       <div className="absolute top-1/4 left-1/2 -translate-x-1/2 -translate-y-1/2 w-96 h-96 rounded-full blur-3xl pointer-events-none"
         style={{ backgroundColor: 'rgba(193,247,107,0.06)' }} />
