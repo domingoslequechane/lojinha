@@ -2,30 +2,15 @@ import React, { useState } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { Store, ShoppingBag, Sparkles, MapPin, Smartphone, ArrowRight, AlertCircle, LogOut } from 'lucide-react';
 import { useAuth } from '../../context/AuthContext';
-import { CustomSelect } from '../common/CustomSelect';
-
-const MOZ_PROVINCES = [
-  'Maputo Cidade',
-  'Matola',
-  'Gaza (Xai-Xai)',
-  'Inhambane',
-  'Sofala (Beira)',
-  'Nampula',
-  'Tete',
-  'Zambézia (Quelimane)',
-  'Cabo Delgado (Pemba)',
-  'Niassa (Lichinga)',
-];
-
 export const OnboardingPage: React.FC = () => {
   const navigate = useNavigate();
   const { user, completeOnboarding, logout, isLoading } = useAuth();
 
   const [storeName, setStoreName] = useState('');
   const [slogan, setSlogan] = useState('');
-  const [city, setCity] = useState('Maputo Cidade');
+  const [city, setCity] = useState('');
   const [enable2FA, setEnable2FA] = useState(false);
-  const [twoFactorPhone, setTwoFactorPhone] = useState(user?.phone || '+258 8');
+  const [twoFactorPhone, setTwoFactorPhone] = useState(user?.phone || '');
   const [errorMessage, setErrorMessage] = useState<string | null>(null);
 
   const handleSubmit = async (e: React.FormEvent) => {
@@ -35,7 +20,7 @@ export const OnboardingPage: React.FC = () => {
     const result = await completeOnboarding({
       storeName: storeName.trim(),
       slogan: slogan.trim() || 'Loja Oficial WhatsApp',
-      city,
+      city: city.trim() || undefined,
       enable2FAWhatsApp: enable2FA,
       twoFactorPhone: enable2FA ? twoFactorPhone.trim() : undefined,
     });
@@ -90,7 +75,7 @@ export const OnboardingPage: React.FC = () => {
             <div className="relative">
               <ShoppingBag className="w-4 h-4 absolute left-3.5 top-1/2 -translate-y-1/2" style={{ color: 'var(--color-text-muted)' }} />
               <input type="text" required value={storeName} onChange={e => setStoreName(e.target.value)}
-                placeholder="Ex: Lojinha Kids Maputo"
+                placeholder="Ex: Minha Loja"
                 className="w-full text-xs pl-10 pr-4 py-2.5 rounded-xl focus:outline-none transition-colors font-medium"
                 style={inputStyle} onFocus={onFocus} onBlur={onBlur} />
             </div>
@@ -102,7 +87,7 @@ export const OnboardingPage: React.FC = () => {
             <div className="relative">
               <Sparkles className="w-4 h-4 absolute left-3.5 top-1/2 -translate-y-1/2" style={{ color: 'var(--color-text-muted)' }} />
               <input type="text" value={slogan} onChange={e => setSlogan(e.target.value)}
-                placeholder="Ex: Tablets Educativos e Brinquedos Infantis"
+                placeholder="Ex: Loja Oficial WhatsApp"
                 className="w-full text-xs pl-10 pr-4 py-2.5 rounded-xl focus:outline-none transition-colors"
                 style={inputStyle} onFocus={onFocus} onBlur={onBlur} />
             </div>
@@ -110,16 +95,20 @@ export const OnboardingPage: React.FC = () => {
 
           {/* City */}
           <div>
-            <label className="text-xs font-semibold block mb-1" style={{ color: 'var(--color-text-secondary)' }}>Cidade / Província (Moçambique)</label>
-            <CustomSelect
-              value={city}
-              onChange={setCity}
-              options={MOZ_PROVINCES.map((p) => ({ value: p, label: p }))}
-              leftIcon={<MapPin className="w-4 h-4 text-[#95BDB0]" />}
-              size="md"
-              className="w-full"
-              dropdownClassName="w-full min-w-full"
-            />
+            <label className="text-xs font-semibold block mb-1" style={{ color: 'var(--color-text-secondary)' }}>Cidade / Região (Opcional)</label>
+            <div className="relative">
+              <MapPin className="w-4 h-4 absolute left-3.5 top-1/2 -translate-y-1/2" style={{ color: 'var(--color-text-muted)' }} />
+              <input
+                type="text"
+                value={city}
+                onChange={e => setCity(e.target.value)}
+                placeholder="Ex: Sua Cidade ou País"
+                className="w-full text-xs pl-10 pr-4 py-2.5 rounded-xl focus:outline-none transition-colors"
+                style={inputStyle}
+                onFocus={onFocus}
+                onBlur={onBlur}
+              />
+            </div>
           </div>
 
           {/* 2FA Section */}

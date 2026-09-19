@@ -83,7 +83,7 @@ export const RegisterPage: React.FC = () => {
             <div className="relative">
               <Mail className="w-4 h-4 absolute left-3.5 top-1/2 -translate-y-1/2" style={{ color: 'var(--color-text-muted)' }} />
               <input type="email" required value={email} onChange={e => setEmail(e.target.value)}
-                placeholder="seu.email@exemplo.co.mz"
+                placeholder="seu.email@exemplo.com"
                 className="w-full text-xs pl-10 pr-4 py-2.5 rounded-xl focus:outline-none transition-colors"
                 style={inputStyle} onFocus={onFocus} onBlur={onBlur} />
             </div>

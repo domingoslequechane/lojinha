@@ -396,7 +396,7 @@ export const WhatsAppInstancesView: React.FC<WhatsAppInstancesViewProps> = ({
               <span className="w-2 h-2 rounded-full bg-[#C1F76B] animate-pulse" />
             </div>
             <p className="text-[11px] text-[#95BDB0] font-mono mt-0.5">
-              https://evolution.meuservidor.co.mz • Instâncias ativas: {instList.filter((i) => i.status === 'connected').length} / {instList.length}
+              https://evolution.meuservidor.com • Instâncias ativas: {instList.filter((i) => i.status === 'connected').length} / {instList.length}
             </p>
           </div>
         </div>
@@ -815,7 +815,7 @@ export const WhatsAppInstancesView: React.FC<WhatsAppInstancesViewProps> = ({
                     setNewInstanceName(e.target.value);
                     if (createError) setCreateError(null);
                   }}
-                  placeholder="Ex: Linha 2 - Atendimento Matola"
+                  placeholder="Ex: Linha 2 - Atendimento e Vendas"
                   className="w-full bg-[#14382F] text-xs text-[#FDFEF8] px-3.5 py-2.5 rounded-xl border border-[#2D6B5A] focus:border-[#C1F76B] focus:outline-none"
                 />
                 <p className="text-[10px] text-[#95BDB0] mt-1">

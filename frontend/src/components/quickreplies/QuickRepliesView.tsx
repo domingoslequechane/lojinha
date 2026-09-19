@@ -364,7 +364,7 @@ export const QuickRepliesView: React.FC<QuickRepliesViewProps> = ({
                   required
                   value={title}
                   onChange={(e) => setTitle(e.target.value)}
-                  placeholder="Ex: Tabela de Fretes Matola / Zimpeto"
+                  placeholder="Ex: Tabela de Fretes e Entregas"
                   className="w-full bg-[#14382F] text-xs text-[#FDFEF8] px-3 py-2 rounded-xl border border-[#2D6B5A] focus:border-[#C1F76B] focus:outline-none"
                 />
               </div>

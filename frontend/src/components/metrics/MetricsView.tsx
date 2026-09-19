@@ -79,7 +79,7 @@ export const MetricsView: React.FC<MetricsViewProps> = ({ columns, leads }) => {
     { day: 'Dom', leads: 16, sales: 6, value: 22800 },
   ];
 
-  // Drop-off Reasons Matrix (Real pain points from WhatsApp sales in Mozambique)
+  // Drop-off Reasons Matrix (Operational pain points from WhatsApp sales)
   const dropOffReasons = [
     {
       title: 'Decisão Familiar (Aguardando Esposo / Esposa)',
@@ -109,22 +109,22 @@ export const MetricsView: React.FC<MetricsViewProps> = ({ columns, leads }) => {
       action: 'Programar follow-up automático na manhã do dia 25 oferecendo entrega prioritária.',
     },
     {
-      title: 'Dúvida no Custo de Frete (Matola, Zimpeto, Províncias)',
+      title: 'Dúvida no Custo de Frete ou Envio',
       percentage: 10,
       leadsCount: 4,
       valueAtRisk: 15200,
       color: '#eab308',
       criticality: 'Médio',
-      action: 'Oferecer ponto de encontro gratuito no centro de Maputo ou taxa fixa de 150 MT.',
+      action: 'Oferecer ponto de retirada ou frete fixo promocional.',
     },
     {
-      title: 'Dificuldade ou atraso no M-Pesa / e-Mola',
+      title: 'Dificuldade na forma de pagamento',
       percentage: 5,
       leadsCount: 2,
       valueAtRisk: 7600,
       color: '#10b981',
       criticality: 'Baixo',
-      action: 'Enviar dados do M-Pesa e Emola já formatados com opção de pagamento na entrega.',
+      action: 'Enviar dados de pagamento alternativos ou parcelamento facilitado.',
     },
   ];
 
@@ -561,10 +561,10 @@ export const MetricsView: React.FC<MetricsViewProps> = ({ columns, leads }) => {
             <div>
               <h3 className="text-sm font-bold text-[#FDFEF8] flex items-center gap-2">
                 <AlertTriangle className="w-4 h-4 text-orange-400" />
-                Matriz de Gargalos & Motivos de Abandono (Diagnóstico Moçambique)
+                Matriz de Gargalos & Motivos de Abandono (Diagnóstico Operacional)
               </h3>
               <p className="text-xs text-[#95BDB0] mt-0.5">
-                Fatores que travam a decisão de compra de tablets infantis e estratégias de recuperação
+                Fatores que travam a decisão de compra e estratégias de recuperação
               </p>
             </div>
           </div>

@@ -285,19 +285,29 @@ export const MyStoreView: React.FC<MyStoreViewProps> = ({
   };
 
   // Payment preview text
-  const paymentPreviewText = `💳 *DADOS PARA PAGAMENTO / RESERVA:*
-
-📱 *M-Pesa (Vodacom):* ${formData.paymentSettings?.mpesaNumber || 'A configurar'} (Nome: ${formData.paymentSettings?.mpesaName || ''})
-📱 *e-Mola (Movitel):* ${formData.paymentSettings?.emolaNumber || 'A configurar'} (Nome: ${formData.paymentSettings?.emolaName || ''})${formData.paymentSettings?.bankName && formData.paymentSettings?.bankAccount ? `\n🏦 *${formData.paymentSettings.bankName}:* ${formData.paymentSettings.bankAccount}` : ''}
-
-${formData.paymentSettings?.customInstructions || ''}`.trim();
+  const paymentPreviewParts: string[] = ['💳 *DADOS PARA PAGAMENTO / RESERVA:*'];
+  if (formData.paymentSettings?.mpesaNumber) {
+    paymentPreviewParts.push(`📱 *M-Pesa / Pagamento Móvel 1:* ${formData.paymentSettings.mpesaNumber}${formData.paymentSettings.mpesaName ? ` (Nome: ${formData.paymentSettings.mpesaName})` : ''}`);
+  }
+  if (formData.paymentSettings?.emolaNumber) {
+    paymentPreviewParts.push(`📱 *e-Mola / Pagamento Móvel 2:* ${formData.paymentSettings.emolaNumber}${formData.paymentSettings.emolaName ? ` (Nome: ${formData.paymentSettings.emolaName})` : ''}`);
+  }
+  if (formData.paymentSettings?.bankName && formData.paymentSettings?.bankAccount) {
+    paymentPreviewParts.push(`🏦 *${formData.paymentSettings.bankName}:* ${formData.paymentSettings.bankAccount}`);
+  }
+  if (formData.paymentSettings?.customInstructions) {
+    paymentPreviewParts.push(`\n${formData.paymentSettings.customInstructions}`);
+  }
+  const paymentPreviewText = paymentPreviewParts.length > 1
+    ? paymentPreviewParts.join('\n')
+    : '💳 *DADOS PARA PAGAMENTO / RESERVA:*\n(Configure os dados de pagamento acima)';
 
   // Shipping preview text
-  const shippingPreviewText = `📍 *LOCAIS DE ENTREGA & FRETE (MOÇAMBIQUE):*
+  const shippingPreviewText = `📍 *INFORMAÇÕES DE ENTREGA & FRETE:*
 
-• *Maputo Cidade:* ${formData.shippingSettings?.maputoFee || 'A combinar'}
-• *Matola / Zimpeto:* ${formData.shippingSettings?.matolaFee || 'A combinar'}
-• *Províncias:* ${formData.shippingSettings?.provincesFee || 'A combinar'}
+• *Entrega Local:* ${formData.shippingSettings?.maputoFee || 'A combinar'}
+• *Envio Regional:* ${formData.shippingSettings?.matolaFee || 'A combinar'}
+• *Envio Nacional / Longa Distância:* ${formData.shippingSettings?.provincesFee || 'A combinar'}
 • *Ponto de Retirada:* ${formData.shippingSettings?.pickupAddress || 'A combinar'}${formData.shippingSettings?.shippingNotes ? `\n\nℹ️ *Observação:* ${formData.shippingSettings.shippingNotes}` : ''}`.trim();
 
   return (
@@ -357,7 +367,7 @@ ${formData.paymentSettings?.customInstructions || ''}`.trim();
           }`}
         >
           <CreditCard className={`w-4 h-4 ${activeSubTab === 'payments' ? 'text-[#0F2D26]' : 'text-emerald-400'}`} />
-          <span>Contas de Pagamento (M-Pesa / e-Mola)</span>
+          <span>Formas de Pagamento</span>
         </button>
 
         <button
@@ -390,10 +400,10 @@ ${formData.paymentSettings?.customInstructions || ''}`.trim();
             <div>
               <h3 className="text-base font-bold text-[#FDFEF8] flex items-center gap-2">
                 <Package className="w-5 h-5 text-pink-400" />
-                Catálogo de Produtos & Tablets ({formData.products?.length || 0})
+                Catálogo de Produtos & Serviços ({formData.products?.length || 0})
               </h3>
               <p className="text-xs text-[#95BDB0] mt-1 leading-relaxed">
-                Estes produtos aparecem no botão de anexo <strong className="text-[#FDFEF8]">"Catálogo dos Tablets"</strong> dentro do Chat WhatsApp. Ao clicar neles no atendimento, a foto ou vídeo demonstrativo e a legenda com preço em Meticais (MT) são enviados instantaneamente ao cliente.
+                Estes produtos aparecem no botão de anexo <strong className="text-[#FDFEF8]">"Catálogo de Produtos"</strong> dentro do Chat WhatsApp. Ao clicar neles no atendimento, a foto ou vídeo demonstrativo e a legenda com o preço configurado são enviados instantaneamente ao cliente.
               </p>
             </div>
 
@@ -547,14 +557,14 @@ ${formData.paymentSettings?.customInstructions || ''}`.trim();
 
                     <div>
                       <label className="text-xs font-semibold text-[#95BDB0] block mb-1.5">
-                        Preço em Meticais (MT) *
+                        Preço *
                       </label>
                       <input
                         type="text"
                         required
                         value={productForm.price}
                         onChange={(e) => setProductForm({ ...productForm, price: e.target.value })}
-                        placeholder="Ex: 3.800 MT"
+                        placeholder="Ex: 1500"
                         className="w-full bg-[#14382F] text-xs text-[#FDFEF8] px-3.5 py-2.5 rounded-xl border border-[#2D6B5A] focus:border-[#C1F76B] focus:outline-none font-bold text-[#C1F76B]"
                       />
                     </div>
@@ -675,10 +685,10 @@ ${formData.paymentSettings?.customInstructions || ''}`.trim();
               <div>
                 <h3 className="text-sm font-bold text-[#FDFEF8] flex items-center gap-2">
                   <CreditCard className="w-4 h-4 text-emerald-400" />
-                  Contas de Pagamento & Transferência Móvel (Moçambique)
+                  Formas de Pagamento & Transferência
                 </h3>
                 <p className="text-xs text-[#95BDB0] mt-0.5">
-                  Estes dados são enviados instantaneamente quando o atendente clica em <strong className="text-[#FDFEF8]">"Dados M-Pesa / e-Mola"</strong> no Chat.
+                  Estes dados são enviados instantaneamente quando o atendente clica em <strong className="text-[#FDFEF8]">"Dados de Pagamento"</strong> no Chat.
                 </p>
               </div>
 
@@ -695,35 +705,33 @@ ${formData.paymentSettings?.customInstructions || ''}`.trim();
             <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
               {/* M-Pesa */}
               <div className="p-4 rounded-2xl bg-[#14382F] border border-[#235447] space-y-3">
-                <div className="flex items-center gap-2 text-red-400 font-bold text-xs">
-                  <span className="w-2.5 h-2.5 rounded-full bg-red-500"></span>
-                  <span>M-Pesa (Vodacom Moçambique)</span>
+                <div className="flex items-center gap-2 text-emerald-400 font-bold text-xs">
+                  <span className="w-2.5 h-2.5 rounded-full bg-emerald-500"></span>
+                  <span>M-Pesa / Pagamento Móvel 1</span>
                 </div>
 
                 <div>
                   <label className="text-[11px] font-semibold text-[#95BDB0] block mb-1">
-                    Número do M-Pesa *
+                    Número ou Chave do Pagamento (Opcional)
                   </label>
                   <input
                     type="text"
-                    required
                     value={formData.paymentSettings?.mpesaNumber || ''}
                     onChange={(e) => handlePaymentChange('mpesaNumber', e.target.value)}
-                    placeholder="84 555 1234"
+                    placeholder="Ex: 84 555 1234"
                     className="w-full bg-[#14382F] text-xs text-[#FDFEF8] px-3.5 py-2.5 rounded-xl border border-[#2D6B5A] focus:border-[#C1F76B] focus:outline-none font-mono font-bold"
                   />
                 </div>
 
                 <div>
                   <label className="text-[11px] font-semibold text-[#95BDB0] block mb-1">
-                    Nome do Titular da Conta M-Pesa *
+                    Nome do Titular da Conta (Opcional)
                   </label>
                   <input
                     type="text"
-                    required
                     value={formData.paymentSettings?.mpesaName || ''}
                     onChange={(e) => handlePaymentChange('mpesaName', e.target.value)}
-                    placeholder="Lojinha Kids / Nome da Empresa"
+                    placeholder="Ex: Nome da Empresa ou Titular"
                     className="w-full bg-[#14382F] text-xs text-[#FDFEF8] px-3.5 py-2.5 rounded-xl border border-[#2D6B5A] focus:border-[#C1F76B] focus:outline-none"
                   />
                 </div>
@@ -733,33 +741,31 @@ ${formData.paymentSettings?.customInstructions || ''}`.trim();
               <div className="p-4 rounded-2xl bg-[#14382F] border border-[#235447] space-y-3">
                 <div className="flex items-center gap-2 text-amber-400 font-bold text-xs">
                   <span className="w-2.5 h-2.5 rounded-full bg-amber-500"></span>
-                  <span>e-Mola (Movitel Moçambique)</span>
+                  <span>e-Mola / Pagamento Móvel 2</span>
                 </div>
 
                 <div>
                   <label className="text-[11px] font-semibold text-[#95BDB0] block mb-1">
-                    Número do e-Mola *
+                    Número ou Chave do Pagamento (Opcional)
                   </label>
                   <input
                     type="text"
-                    required
                     value={formData.paymentSettings?.emolaNumber || ''}
                     onChange={(e) => handlePaymentChange('emolaNumber', e.target.value)}
-                    placeholder="86 555 1234"
+                    placeholder="Ex: 86 555 1234"
                     className="w-full bg-[#14382F] text-xs text-[#FDFEF8] px-3.5 py-2.5 rounded-xl border border-[#2D6B5A] focus:border-[#C1F76B] focus:outline-none font-mono font-bold"
                   />
                 </div>
 
                 <div>
                   <label className="text-[11px] font-semibold text-[#95BDB0] block mb-1">
-                    Nome do Titular da Conta e-Mola *
+                    Nome do Titular da Conta (Opcional)
                   </label>
                   <input
                     type="text"
-                    required
                     value={formData.paymentSettings?.emolaName || ''}
                     onChange={(e) => handlePaymentChange('emolaName', e.target.value)}
-                    placeholder="Lojinha Kids / Nome da Empresa"
+                    placeholder="Ex: Nome da Empresa ou Titular"
                     className="w-full bg-[#14382F] text-xs text-[#FDFEF8] px-3.5 py-2.5 rounded-xl border border-[#2D6B5A] focus:border-[#C1F76B] focus:outline-none"
                   />
                 </div>
@@ -769,32 +775,32 @@ ${formData.paymentSettings?.customInstructions || ''}`.trim();
               <div className="p-4 rounded-2xl bg-[#14382F] border border-[#235447] space-y-3 sm:col-span-2">
                 <div className="flex items-center gap-2 text-blue-400 font-bold text-xs">
                   <span className="w-2.5 h-2.5 rounded-full bg-blue-500"></span>
-                  <span>Conta Bancária (Opcional - BIM, BCI, Standard Bank, etc.)</span>
+                  <span>Transferência Bancária / Pix / IBAN (Opcional)</span>
                 </div>
 
                 <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
                   <div>
                     <label className="text-[11px] font-semibold text-[#95BDB0] block mb-1">
-                      Nome do Banco
+                      Nome do Banco ou Instituição
                     </label>
                     <input
                       type="text"
                       value={formData.paymentSettings?.bankName || ''}
                       onChange={(e) => handlePaymentChange('bankName', e.target.value)}
-                      placeholder="Ex: Millennium BIM ou BCI"
+                      placeholder="Ex: Banco ou Instituição Financeira"
                       className="w-full bg-[#14382F] text-xs text-[#FDFEF8] px-3.5 py-2.5 rounded-xl border border-[#2D6B5A] focus:border-[#C1F76B] focus:outline-none"
                     />
                   </div>
 
                   <div>
                     <label className="text-[11px] font-semibold text-[#95BDB0] block mb-1">
-                      Número de Conta / NIB / IBAN
+                      Número de Conta / Pix / IBAN
                     </label>
                     <input
                       type="text"
                       value={formData.paymentSettings?.bankAccount || ''}
                       onChange={(e) => handlePaymentChange('bankAccount', e.target.value)}
-                      placeholder="Ex: 123456789 (IBAN MZ59...)"
+                      placeholder="Ex: 123456789 ou chave Pix / IBAN"
                       className="w-full bg-[#14382F] text-xs text-[#FDFEF8] px-3.5 py-2.5 rounded-xl border border-[#2D6B5A] focus:border-[#C1F76B] focus:outline-none font-mono"
                     />
                   </div>
@@ -808,7 +814,7 @@ ${formData.paymentSettings?.customInstructions || ''}`.trim();
                     type="text"
                     value={formData.paymentSettings?.customInstructions || ''}
                     onChange={(e) => handlePaymentChange('customInstructions', e.target.value)}
-                    placeholder="Ao realizar a transferência, envie o comprovativo por aqui para emitirmos o guia de entrega com o estafeta! 🚀"
+                    placeholder="Ao realizar o pagamento, envie o comprovativo por aqui para darmos andamento ao pedido! 🚀"
                     className="w-full bg-[#14382F] text-xs text-[#FDFEF8] px-3.5 py-2.5 rounded-xl border border-[#2D6B5A] focus:border-[#C1F76B] focus:outline-none"
                   />
                 </div>
@@ -852,10 +858,10 @@ ${formData.paymentSettings?.customInstructions || ''}`.trim();
               <div>
                 <h3 className="text-sm font-bold text-[#FDFEF8] flex items-center gap-2">
                   <Truck className="w-4 h-4 text-amber-400" />
-                  Taxas de Frete, Entregas & Ponto de Retirada (Moçambique)
+                  Taxas de Frete, Entregas & Ponto de Retirada
                 </h3>
                 <p className="text-xs text-[#95BDB0] mt-0.5">
-                  Estes dados são enviados instantaneamente quando o atendente clica em <strong className="text-[#FDFEF8]">"Locais de Entrega & Frete"</strong> no Chat.
+                  Estes dados são enviados instantaneamente quando o atendente clica em <strong className="text-[#FDFEF8]">"Informações de Frete"</strong> no Chat.
                 </p>
               </div>
 
@@ -872,59 +878,55 @@ ${formData.paymentSettings?.customInstructions || ''}`.trim();
               {/* Pickup Address */}
               <div className="sm:col-span-2">
                 <label className="text-xs font-semibold text-[#95BDB0] block mb-1.5">
-                  Endereço Físico / Ponto de Retirada da Loja *
+                  Endereço Físico / Ponto de Retirada da Loja (Opcional)
                 </label>
                 <input
                   type="text"
-                  required
                   value={formData.shippingSettings?.pickupAddress || ''}
                   onChange={(e) => handleShippingChange('pickupAddress', e.target.value)}
-                  placeholder="Av. Eduardo Mondlane, Prédio 104, R/C (Maputo)"
+                  placeholder="Ex: Rua Central, 100 ou Ponto de Coleta"
                   className="w-full bg-[#14382F] text-xs text-[#FDFEF8] px-3.5 py-2.5 rounded-xl border border-[#2D6B5A] focus:border-[#C1F76B] focus:outline-none"
                 />
               </div>
 
-              {/* Maputo Fee */}
+              {/* Local Delivery Fee */}
               <div>
                 <label className="text-xs font-semibold text-[#95BDB0] block mb-1.5">
-                  Taxa / Condição para Maputo Cidade *
+                  Taxa de Entrega Local (Mesma Cidade / Bairro)
                 </label>
                 <input
                   type="text"
-                  required
                   value={formData.shippingSettings?.maputoFee || ''}
                   onChange={(e) => handleShippingChange('maputoFee', e.target.value)}
-                  placeholder="Grátis no centro ou 150 MT"
+                  placeholder="Ex: Grátis no centro ou valor fixo"
                   className="w-full bg-[#14382F] text-xs text-[#FDFEF8] px-3.5 py-2.5 rounded-xl border border-[#2D6B5A] focus:border-[#C1F76B] focus:outline-none"
                 />
               </div>
 
-              {/* Matola Fee */}
+              {/* Regional Delivery Fee */}
               <div>
                 <label className="text-xs font-semibold text-[#95BDB0] block mb-1.5">
-                  Taxa / Condição para Matola & Zimpeto *
+                  Taxa de Envio Regional (Cidades Próximas / Região Metropolitana)
                 </label>
                 <input
                   type="text"
-                  required
                   value={formData.shippingSettings?.matolaFee || ''}
                   onChange={(e) => handleShippingChange('matolaFee', e.target.value)}
-                  placeholder="150 MT (Estafeta próprio no mesmo dia)"
+                  placeholder="Ex: Envio expresso ou taxa padrão"
                   className="w-full bg-[#14382F] text-xs text-[#FDFEF8] px-3.5 py-2.5 rounded-xl border border-[#2D6B5A] focus:border-[#C1F76B] focus:outline-none"
                 />
               </div>
 
-              {/* Provinces Fee */}
+              {/* Long Distance / National Fee */}
               <div className="sm:col-span-2">
                 <label className="text-xs font-semibold text-[#95BDB0] block mb-1.5">
-                  Envio para Províncias (Gaza, Inhambane, Beira, Nampula, etc.) *
+                  Taxa de Envio Nacional / Longa Distância
                 </label>
                 <input
                   type="text"
-                  required
                   value={formData.shippingSettings?.provincesFee || ''}
                   onChange={(e) => handleShippingChange('provincesFee', e.target.value)}
-                  placeholder="Envio diário via portador credenciado ou transportadora"
+                  placeholder="Ex: Envio por transportadora ou correios"
                   className="w-full bg-[#14382F] text-xs text-[#FDFEF8] px-3.5 py-2.5 rounded-xl border border-[#2D6B5A] focus:border-[#C1F76B] focus:outline-none"
                 />
               </div>
@@ -938,7 +940,7 @@ ${formData.paymentSettings?.customInstructions || ''}`.trim();
                   rows={3}
                   value={formData.shippingSettings?.shippingNotes || ''}
                   onChange={(e) => handleShippingChange('shippingNotes', e.target.value)}
-                  placeholder="Entregas em Maputo e Matola realizadas no mesmo dia para pedidos confirmados até às 14h."
+                  placeholder="Ex: Pedidos confirmados até às 14h são despachados no mesmo dia."
                   className="w-full bg-[#14382F] text-xs text-[#FDFEF8] px-3.5 py-2.5 rounded-xl border border-[#2D6B5A] focus:border-[#C1F76B] focus:outline-none resize-none leading-relaxed"
                 />
               </div>

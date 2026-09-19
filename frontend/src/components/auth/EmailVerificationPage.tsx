@@ -14,7 +14,7 @@ export const EmailVerificationPage: React.FC = () => {
   const [isResending, setIsResending] = useState(false);
   const inputRefs = useRef<(HTMLInputElement | null)[]>([]);
 
-  const displayEmail = pendingRegistration?.email || 'seu.email@exemplo.co.mz';
+  const displayEmail = pendingRegistration?.email || 'seu.email@exemplo.com';
 
   useEffect(() => { inputRefs.current[0]?.focus(); }, []);
 

@@ -21,17 +21,21 @@ export const NewLeadModal: React.FC<NewLeadModalProps> = ({
   if (!isOpen) return null;
 
   const [name, setName] = useState('');
-  const [phone, setPhone] = useState('+258 8');
+  const [phone, setPhone] = useState('');
   const [columnId, setColumnId] = useState(defaultColumnId || columns[0]?.id || 'col-new');
-  const [dealValue, setDealValue] = useState('3800');
-  const [productInterest, setProductInterest] = useState('Tablet Infantil 7" Rosa');
-  const [childInfo, setChildInfo] = useState('Menina 5 anos');
-  const [location, setLocation] = useState('Maputo Cidade');
-  const [initialMessage, setInitialMessage] = useState('Olá! Gostaria de saber mais sobre o tablet infantil.');
+  const [dealValue, setDealValue] = useState('');
+  const [productInterest, setProductInterest] = useState('');
+  const [childInfo, setChildInfo] = useState('');
+  const [location, setLocation] = useState('');
+  const [initialMessage, setInitialMessage] = useState('');
 
   const handleSubmit = (e: React.FormEvent) => {
     e.preventDefault();
     if (!name.trim() || !phone.trim()) return;
+
+    const tags: string[] = [];
+    if (productInterest.trim()) tags.push(productInterest.trim());
+    if (location.trim()) tags.push(location.trim());
 
     const newLead: ContactLead = {
       id: `lead-${Date.now()}`,
@@ -44,10 +48,10 @@ export const NewLeadModal: React.FC<NewLeadModalProps> = ({
       lastMessageTime: 'Agora',
       lastMessageTimestamp: Date.now(),
       dealValue: Number(dealValue) || 0,
-      tags: [productInterest.split(' ')[0], location.split(' ')[0]],
-      location: location.trim(),
-      childInfo: childInfo.trim(),
-      productInterest: productInterest.trim(),
+      tags,
+      location: location.trim() || undefined,
+      childInfo: childInfo.trim() || undefined,
+      productInterest: productInterest.trim() || undefined,
     };
 
     onCreateLead(newLead, initialMessage.trim());
@@ -95,14 +99,14 @@ export const NewLeadModal: React.FC<NewLeadModalProps> = ({
 
             <div>
               <label className="text-[11px] font-semibold text-[#95BDB0] block mb-1">
-                WhatsApp (+258) *
+                WhatsApp / Telefone *
               </label>
               <input
                 type="text"
                 required
                 value={phone}
                 onChange={(e) => setPhone(e.target.value)}
-                placeholder="+258 84..."
+                placeholder="Ex: +1 234 567 8900 ou seu número"
                 className="w-full bg-[#14382F] text-xs text-[#FDFEF8] px-3 py-2 rounded-xl border border-[#2D6B5A] focus:border-[#C1F76B] focus:outline-none"
               />
             </div>
@@ -127,13 +131,13 @@ export const NewLeadModal: React.FC<NewLeadModalProps> = ({
 
             <div>
               <label className="text-[11px] font-semibold text-[#95BDB0] block mb-1">
-                Valor Previsto (MT)
+                Valor Previsto
               </label>
               <input
                 type="number"
                 value={dealValue}
                 onChange={(e) => setDealValue(e.target.value)}
-                placeholder="3800"
+                placeholder="0"
                 className="w-full bg-[#14382F] text-xs text-[#C1F76B] font-bold px-3 py-2 rounded-xl border border-[#2D6B5A] focus:border-[#C1F76B] focus:outline-none"
               />
             </div>
@@ -142,26 +146,26 @@ export const NewLeadModal: React.FC<NewLeadModalProps> = ({
           <div className="grid grid-cols-2 gap-3">
             <div>
               <label className="text-[11px] font-semibold text-[#95BDB0] block mb-1">
-                Produto de Interesse
+                Produto ou Serviço de Interesse
               </label>
               <input
                 type="text"
                 value={productInterest}
                 onChange={(e) => setProductInterest(e.target.value)}
-                placeholder="Ex: Tablet 7' Azul"
+                placeholder="Ex: Produto ou Serviço"
                 className="w-full bg-[#14382F] text-xs text-[#FDFEF8] px-3 py-2 rounded-xl border border-[#2D6B5A] focus:border-[#C1F76B] focus:outline-none"
               />
             </div>
 
             <div>
               <label className="text-[11px] font-semibold text-[#95BDB0] block mb-1">
-                Bairro / Cidade
+                Localização / Cidade
               </label>
               <input
                 type="text"
                 value={location}
                 onChange={(e) => setLocation(e.target.value)}
-                placeholder="Ex: Matola Gare"
+                placeholder="Ex: Cidade, Bairro ou Região"
                 className="w-full bg-[#14382F] text-xs text-[#FDFEF8] px-3 py-2 rounded-xl border border-[#2D6B5A] focus:border-[#C1F76B] focus:outline-none"
               />
             </div>
@@ -169,26 +173,26 @@ export const NewLeadModal: React.FC<NewLeadModalProps> = ({
 
           <div>
             <label className="text-[11px] font-semibold text-[#95BDB0] block mb-1">
-              Idade da Criança (opcional)
+              Observações Adicionais (opcional)
             </label>
             <input
               type="text"
               value={childInfo}
               onChange={(e) => setChildInfo(e.target.value)}
-              placeholder="Ex: Menino 4 anos, estuda no pré-escolar"
+              placeholder="Ex: Preferências, notas ou detalhes do cliente"
               className="w-full bg-[#14382F] text-xs text-[#FDFEF8] px-3 py-2 rounded-xl border border-[#2D6B5A] focus:border-[#C1F76B] focus:outline-none"
             />
           </div>
 
           <div>
             <label className="text-[11px] font-semibold text-[#95BDB0] block mb-1">
-              Primeira Mensagem Recebida
+              Primeira Mensagem Recebida (opcional)
             </label>
             <textarea
               rows={2}
               value={initialMessage}
               onChange={(e) => setInitialMessage(e.target.value)}
-              placeholder="O que o cliente disse..."
+              placeholder="Mensagem ou anotação inicial (opcional)..."
               className="w-full bg-[#14382F] text-xs text-[#FDFEF8] px-3 py-2 rounded-xl border border-[#2D6B5A] focus:border-[#C1F76B] focus:outline-none resize-none"
             />
           </div>

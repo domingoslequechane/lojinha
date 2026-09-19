@@ -47,7 +47,7 @@ export interface ContactLead {
   lastMessage: string;
   lastMessageTime: string;
   lastMessageTimestamp: number;
-  dealValue: number; // em Meticais (MT)
+  dealValue: number; // Valor monetário estimado / venda
   tags: string[];
   location?: string;
   childInfo?: string; // ex: "Menino 4 anos"

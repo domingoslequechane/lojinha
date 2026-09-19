@@ -12,7 +12,7 @@ export const EvolutionConfigModal: React.FC<EvolutionConfigModalProps> = ({
 }) => {
   if (!isOpen) return null;
 
-  const [apiUrl, setApiUrl] = useState('https://evolution.meuservidor.co.mz');
+  const [apiUrl, setApiUrl] = useState('https://evolution.meuservidor.com');
   const [apiKey, setApiKey] = useState('B6D711FCDE4D4FD5936544120E713976');
   const [instanceName, setInstanceName] = useState('lojinha-vendas');
   const [isTesting, setIsTesting] = useState(false);

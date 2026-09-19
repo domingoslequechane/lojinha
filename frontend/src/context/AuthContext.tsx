@@ -364,8 +364,8 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
           {
             user_id: activeUserId,
             name: storeData.storeName.trim(),
-            slogan: storeData.slogan?.trim() || 'A tua loja, simples.',
-            city: storeData.city || 'Maputo Cidade',
+            slogan: storeData.slogan?.trim() || '',
+            city: storeData.city?.trim() || '',
           },
         ])
         .select()
@@ -373,10 +373,10 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
 
       if (storeError) {
         console.error('Error creating store during onboarding:', storeError);
-        // Fallback for offline/local storage if schema is not yet applied
+        return { success: false, error: 'Erro ao cadastrar loja no banco de dados.' };
       }
 
-      const storeId = store?.id || DEFAULT_STORE_ID;
+      const storeId = store.id;
 
       // 2. Create Store Settings
       await supabase.from('store_settings').insert([
@@ -411,11 +411,11 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
       setUser((prev) => ({
         id: activeUserId || 'usr-local',
         name: prev?.name || 'Lojista',
-        email: prev?.email || 'vendas@loginha.co.mz',
+        email: prev?.email || 'contato@minhaloja.com',
         storeId,
         storeName: storeData.storeName.trim(),
-        slogan: storeData.slogan?.trim() || 'A tua loja, simples.',
-        city: storeData.city || 'Maputo Cidade',
+        slogan: storeData.slogan?.trim() || '',
+        city: storeData.city?.trim() || '',
         role: 'Proprietário',
         emailVerified: true,
         twoFactorWhatsAppEnabled: storeData.enable2FAWhatsApp,

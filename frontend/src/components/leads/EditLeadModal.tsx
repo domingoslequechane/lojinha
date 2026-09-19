@@ -157,19 +157,19 @@ export const EditLeadModal: React.FC<EditLeadModalProps> = ({
             <div>
               <label className="text-[11px] font-semibold text-[#95BDB0] flex items-center gap-1 mb-1">
                 <DollarSign className="w-3 h-3 text-[#C1F76B]" />
-                Valor da Venda (MT)
+                Valor da Venda
               </label>
               <input
                 type="number"
                 value={dealValue}
                 onChange={(e) => setDealValue(e.target.value)}
-                placeholder="3800"
+                placeholder="0"
                 className="w-full bg-[#14382F] text-xs text-[#C1F76B] font-bold px-3 py-2 rounded-xl border border-[#2D6B5A] focus:border-[#C1F76B] focus:outline-none"
               />
             </div>
           </div>
 
-          {/* Produto de Interesse e Dados da Criança */}
+          {/* Produto de Interesse e Informações Adicionais */}
           <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
             <div>
               <label className="text-[11px] font-semibold text-[#95BDB0] flex items-center gap-1 mb-1">
@@ -180,7 +180,7 @@ export const EditLeadModal: React.FC<EditLeadModalProps> = ({
                 type="text"
                 value={productInterest}
                 onChange={(e) => setProductInterest(e.target.value)}
-                placeholder="Ex: Tablet 7' Rosa"
+                placeholder="Ex: Produto ou Serviço"
                 className="w-full bg-[#14382F] text-xs text-[#FDFEF8] px-3 py-2 rounded-xl border border-[#2D6B5A] focus:border-[#C1F76B] focus:outline-none"
               />
             </div>
@@ -188,13 +188,13 @@ export const EditLeadModal: React.FC<EditLeadModalProps> = ({
             <div>
               <label className="text-[11px] font-semibold text-[#95BDB0] flex items-center gap-1 mb-1">
                 <Baby className="w-3 h-3 text-[#C1F76B]" />
-                Dados da Criança
+                Observações / Informações Adicionais
               </label>
               <input
                 type="text"
                 value={childInfo}
                 onChange={(e) => setChildInfo(e.target.value)}
-                placeholder="Ex: Menina 5 anos"
+                placeholder="Ex: Preferências ou anotações"
                 className="w-full bg-[#14382F] text-xs text-[#FDFEF8] px-3 py-2 rounded-xl border border-[#2D6B5A] focus:border-[#C1F76B] focus:outline-none"
               />
             </div>
@@ -210,7 +210,7 @@ export const EditLeadModal: React.FC<EditLeadModalProps> = ({
               type="text"
               value={location}
               onChange={(e) => setLocation(e.target.value)}
-              placeholder="Ex: Maputo Cidade, Sommerschield"
+              placeholder="Ex: Cidade, Bairro ou Região"
               className="w-full bg-[#14382F] text-xs text-[#FDFEF8] px-3 py-2 rounded-xl border border-[#2D6B5A] focus:border-[#C1F76B] focus:outline-none"
             />
           </div>

@@ -515,10 +515,10 @@ export const ChatPanel: React.FC<ChatPanelProps> = ({
 
   const handleSendLocationInfo = () => {
     const shipping = storeSettings?.shippingSettings;
-    const lines: string[] = ['📍 *LOCAIS DE ENTREGA & FRETE (MOÇAMBIQUE):*', ''];
-    if (shipping?.maputoFee) lines.push(`• *Maputo Cidade:* ${shipping.maputoFee}`);
-    if (shipping?.matolaFee) lines.push(`• *Matola / Zimpeto:* ${shipping.matolaFee}`);
-    if (shipping?.provincesFee) lines.push(`• *Províncias:* ${shipping.provincesFee}`);
+    const lines: string[] = ['📍 *INFORMAÇÕES DE ENTREGA & FRETE:*', ''];
+    if (shipping?.maputoFee) lines.push(`• *Entrega Local:* ${shipping.maputoFee}`);
+    if (shipping?.matolaFee) lines.push(`• *Envio Regional:* ${shipping.matolaFee}`);
+    if (shipping?.provincesFee) lines.push(`• *Envio Nacional / Longa Distância:* ${shipping.provincesFee}`);
     if (shipping?.pickupAddress) lines.push(`• *Ponto de Retirada:* ${shipping.pickupAddress}`);
     if (shipping?.shippingNotes) lines.push('', `ℹ️ *Observação:* ${shipping.shippingNotes}`);
 
@@ -1657,7 +1657,7 @@ export const ChatPanel: React.FC<ChatPanelProps> = ({
               </div>
               <div className="text-left">
                 <p className="font-semibold">Locais de Entrega & Frete</p>
-                <p className="text-[10px] text-[#95BDB0]">Maputo, Matola e Províncias</p>
+                <p className="text-[10px] text-[#95BDB0]">Opções e taxas configuradas</p>
               </div>
             </button>
           </div>

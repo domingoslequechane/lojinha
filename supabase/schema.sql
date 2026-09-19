@@ -12,7 +12,7 @@ CREATE TABLE IF NOT EXISTS public.stores (
     user_id UUID REFERENCES auth.users(id) ON DELETE CASCADE,
     name TEXT NOT NULL,
     slogan TEXT DEFAULT 'A tua loja, simples.',
-    city TEXT DEFAULT 'Maputo Cidade',
+    city TEXT DEFAULT '',
     phone TEXT,
     logo_url TEXT,
     banner_url TEXT,
@@ -30,11 +30,11 @@ CREATE TABLE IF NOT EXISTS public.store_settings (
     emola_name TEXT DEFAULT '',
     bank_name TEXT,
     bank_account TEXT,
-    custom_instructions TEXT DEFAULT 'Envie o comprovativo por aqui para emitirmos o guia de entrega!',
-    maputo_fee TEXT DEFAULT 'Grátis no centro ou retirada na loja',
-    matola_fee TEXT DEFAULT '150 MT (Estafeta no mesmo dia)',
-    provinces_fee TEXT DEFAULT 'Envio diário por transportadora',
-    pickup_address TEXT DEFAULT 'Maputo',
+    custom_instructions TEXT DEFAULT 'Envie o comprovativo por aqui para darmos andamento ao pedido!',
+    maputo_fee TEXT DEFAULT '',
+    matola_fee TEXT DEFAULT '',
+    provinces_fee TEXT DEFAULT '',
+    pickup_address TEXT DEFAULT '',
     shipping_notes TEXT,
     two_factor_whatsapp_enabled BOOLEAN DEFAULT FALSE,
     two_factor_phone TEXT,
@@ -190,8 +190,8 @@ BEGIN
     INSERT INTO public.quick_replies (store_id, shortcut, title, category, content)
     VALUES
       (NEW.id, 'ola', 'Boas-Vindas', 'demonstracao', 'Olá! Muito obrigado pelo contato com a nossa loja. Como posso ajudar você hoje? 😊'),
-      (NEW.id, 'pagamento', 'Dados de Pagamento', 'pagamento', 'Trabalhamos com M-Pesa e e-Mola. Por favor envie o comprovativo por aqui assim que efetuar o pagamento! 📱'),
-      (NEW.id, 'frete', 'Informações de Frete', 'entrega', 'Fazemos entregas diárias em Maputo e Matola, e envios para todas as províncias via transportadora.');
+      (NEW.id, 'pagamento', 'Dados de Pagamento', 'pagamento', 'Trabalhamos com diversas formas de pagamento seguras. Por favor envie o comprovativo por aqui assim que efetuar o pagamento! 📱'),
+      (NEW.id, 'frete', 'Informações de Frete', 'entrega', 'Fazemos entregas locais e envios para outras regiões via transportadora ou correios.');
 
     RETURN NEW;
 END;

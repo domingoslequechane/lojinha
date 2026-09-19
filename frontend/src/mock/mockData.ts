@@ -23,15 +23,15 @@ export const defaultQuickReplies: QuickReply[] = [];
 // Completely clean - No fake WhatsApp instances
 export const initialInstances: WhatsAppInstance[] = [];
 
-// Default clean store settings
+// Default clean store settings (International, zero predefined locations)
 export const initialStoreSettings: StoreSettings = {
   storeName: 'Minha Loja',
-  slogan: 'A tua loja, simples.',
+  slogan: '',
   loginName: 'admin',
   email: '',
-  phone: '+258 84 000 0000',
-  address: 'Maputo',
-  city: 'Maputo Cidade',
+  phone: '',
+  address: '',
+  city: '',
   logoUrl: '',
   bannerUrl: '',
   bannerPositionX: 50,
@@ -53,10 +53,10 @@ export const initialStoreSettings: StoreSettings = {
     customInstructions: '',
   },
   shippingSettings: {
-    maputoFee: 'Grátis no centro ou retirada',
-    matolaFee: '150 MT',
-    provincesFee: 'A combinar',
-    pickupAddress: 'Maputo',
+    maputoFee: '',
+    matolaFee: '',
+    provincesFee: '',
+    pickupAddress: '',
     shippingNotes: '',
   },
 };
