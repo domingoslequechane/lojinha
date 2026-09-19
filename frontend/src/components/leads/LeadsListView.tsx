@@ -1,7 +1,8 @@
 import React, { useState } from 'react';
-import { Users, Search, MessageSquare, Clock, MapPin, Tag, Baby, FileSpreadsheet, Trash2, CopySlash } from 'lucide-react';
+import { Users, Search, MessageSquare, Clock, MapPin, Tag, Baby, FileSpreadsheet, Trash2, CopySlash, Phone } from 'lucide-react';
 import { ContactLead, KanbanColumn } from '../../types';
 import { CustomSelect } from '../common/CustomSelect';
+import { formatPhoneForCall } from '../../utils/phoneUtils';
 
 interface LeadsListViewProps {
   leads: ContactLead[];
@@ -97,8 +98,8 @@ export const LeadsListView: React.FC<LeadsListViewProps> = ({
         </div>
       </div>
 
-      {/* Table */}
-      <div className="rounded-2xl border border-[#235447] bg-[#0F2D26] overflow-hidden">
+      {/* Desktop Table (Hidden on mobile) */}
+      <div className="hidden md:block rounded-2xl border border-[#235447] bg-[#0F2D26] overflow-hidden">
         <div className="overflow-x-auto">
           <table className="w-full text-left text-xs">
             <thead className="bg-[#14382F] text-[#95BDB0] uppercase text-[10px] tracking-wider border-b border-[#235447]">
@@ -226,7 +227,16 @@ export const LeadsListView: React.FC<LeadsListViewProps> = ({
                     </td>
 
                     <td className="p-3.5 text-right" onClick={(e) => e.stopPropagation()}>
-                      <div className="flex items-center justify-end gap-3.5">
+                      <div className="flex items-center justify-end gap-2 sm:gap-3.5">
+                        {lead.phone && (
+                          <a
+                            href={formatPhoneForCall(lead.phone)}
+                            className="p-1.5 rounded-xl bg-[#14382F] hover:bg-[#C1F76B] text-[#C1F76B] hover:text-[#0F2D26] border border-[#235447] hover:border-[#C1F76B] transition-all duration-150 hover:scale-105 active:scale-95 cursor-pointer shadow-xs"
+                            title={`Ligar para ${lead.name || lead.phone}`}
+                          >
+                            <Phone className="w-3.5 h-3.5" />
+                          </a>
+                        )}
                         <button
                           onClick={() => onSelectLeadForChat(lead)}
                           className={`px-3 py-1.5 font-semibold rounded-xl text-xs inline-flex items-center gap-1 transition-all duration-150 hover:scale-105 active:scale-95 cursor-pointer ${
@@ -256,6 +266,134 @@ export const LeadsListView: React.FC<LeadsListViewProps> = ({
             </tbody>
           </table>
         </div>
+      </div>
+
+      {/* Mobile Cards View (Visible only on mobile devices) */}
+      <div className="md:hidden space-y-3 pb-8">
+        {filtered.length === 0 ? (
+          <div className="p-8 text-center text-[#95BDB0] bg-[#0F2D26] rounded-2xl border border-[#235447]">
+            <p className="text-sm font-medium text-[#FDFEF8]">Nenhum cliente cadastrado ainda</p>
+            <p className="text-xs text-[#95BDB0] mt-1">Os novos leads do WhatsApp aparecerão aqui automaticamente.</p>
+          </div>
+        ) : (
+          filtered.map((lead) => {
+            const col = columns.find((c) => c.id === lead.columnId);
+            const isSelected = lead.id === selectedLeadId;
+            const hasUnread = (lead.unreadCount || 0) > 0;
+
+            return (
+              <div
+                key={lead.id}
+                onClick={() => onSelectLeadForChat(lead)}
+                className={`p-3.5 rounded-2xl border bg-[#0F2D26] transition-all cursor-pointer ${
+                  isSelected
+                    ? 'border-[#C1F76B] ring-1 ring-[#C1F76B] bg-[#14382F]'
+                    : 'border-[#235447] hover:border-[#2E6858] active:bg-[#14382F]'
+                }`}
+              >
+                <div className="flex items-start justify-between gap-2.5 mb-2.5">
+                  <div className="flex items-center gap-2.5">
+                    <div className="relative flex-shrink-0">
+                      {lead.avatar ? (
+                        <img
+                          src={lead.avatar}
+                          alt={lead.name}
+                          className="w-10 h-10 rounded-full object-cover border border-[#2E6858]"
+                        />
+                      ) : (
+                        <div className="w-10 h-10 rounded-full bg-[#184339] border border-[#2E6858] flex items-center justify-center text-sm font-bold text-[#C1F76B]">
+                          {lead.name ? lead.name.trim().charAt(0).toUpperCase() : '#'}
+                        </div>
+                      )}
+                      {hasUnread && (
+                        <span className="absolute -top-1 -right-1 w-4 h-4 rounded-full bg-[#C1F76B] text-[#0F2D26] font-extrabold text-[10px] flex items-center justify-center ring-2 ring-[#0F2D26]">
+                          {lead.unreadCount}
+                        </span>
+                      )}
+                    </div>
+                    <div>
+                      <h4 className="font-semibold text-sm text-[#FDFEF8] leading-tight">{lead.name}</h4>
+                      <p className="text-xs text-[#95BDB0] mt-0.5">{lead.phone}</p>
+                    </div>
+                  </div>
+
+                  <div className="text-right flex-shrink-0">
+                    <span className="font-bold text-xs text-[#C1F76B] bg-[#C1F76B]/15 px-2 py-0.5 rounded-md border border-[#C1F76B]/30 inline-block">
+                      {lead.dealValue.toLocaleString()} MT
+                    </span>
+                    {col && (
+                      <div className="mt-1">
+                        <span
+                          className="inline-flex items-center gap-1 px-2 py-0.5 rounded-full text-[10px] font-medium"
+                          style={{
+                            backgroundColor: `${col.color}15`,
+                            color: col.color,
+                            border: `1px solid ${col.color}30`,
+                          }}
+                        >
+                          <span className="w-1.5 h-1.5 rounded-full" style={{ backgroundColor: col.color }} />
+                          {col.title}
+                        </span>
+                      </div>
+                    )}
+                  </div>
+                </div>
+
+                {/* Sub info */}
+                {(lead.childInfo || lead.location) && (
+                  <div className="flex flex-wrap items-center gap-2 text-xs text-[#D1EAE0] mb-3 bg-[#14382F]/60 px-2.5 py-1.5 rounded-xl border border-[#235447]/60">
+                    {lead.childInfo && (
+                      <span className="flex items-center gap-1">
+                        <Baby className="w-3 h-3 text-pink-400" />
+                        <span>{lead.childInfo}</span>
+                      </span>
+                    )}
+                    {lead.location && (
+                      <span className="flex items-center gap-1 text-[#95BDB0]">
+                        <MapPin className="w-3 h-3 text-red-400" />
+                        <span>{lead.location}</span>
+                      </span>
+                    )}
+                  </div>
+                )}
+
+                {/* Action buttons */}
+                <div className="flex items-center justify-between gap-2 pt-2 border-t border-[#235447]/60" onClick={(e) => e.stopPropagation()}>
+                  <div className="flex items-center gap-2">
+                    {lead.phone && (
+                      <a
+                        href={formatPhoneForCall(lead.phone)}
+                        className="px-3 py-2 rounded-xl bg-[#14382F] hover:bg-[#C1F76B] text-[#C1F76B] hover:text-[#0F2D26] border border-[#235447] font-semibold text-xs flex items-center gap-1.5 transition-all shadow-xs"
+                        title={`Ligar para ${lead.name || lead.phone}`}
+                      >
+                        <Phone className="w-3.5 h-3.5" />
+                        <span>Ligar</span>
+                      </a>
+                    )}
+                    {onDeleteLead && (
+                      <button
+                        type="button"
+                        onClick={() => onDeleteLead(lead)}
+                        className="p-2 rounded-xl bg-[#14382F] hover:bg-red-500/20 text-[#95BDB0] hover:text-red-400 border border-[#235447] transition-all"
+                        title="Excluir Lead"
+                      >
+                        <Trash2 className="w-3.5 h-3.5" />
+                      </button>
+                    )}
+                  </div>
+
+                  <button
+                    onClick={() => onSelectLeadForChat(lead)}
+                    className="flex-1 py-2 px-3.5 rounded-xl bg-[#C1F76B] text-[#0F2D26] font-bold text-xs flex items-center justify-center gap-1.5 shadow-md shadow-[#C1F76B]/20 active:scale-95 transition-all"
+                  >
+                    <MessageSquare className="w-3.5 h-3.5" />
+                    <span>{isSelected ? 'Fechar Chat' : 'Conversar'}</span>
+                  </button>
+                </div>
+              </div>
+            );
+          })
+        )}
       </div>
     </div>
   );

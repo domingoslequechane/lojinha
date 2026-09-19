@@ -1,6 +1,7 @@
 import React from 'react';
-import { Clock, MessageSquare, Check, X, Calendar, UserCheck } from 'lucide-react';
+import { Clock, MessageSquare, Check, X, Calendar, UserCheck, Phone } from 'lucide-react';
 import { ContactLead } from '../../types';
+import { formatPhoneForCall } from '../../utils/phoneUtils';
 
 interface FollowUpListModalProps {
   isOpen: boolean;
@@ -99,6 +100,16 @@ export const FollowUpListModal: React.FC<FollowUpListModalProps> = ({
                   </span>
 
                   <div className="flex items-center gap-2">
+                    {lead.phone && (
+                      <a
+                        href={formatPhoneForCall(lead.phone)}
+                        className="px-3 py-1.5 rounded-xl bg-[#0F2D26] hover:bg-[#C1F76B] text-[#C1F76B] hover:text-[#0F2D26] border border-[#235447] hover:border-[#C1F76B] text-xs font-semibold flex items-center gap-1 transition-all"
+                        title={`Ligar para ${lead.phone}`}
+                      >
+                        <Phone className="w-3.5 h-3.5" />
+                        <span>Ligar</span>
+                      </a>
+                    )}
                     <button
                       onClick={() => onResolveFollowUp(lead.id)}
                       className="px-3 py-1.5 rounded-xl bg-[#14382F] hover:bg-[#2D6B5A] text-xs text-[#95BDB0] hover:text-[#FDFEF8] transition-colors flex items-center gap-1"

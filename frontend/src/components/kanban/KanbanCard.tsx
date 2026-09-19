@@ -7,9 +7,11 @@ import {
   Baby,
   MessageSquare,
   FileText,
-  Edit3
+  Edit3,
+  Phone
 } from 'lucide-react';
 import { ContactLead, KanbanColumn } from '../../types';
+import { formatPhoneForCall } from '../../utils/phoneUtils';
 
 interface KanbanCardProps {
   lead: ContactLead;
@@ -69,7 +71,19 @@ export const KanbanCard: React.FC<KanbanCardProps> = ({
             <h4 className="font-semibold text-sm text-[#FDFEF8] group-hover:text-[#C1F76B] transition-colors leading-tight">
               {lead.name}
             </h4>
-            <p className="text-[11px] text-[#95BDB0]">{lead.phone}</p>
+            <div className="flex items-center gap-1.5 mt-0.5">
+              <p className="text-[11px] text-[#95BDB0]">{lead.phone}</p>
+              {lead.phone && (
+                <a
+                  href={formatPhoneForCall(lead.phone)}
+                  onClick={(e) => e.stopPropagation()}
+                  className="p-1 rounded-md bg-[#0F2D26] hover:bg-[#C1F76B] text-[#C1F76B] hover:text-[#0F2D26] border border-[#2E6858] hover:border-[#C1F76B] transition-all flex items-center justify-center cursor-pointer shadow-xs"
+                  title={`Ligar para ${lead.name || lead.phone}`}
+                >
+                  <Phone className="w-2.5 h-2.5" />
+                </a>
+              )}
+            </div>
           </div>
         </div>
 

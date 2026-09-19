@@ -37,6 +37,7 @@ import {
 import { ContactLead, ChatMessage, MessageType, KanbanColumn, QuickReply, StoreSettings, StoreProduct } from '../../types';
 import { CustomSelect } from '../common/CustomSelect';
 import { EditLeadModal } from '../leads/EditLeadModal';
+import { formatPhoneForCall } from '../../utils/phoneUtils';
 
 /** Returns "Remove em Xh Ym" remaining until 48h expiry.
  *  Shown for all image/video messages — media is cleaned up after 48h. */
@@ -794,7 +795,17 @@ export const ChatPanel: React.FC<ChatPanelProps> = ({
     <div className="w-full md:w-[480px] md:min-w-[420px] lg:w-[500px] h-full bg-[#091E19] border-l border-[#235447] flex flex-col z-20 shadow-2xl transition-all duration-200 animate-in fade-in slide-in-from-right-4 relative overflow-hidden">
       {/* Chat Top Header */}
       <div className="h-16 bg-[#14382F] px-3.5 flex items-center justify-between border-b border-[#235447] select-none">
-        <div className="flex items-center gap-3 truncate">
+        <div className="flex items-center gap-2.5 truncate">
+          {/* Mobile Back Button (WhatsApp Style) */}
+          <button
+            type="button"
+            onClick={onCloseChat}
+            className="md:hidden p-1.5 -ml-1 rounded-xl text-[#95BDB0] hover:text-[#C1F76B] hover:bg-[#0F2D26] active:scale-95 transition-all flex items-center justify-center cursor-pointer flex-shrink-0"
+            title="Voltar ao Funil"
+          >
+            <ChevronLeft className="w-6 h-6 stroke-[2.5]" />
+          </button>
+
           <div className="relative flex-shrink-0">
             {lead.avatar ? (
               <img
@@ -815,15 +826,38 @@ export const ChatPanel: React.FC<ChatPanelProps> = ({
             <h3 className="font-semibold text-sm text-[#FDFEF8] truncate flex items-center gap-1.5">
               {lead.name}
             </h3>
-            <p className="text-[11px] text-[#95BDB0] truncate flex items-center gap-1">
-              <span>{lead.phone}</span>
+            <div className="text-[11px] text-[#95BDB0] truncate flex items-center gap-1">
+              {lead.phone ? (
+                <a
+                  href={formatPhoneForCall(lead.phone)}
+                  className="hover:text-[#C1F76B] hover:underline flex items-center gap-1 transition-colors cursor-pointer"
+                  title={`Ligar para ${lead.phone}`}
+                >
+                  <Phone className="w-2.5 h-2.5 text-[#C1F76B]" />
+                  <span>{lead.phone}</span>
+                </a>
+              ) : (
+                <span>Sem telefone</span>
+              )}
               {lead.location && <span>• {lead.location}</span>}
-            </p>
+            </div>
           </div>
         </div>
 
         {/* Header Actions */}
         <div className="flex items-center gap-1.5 flex-shrink-0">
+          {/* Direct Phone Call Button */}
+          {lead.phone && (
+            <a
+              href={formatPhoneForCall(lead.phone)}
+              className="p-2 rounded-xl border bg-[#0F2D26] border-[#235447] text-[#C1F76B] hover:text-[#0F2D26] hover:bg-[#C1F76B] hover:border-[#C1F76B] transition-all duration-150 hover:scale-105 active:scale-95 cursor-pointer flex items-center gap-1.5 shadow-xs"
+              title={`Fazer ligação para ${lead.name || lead.phone}`}
+            >
+              <Phone className="w-4 h-4" />
+              <span className="hidden sm:inline text-xs font-bold">Ligar</span>
+            </a>
+          )}
+
           {/* 1. Quick Column / Funnel Stage Switcher (Color Dot Trigger) */}
           <CustomSelect
             variant="dot-only"

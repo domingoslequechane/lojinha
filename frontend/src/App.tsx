@@ -21,6 +21,7 @@ import {
 } from './types';
 import { Sidebar } from './components/cockpit/Sidebar';
 import { Header } from './components/cockpit/Header';
+import { MobileNav } from './components/cockpit/MobileNav';
 import { KanbanBoard } from './components/kanban/KanbanBoard';
 import { ChatPanel } from './components/chat/ChatPanel';
 import { FollowUpModal } from './components/followup/FollowUpModal';
@@ -988,7 +989,7 @@ function CockpitWorkspace() {
       />
 
       {/* Main Workspace Area */}
-      <div className="flex-1 flex flex-col h-full overflow-hidden">
+      <div className="flex-1 flex flex-col h-full overflow-hidden pb-16 md:pb-0">
         {/* 2. Top Header with Search, Status and Quick Actions */}
         <Header
           searchTerm={searchTerm}
@@ -1013,8 +1014,8 @@ function CockpitWorkspace() {
         {activeTab === 'metrics' ? (
           <MetricsView columns={columns} leads={leads} />
         ) : activeTab === 'leads' ? (
-          <div className="flex-1 flex h-[calc(100vh-64px)] overflow-hidden">
-            <div className="flex-1 h-full overflow-hidden flex flex-col">
+          <div className="flex-1 flex h-[calc(100vh-64px)] overflow-hidden relative">
+            <div className={`flex-1 h-full overflow-hidden flex flex-col ${selectedLeadId && activeLead ? 'hidden md:flex' : 'flex'}`}>
               <LeadsListView
                 leads={leads}
                 columns={columns}
@@ -1062,20 +1063,22 @@ function CockpitWorkspace() {
 
             {/* Right Chat Panel inside Leads view without navigating away */}
             {selectedLeadId && activeLead && (
-              <ChatPanel
-                lead={activeLead}
-                columns={columns}
-                messages={activeChatMessages}
-                quickReplies={quickReplies}
-                storeSettings={storeSettings}
-                onSendMessage={handleSendMessage}
-                onDeleteMessage={handleDeleteMessage}
-                onChangeColumn={handleMoveLead}
-                onOpenFollowUpModal={handleOpenFollowUp}
-                onUpdateLead={handleUpdateLead}
-                onCloseChat={() => setSelectedLeadId(null)}
-                onNavigateToSettings={() => navigate('/store')}
-              />
+              <div className="fixed inset-0 z-50 md:static md:inset-auto md:z-auto md:flex h-full w-full md:w-auto">
+                <ChatPanel
+                  lead={activeLead}
+                  columns={columns}
+                  messages={activeChatMessages}
+                  quickReplies={quickReplies}
+                  storeSettings={storeSettings}
+                  onSendMessage={handleSendMessage}
+                  onDeleteMessage={handleDeleteMessage}
+                  onChangeColumn={handleMoveLead}
+                  onOpenFollowUpModal={handleOpenFollowUp}
+                  onUpdateLead={handleUpdateLead}
+                  onCloseChat={() => setSelectedLeadId(null)}
+                  onNavigateToSettings={() => navigate('/store')}
+                />
+              </div>
             )}
           </div>
         ) : activeTab === 'quickreplies' ? (
@@ -1102,9 +1105,9 @@ function CockpitWorkspace() {
           />
         ) : (
           /* Cockpit Mode: Central Kanban + Live Chat Side by Side */
-          <div className="flex-1 flex h-[calc(100vh-64px)] overflow-hidden">
+          <div className="flex-1 flex h-[calc(100vh-64px)] overflow-hidden relative">
             {/* Center Kanban Board */}
-            <div className="flex-1 h-full overflow-hidden flex flex-col">
+            <div className={`flex-1 h-full overflow-hidden flex flex-col ${viewMode === 'split' ? 'hidden md:flex' : 'flex'}`}>
               <KanbanBoard
                 columns={columns}
                 leads={filteredLeads}
@@ -1120,27 +1123,44 @@ function CockpitWorkspace() {
 
             {/* Right Chat Panel (Active only in Cockpit split mode) */}
             {viewMode === 'split' && (
-              <ChatPanel
-                lead={activeLead}
-                columns={columns}
-                messages={activeChatMessages}
-                quickReplies={quickReplies}
-                storeSettings={storeSettings}
-                onSendMessage={handleSendMessage}
-                onDeleteMessage={handleDeleteMessage}
-                onChangeColumn={handleMoveLead}
-                onOpenFollowUpModal={handleOpenFollowUp}
-                onUpdateLead={handleUpdateLead}
-                onCloseChat={() => {
-                  setSelectedLeadId(null);
-                  setViewMode('kanban-only');
-                }}
-                onNavigateToSettings={() => navigate('/store')}
-              />
+              <div className="fixed inset-0 z-50 md:static md:inset-auto md:z-auto md:flex h-full w-full md:w-auto">
+                <ChatPanel
+                  lead={activeLead}
+                  columns={columns}
+                  messages={activeChatMessages}
+                  quickReplies={quickReplies}
+                  storeSettings={storeSettings}
+                  onSendMessage={handleSendMessage}
+                  onDeleteMessage={handleDeleteMessage}
+                  onChangeColumn={handleMoveLead}
+                  onOpenFollowUpModal={handleOpenFollowUp}
+                  onUpdateLead={handleUpdateLead}
+                  onCloseChat={() => {
+                    setSelectedLeadId(null);
+                    setViewMode('kanban-only');
+                  }}
+                  onNavigateToSettings={() => navigate('/store')}
+                />
+              </div>
             )}
           </div>
         )}
       </div>
+
+      {/* Mobile Bottom Navigation Bar & Drawer (Mobile Only) */}
+      <MobileNav
+        activeTab={activeTab}
+        onSelectTab={handleSelectTab}
+        totalLeads={leads.length}
+        unreadLeadsCount={leads.filter((l) => (l.unreadCount || 0) > 0).length}
+        connectedInstancesCount={instances.filter((i) => i.status === 'connected').length}
+        storeName={storeSettings.storeName}
+        storeLogoUrl={storeSettings.logoUrl}
+        onOpenImportCsv={() => setIsImportCsvOpen(true)}
+        onOpenDeduplicate={() => setIsDeduplicateOpen(true)}
+        onOpenColumnManager={() => setIsColumnManagerOpen(true)}
+        onLogout={handleLogout}
+      />
 
       {/* Modals */}
       <FollowUpModal

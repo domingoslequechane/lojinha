@@ -42,21 +42,29 @@ export const Header: React.FC<HeaderProps> = ({
   const isConnecting = activeInstanceStatus === 'connecting';
 
   return (
-    <header className="h-16 bg-[#0F2D26] border-b border-[#235447] px-4 flex items-center justify-between gap-4 z-20 select-none">
-      {/* Left: Search & Filter */}
-      <div className="flex items-center gap-3 flex-1 max-w-md">
+    <header className="h-16 bg-[#0F2D26] border-b border-[#235447] px-3 sm:px-4 flex items-center justify-between gap-2.5 sm:gap-4 z-20 select-none flex-shrink-0">
+      {/* Mobile Brand Icon & Logo (Visible only when desktop sidebar is hidden) */}
+      <div className="md:hidden flex items-center gap-2 flex-shrink-0">
+        <img src="/sidebar-icon.png" alt="Lojinha" className="w-7 h-7 object-contain" />
+        <span className="font-baloo font-bold text-base text-[#FDFEF8] leading-none">
+          Loj<span className="text-[#C1F76B]">inha</span>
+        </span>
+      </div>
+
+      {/* Left / Center: Search & Filter */}
+      <div className="flex items-center gap-2 sm:gap-3 flex-1 max-w-md min-w-0">
         <div className="relative w-full">
-          <Search className="w-4 h-4 text-[#95BDB0] absolute left-3.5 top-1/2 -translate-y-1/2" />
+          <Search className="w-4 h-4 text-[#95BDB0] absolute left-3 top-1/2 -translate-y-1/2" />
           <input
             type="text"
             value={searchTerm}
             onChange={(e) => onSearchChange(e.target.value)}
-            placeholder="Pesquisar por nome, +258..., tag ou bairro..."
-            className="w-full h-10 bg-[#14382F] text-sm text-[#FDFEF8] placeholder-[#95BDB0] pl-10 pr-4 rounded-xl border border-[#235447] focus:border-[#C1F76B] focus:ring-1 focus:ring-[#C1F76B]/50 focus:outline-none transition-all"
+            placeholder="Pesquisar..."
+            className="w-full h-9 sm:h-10 bg-[#14382F] text-xs sm:text-sm text-[#FDFEF8] placeholder-[#95BDB0] pl-9 pr-3 sm:pl-10 sm:pr-4 rounded-xl border border-[#235447] focus:border-[#C1F76B] focus:ring-1 focus:ring-[#C1F76B]/50 focus:outline-none transition-all"
           />
           {searchTerm && (
-            <span className="absolute right-3 top-1/2 -translate-y-1/2 text-xs text-[#95BDB0] bg-[#0F2D26] border border-[#235447] px-1.5 py-0.5 rounded">
-              {totalFilteredLeads} resultados
+            <span className="hidden sm:inline absolute right-3 top-1/2 -translate-y-1/2 text-xs text-[#95BDB0] bg-[#0F2D26] border border-[#235447] px-1.5 py-0.5 rounded">
+              {totalFilteredLeads}
             </span>
           )}
         </div>
@@ -116,12 +124,26 @@ export const Header: React.FC<HeaderProps> = ({
       </div>
 
       {/* Right: Actions */}
-      <div className="flex items-center gap-2.5">
+      <div className="flex items-center gap-1.5 sm:gap-2.5 flex-shrink-0">
+        {/* Mobile Follow-up alert icon button */}
+        {pendingFollowUpsCount > 0 && (
+          <button
+            onClick={onOpenFollowUpList}
+            className="lg:hidden p-2 rounded-xl bg-amber-500/15 border border-amber-500/35 text-amber-300 relative transition-all active:scale-95 cursor-pointer animate-pulse"
+            title={`${pendingFollowUpsCount} Follow-ups Agendados`}
+          >
+            <Clock className="w-4 h-4" />
+            <span className="absolute -top-1 -right-1 min-w-4 h-4 px-1 rounded-full bg-amber-400 text-[#0F2D26] font-extrabold text-[9px] flex items-center justify-center">
+              {pendingFollowUpsCount}
+            </span>
+          </button>
+        )}
+
         {/* Varredura de Duplicados */}
         {onOpenDeduplicate && (
           <button
             onClick={onOpenDeduplicate}
-            className="flex items-center gap-1.5 px-3 py-2 bg-[#14382F] hover:bg-amber-500/20 hover:border-amber-400/50 text-amber-300 rounded-xl text-xs font-medium border border-[#235447] transition-all duration-150 hover:scale-105 active:scale-95 cursor-pointer shadow-xs"
+            className="hidden sm:flex items-center gap-1.5 px-3 py-2 bg-[#14382F] hover:bg-amber-500/20 hover:border-amber-400/50 text-amber-300 rounded-xl text-xs font-medium border border-[#235447] transition-all duration-150 hover:scale-105 active:scale-95 cursor-pointer shadow-xs"
             title="Escanear e limpar leads duplicados por telefone"
           >
             <CopySlash className="w-3.5 h-3.5 text-amber-400" />
@@ -133,31 +155,32 @@ export const Header: React.FC<HeaderProps> = ({
         {onOpenImportCsv && (
           <button
             onClick={onOpenImportCsv}
-            className="flex items-center gap-1.5 px-3 py-2 bg-[#14382F] hover:bg-[#184339] hover:border-[#C1F76B]/40 text-[#D1EAE0] hover:text-[#C1F76B] rounded-xl text-xs font-medium border border-[#235447] transition-all duration-150 hover:scale-105 active:scale-95 cursor-pointer shadow-xs"
+            className="hidden sm:flex items-center gap-1.5 px-3 py-2 bg-[#14382F] hover:bg-[#184339] hover:border-[#C1F76B]/40 text-[#D1EAE0] hover:text-[#C1F76B] rounded-xl text-xs font-medium border border-[#235447] transition-all duration-150 hover:scale-105 active:scale-95 cursor-pointer shadow-xs"
             title="Importar lista de clientes via planilha CSV"
           >
             <FileSpreadsheet className="w-3.5 h-3.5 text-[#C1F76B]" />
-            <span className="hidden sm:inline">Importar CSV</span>
+            <span className="hidden md:inline">Importar CSV</span>
           </button>
         )}
 
         {/* Ajustar Funil */}
         <button
           onClick={onOpenColumnManager}
-          className="flex items-center gap-2 px-3.5 py-2 bg-[#14382F] hover:bg-[#184339] hover:border-[#C1F76B]/40 text-[#FDFEF8] rounded-xl text-xs font-medium border border-[#235447] transition-all duration-150 hover:scale-105 active:scale-95 cursor-pointer"
+          className="hidden md:flex items-center gap-2 px-3.5 py-2 bg-[#14382F] hover:bg-[#184339] hover:border-[#C1F76B]/40 text-[#FDFEF8] rounded-xl text-xs font-medium border border-[#235447] transition-all duration-150 hover:scale-105 active:scale-95 cursor-pointer"
         >
           <SlidersHorizontal className="w-3.5 h-3.5 text-[#C1F76B]" />
-          <span className="hidden md:inline">Ajustar Funil</span>
+          <span>Ajustar Funil</span>
         </button>
 
         {/* Novo Lead Button (Loginha Signature Lime CTA) */}
         <button
           onClick={onOpenNewLead}
-          className="flex items-center gap-2 px-4 py-2 rounded-xl text-xs font-bold transition-all duration-150 hover:scale-105 active:scale-95 cursor-pointer shadow-md shadow-[#C1F76B]/20 hover:shadow-[#C1F76B]/40"
+          className="flex items-center gap-1.5 sm:gap-2 px-3 sm:px-4 py-2 rounded-xl text-xs font-bold transition-all duration-150 hover:scale-105 active:scale-95 cursor-pointer shadow-md shadow-[#C1F76B]/20 hover:shadow-[#C1F76B]/40"
           style={{ backgroundColor: '#C1F76B', color: '#0F2D26' }}
         >
           <Plus className="w-4 h-4 stroke-[2.5]" />
-          <span>Novo Lead</span>
+          <span className="hidden xs:inline sm:inline">Novo Lead</span>
+          <span className="xs:hidden sm:hidden">Novo</span>
         </button>
       </div>
     </header>
