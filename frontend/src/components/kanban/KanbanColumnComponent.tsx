@@ -108,7 +108,7 @@ export const KanbanColumnComponent: React.FC<KanbanColumnComponentProps> = ({
       </div>
 
       {/* Cards Container with smooth vertical scroll */}
-      <div className="flex-1 min-h-0 p-2.5 space-y-2.5 overflow-y-auto overscroll-contain kanban-column-scroll">
+      <div className="flex-1 min-h-0 p-2.5 space-y-2.5 overflow-y-auto kanban-card-scroll kanban-column-scroll">
         {leads.length === 0 ? (
           <div className="h-32 border-2 border-dashed border-[#235447] rounded-xl flex flex-col items-center justify-center text-center p-4 text-[#95BDB0]">
             <p className="text-xs">Nenhum cliente nesta etapa</p>

@@ -1,4 +1,4 @@
-import React from 'react';
+import React, { useRef, useEffect } from 'react';
 import { Plus } from 'lucide-react';
 import { ContactLead, KanbanColumn } from '../../types';
 import { KanbanColumnComponent } from './KanbanColumnComponent';
@@ -26,11 +26,67 @@ export const KanbanBoard: React.FC<KanbanBoardProps> = ({
   onOpenFollowUpModal,
   onAddLeadToColumn,
 }) => {
-  // Sort columns by order
+  const boardRef = useRef<HTMLDivElement>(null);
   const sortedColumns = [...columns].sort((a, b) => a.order - b.order);
 
+  useEffect(() => {
+    const board = boardRef.current;
+    if (!board) return;
+
+    const handleWheel = (e: WheelEvent) => {
+      // 1. Direct horizontal scroll gesture (Trackpad horizontal swipe, tilt wheel)
+      if (Math.abs(e.deltaX) > Math.abs(e.deltaY)) {
+        board.scrollLeft += e.deltaX;
+        e.preventDefault();
+        return;
+      }
+
+      // 2. Shift + Wheel (Horizontal shortcut)
+      if (e.shiftKey) {
+        board.scrollLeft += e.deltaY;
+        e.preventDefault();
+        return;
+      }
+
+      // 3. Check if target is inside a scrollable card column
+      const target = e.target as HTMLElement | null;
+      const scrollableCol = target?.closest('.kanban-card-scroll') as HTMLElement | null;
+
+      if (scrollableCol) {
+        const canScrollVertically = scrollableCol.scrollHeight > scrollableCol.clientHeight;
+        if (!canScrollVertically) {
+          // If column has no vertical overflow, scroll board horizontally
+          board.scrollLeft += e.deltaY;
+          e.preventDefault();
+          return;
+        }
+
+        const isAtTop = scrollableCol.scrollTop <= 0 && e.deltaY < 0;
+        const isAtBottom =
+          scrollableCol.scrollTop + scrollableCol.clientHeight >= scrollableCol.scrollHeight - 1 &&
+          e.deltaY > 0;
+
+        if (isAtTop || isAtBottom) {
+          // If at top or bottom edge of column, scroll board horizontally
+          board.scrollLeft += e.deltaY * 0.7;
+          e.preventDefault();
+        }
+      } else {
+        // Over column header, footer, or gaps: scroll horizontally
+        board.scrollLeft += e.deltaY;
+        e.preventDefault();
+      }
+    };
+
+    board.addEventListener('wheel', handleWheel, { passive: false });
+    return () => board.removeEventListener('wheel', handleWheel);
+  }, []);
+
   return (
-    <div className="flex-1 h-full min-h-0 overflow-x-auto overflow-y-hidden pl-4 py-3 pr-0 bg-[#091E19] kanban-column-scroll select-none">
+    <div
+      ref={boardRef}
+      className="flex-1 h-full min-h-0 overflow-x-auto overflow-y-hidden pl-4 py-3 pr-0 bg-[#091E19] kanban-column-scroll select-none"
+    >
       <div className="flex items-stretch gap-4 h-full w-max min-w-full pr-4 pb-1">
         {sortedColumns.map((col, index) => {
           const colLeads = leads.filter((lead) => {
