@@ -42,7 +42,7 @@ export const Header: React.FC<HeaderProps> = ({
   const isConnecting = activeInstanceStatus === 'connecting';
 
   return (
-    <header className="h-16 bg-[#0F2D26] border-b border-[#235447] px-3 sm:px-4 flex items-center justify-between gap-2.5 sm:gap-4 z-20 flex-shrink-0">
+    <header className="h-16 bg-[#0F2D26] border-b border-[#235447] px-3 sm:px-4 flex items-center justify-between gap-2.5 sm:gap-4 sticky top-0 z-30 md:static md:z-20 flex-shrink-0">
       {/* Mobile Brand Icon & Logo (Visible only when desktop sidebar is hidden) */}
       <div className="md:hidden flex items-center gap-2 flex-shrink-0">
         <img src="/sidebar-icon.png" alt="Lojinha" className="w-7 h-7 object-contain" />

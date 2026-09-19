@@ -38,7 +38,7 @@ export const LeadsListView: React.FC<LeadsListViewProps> = ({
   });
 
   return (
-    <div className="flex-1 h-full overflow-y-auto p-6 bg-[#091E19] space-y-4">
+    <div className="w-full p-4 sm:p-6 bg-[#091E19] space-y-4 md:flex-1 md:h-full md:overflow-y-auto">
       {/* Top Header */}
       <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4">
         <div>

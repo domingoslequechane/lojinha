@@ -1001,7 +1001,7 @@ function CockpitWorkspace() {
   };
 
   return (
-    <div className="flex h-[100dvh] w-full bg-[#091E19] text-[#FDFEF8] overflow-hidden font-sans">
+    <div className="min-h-screen w-full flex flex-col md:flex-row md:h-screen md:overflow-hidden bg-[#091E19] text-[#FDFEF8] font-sans">
       {/* 1. Left Sidebar Navigation */}
       <Sidebar
         collapsed={sidebarCollapsed}
@@ -1018,7 +1018,7 @@ function CockpitWorkspace() {
       />
 
       {/* Main Workspace Area */}
-      <div className="flex-1 flex flex-col h-full overflow-hidden pb-[calc(4rem+env(safe-area-inset-bottom,0px))] md:pb-0">
+      <div className="flex-1 flex flex-col w-full min-h-screen md:min-h-0 md:h-full md:overflow-hidden pb-[calc(5rem+env(safe-area-inset-bottom,0px))] md:pb-0">
         {/* 2. Top Header with Search, Status and Quick Actions */}
         <Header
           searchTerm={searchTerm}
@@ -1043,8 +1043,8 @@ function CockpitWorkspace() {
         {activeTab === 'metrics' ? (
           <MetricsView columns={columns} leads={leads} />
         ) : activeTab === 'leads' ? (
-          <div className="flex-1 flex h-[calc(100vh-64px)] overflow-hidden relative">
-            <div className={`flex-1 h-full overflow-hidden flex flex-col ${selectedLeadId && activeLead ? 'hidden md:flex' : 'flex'}`}>
+          <div className="flex-1 flex flex-col md:flex-row w-full md:h-[calc(100vh-64px)] md:overflow-hidden relative">
+            <div className={`flex-1 w-full md:h-full md:overflow-hidden flex flex-col ${selectedLeadId && activeLead ? 'hidden md:flex' : 'flex'}`}>
               <LeadsListView
                 leads={leads}
                 columns={columns}
@@ -1134,9 +1134,9 @@ function CockpitWorkspace() {
           />
         ) : (
           /* Cockpit Mode: Central Kanban + Live Chat Side by Side */
-          <div className="flex-1 flex h-[calc(100vh-64px)] overflow-hidden relative">
+          <div className="flex-1 flex flex-col md:flex-row w-full md:h-[calc(100vh-64px)] md:overflow-hidden relative">
             {/* Center Kanban Board */}
-            <div className={`flex-1 h-full overflow-hidden flex flex-col ${viewMode === 'split' ? 'hidden md:flex' : 'flex'}`}>
+            <div className={`flex-1 w-full md:h-full md:overflow-hidden flex flex-col ${viewMode === 'split' ? 'hidden md:flex' : 'flex'}`}>
               <KanbanBoard
                 columns={columns}
                 leads={filteredLeads}

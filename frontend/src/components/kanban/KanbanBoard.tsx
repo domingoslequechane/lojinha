@@ -34,6 +34,8 @@ export const KanbanBoard: React.FC<KanbanBoardProps> = ({
     if (!board) return;
 
     const handleWheel = (e: WheelEvent) => {
+      if (window.innerWidth < 768) return;
+
       // 1. Direct horizontal scroll gesture (Trackpad horizontal swipe, tilt wheel)
       if (Math.abs(e.deltaX) > Math.abs(e.deltaY)) {
         board.scrollLeft += e.deltaX;
@@ -85,9 +87,9 @@ export const KanbanBoard: React.FC<KanbanBoardProps> = ({
   return (
     <div
       ref={boardRef}
-      className="flex-1 h-full min-h-0 overflow-x-auto overflow-y-hidden px-3 sm:pl-4 sm:pr-0 py-3 bg-[#091E19] kanban-column-scroll snap-x snap-mandatory sm:snap-none"
+      className="w-full md:flex-1 md:h-full md:min-h-0 overflow-x-auto md:overflow-y-hidden px-3 sm:pl-4 sm:pr-0 py-3 bg-[#091E19] kanban-column-scroll snap-x snap-mandatory sm:snap-none"
     >
-      <div className="flex items-stretch gap-3 sm:gap-4 h-full w-max min-w-full pr-3 sm:pr-4 pb-1">
+      <div className="flex items-start gap-3 sm:gap-4 md:items-stretch md:h-full w-max min-w-full pr-3 sm:pr-4 pb-1">
         {sortedColumns.map((col, index) => {
           const colLeads = leads
             .filter((lead) => {
