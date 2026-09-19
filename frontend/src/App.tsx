@@ -201,7 +201,10 @@ function CockpitWorkspace() {
           setColumns(dbCols);
         } else {
           // If Supabase has no columns yet, seed default columns
-          kanbanService.saveColumns(initialColumns, currentStoreId);
+          const seedResult = await kanbanService.saveColumns(initialColumns, currentStoreId);
+          if (seedResult.success && isMounted) {
+            setColumns(seedResult.columns);
+          }
         }
 
         if (dbLeads) {
@@ -594,6 +597,32 @@ function CockpitWorkspace() {
 
     // Persist to Supabase
     kanbanService.moveLeadColumn(leadId, targetColumnId, historyEntry, lead.stageHistory);
+  };
+
+  const handleSaveColumns = async (newCols: KanbanColumn[]) => {
+    try {
+      const result = await kanbanService.saveColumns(newCols, currentStoreId);
+      if (result.success) {
+        setColumns(result.columns);
+        // If any columns were deleted, safely remap local leads state to the fallback column
+        if (result.deletedColumnIds.length > 0 && result.fallbackColumnId) {
+          const fallbackId = result.fallbackColumnId;
+          setLeads((prev) =>
+            prev.map((lead) =>
+              result.deletedColumnIds.includes(lead.columnId)
+                ? { ...lead, columnId: fallbackId }
+                : lead
+            )
+          );
+        }
+      } else {
+        console.error('Falha ao salvar colunas do Kanban:', result.error);
+        alert('Erro ao salvar as etapas no banco de dados. Por favor, tente novamente.');
+      }
+    } catch (err) {
+      console.error('Erro ao salvar colunas:', err);
+      alert('Erro inesperado ao salvar as etapas do Kanban.');
+    }
   };
 
   const handleSelectLead = (lead: ContactLead) => {
@@ -1186,10 +1215,7 @@ function CockpitWorkspace() {
         isOpen={isColumnManagerOpen}
         columns={columns}
         onClose={() => setIsColumnManagerOpen(false)}
-        onSaveColumns={(newCols) => {
-          setColumns(newCols);
-          kanbanService.saveColumns(newCols, currentStoreId);
-        }}
+        onSaveColumns={handleSaveColumns}
       />
 
       <NewLeadModal

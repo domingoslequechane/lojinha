@@ -1,5 +1,5 @@
 import React, { useState } from 'react';
-import { Plus, Clock, MessageSquare } from 'lucide-react';
+import { Plus, Clock, MessageSquare, SlidersHorizontal } from 'lucide-react';
 import { ContactLead, KanbanColumn } from '../../types';
 import { KanbanCard } from './KanbanCard';
 
@@ -78,23 +78,33 @@ export const KanbanColumnComponent: React.FC<KanbanColumnComponentProps> = ({
           </span>
         </div>
 
-        {/* Unread conversations in this column */}
-        {unreadConversationsCount > 0 ? (
-          <span
-            className="flex-shrink-0 flex items-center gap-1 text-[11px] font-bold text-[#C1F76B] bg-[#27AE60]/20 border border-[#27AE60]/40 px-2 py-0.5 rounded-full animate-pulse shadow-sm shadow-[#27AE60]/20"
-            title={`${unreadConversationsCount} conversa(s) com ${totalUnreadMessages} mensagem(ns) não aberta(s)`}
+        <div className="flex items-center gap-1.5 flex-shrink-0">
+          {/* Unread conversations in this column */}
+          {unreadConversationsCount > 0 ? (
+            <span
+              className="flex-shrink-0 flex items-center gap-1 text-[11px] font-bold text-[#C1F76B] bg-[#27AE60]/20 border border-[#27AE60]/40 px-2 py-0.5 rounded-full animate-pulse shadow-sm shadow-[#27AE60]/20"
+              title={`${unreadConversationsCount} conversa(s) com ${totalUnreadMessages} mensagem(ns) não aberta(s)`}
+            >
+              <MessageSquare className="w-3 h-3" />
+              <span>{unreadConversationsCount} não aberta{unreadConversationsCount > 1 ? 's' : ''}</span>
+            </span>
+          ) : (
+            <span
+              className="flex-shrink-0 text-[10px] text-[#95BDB0] bg-[#14382F]/70 px-1.5 py-0.5 rounded-full border border-[#235447]/60"
+              title="Nenhuma conversa não aberta nesta etapa"
+            >
+              0 não abertas
+            </span>
+          )}
+
+          <button
+            onClick={() => onEditColumn(column)}
+            className="p-1 rounded-lg text-[#95BDB0] hover:text-[#FDFEF8] hover:bg-[#14382F] transition-colors"
+            title={`Gerenciar ou editar as etapas do funil`}
           >
-            <MessageSquare className="w-3 h-3" />
-            <span>{unreadConversationsCount} não aberta{unreadConversationsCount > 1 ? 's' : ''}</span>
-          </span>
-        ) : (
-          <span
-            className="flex-shrink-0 text-[10px] text-[#95BDB0] bg-[#14382F]/70 px-1.5 py-0.5 rounded-full border border-[#235447]/60"
-            title="Nenhuma conversa não aberta nesta etapa"
-          >
-            0 não abertas
-          </span>
-        )}
+            <SlidersHorizontal className="w-3.5 h-3.5" />
+          </button>
+        </div>
       </div>
 
       {/* Sub-header: Column Meta (Count & Total Value) */}

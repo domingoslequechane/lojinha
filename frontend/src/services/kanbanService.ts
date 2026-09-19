@@ -3,6 +3,31 @@ import { KanbanColumn, ContactLead, StageHistoryEntry } from '../types';
 
 export const DEFAULT_STORE_ID = '00000000-0000-0000-0000-000000000001';
 
+export function generateUUID(): string {
+  if (typeof crypto !== 'undefined' && typeof crypto.randomUUID === 'function') {
+    return crypto.randomUUID();
+  }
+  return 'xxxxxxxx-xxxx-4xxx-yxxx-xxxxxxxxxxxx'.replace(/[xy]/g, (c) => {
+    const r = (Math.random() * 16) | 0;
+    const v = c === 'x' ? r : (r & 0x3) | 0x8;
+    return v.toString(16);
+  });
+}
+
+export function isValidUUID(id?: string): boolean {
+  if (!id) return false;
+  const uuidRegex = /^[0-9a-f]{8}-[0-9a-f]{4}-[1-5][0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$/i;
+  return uuidRegex.test(id);
+}
+
+export interface SaveColumnsResult {
+  success: boolean;
+  columns: KanbanColumn[];
+  deletedColumnIds: string[];
+  fallbackColumnId?: string;
+  error?: string;
+}
+
 export const kanbanService = {
   // Fetch columns ordered by order_index
   async getColumns(storeId: string = DEFAULT_STORE_ID): Promise<KanbanColumn[]> {
@@ -27,26 +52,124 @@ export const kanbanService = {
     }));
   },
 
-  // Save/reorder columns
-  async saveColumns(columns: KanbanColumn[], storeId: string = DEFAULT_STORE_ID): Promise<boolean> {
-    const upsertData = columns.map((col, idx) => ({
-      id: col.id.startsWith('col-') ? undefined : col.id,
-      store_id: storeId,
-      title: col.title,
-      color: col.color,
-      order_index: idx,
-      sla_hours: col.slaHours,
-    }));
+  // Save/reorder/delete/create columns permanently for a specific tenant store
+  async saveColumns(
+    columns: KanbanColumn[],
+    storeId: string = DEFAULT_STORE_ID
+  ): Promise<SaveColumnsResult> {
+    try {
+      if (!columns || columns.length === 0) {
+        return { success: false, columns: [], deletedColumnIds: [], error: 'Pelo menos uma etapa é necessária' };
+      }
 
-    const { error } = await supabase
-      .from('kanban_columns')
-      .upsert(upsertData);
+      // 1. Normalize each column with valid UUID and order
+      const normalizedColumns: KanbanColumn[] = columns.map((col, idx) => ({
+        ...col,
+        id: isValidUUID(col.id) ? col.id : generateUUID(),
+        order: idx,
+        slaHours: Number(col.slaHours) || 24,
+        title: col.title.trim(),
+      }));
 
-    if (error) {
-      console.error('Error saving kanban columns:', error);
-      return false;
+      const activeIds = new Set(normalizedColumns.map((c) => c.id));
+      const fallbackColumnId = normalizedColumns[0].id;
+
+      // 2. Fetch existing columns in DB for this store to detect deletions
+      const { data: existingRows, error: fetchErr } = await supabase
+        .from('kanban_columns')
+        .select('id')
+        .eq('store_id', storeId);
+
+      if (fetchErr) {
+        console.error('Error fetching existing columns for store:', fetchErr);
+      }
+
+      const existingDbIds = (existingRows || []).map((r) => r.id);
+      const deletedColumnIds = existingDbIds.filter((id) => !activeIds.has(id));
+
+      // 3. Handle deletions:
+      if (deletedColumnIds.length > 0) {
+        // A) Safely reassign any leads in the deleted columns to the fallback column
+        const { error: reassignErr } = await supabase
+          .from('leads')
+          .update({
+            column_id: fallbackColumnId,
+            updated_at: new Date().toISOString(),
+          })
+          .eq('store_id', storeId)
+          .in('column_id', deletedColumnIds);
+
+        if (reassignErr) {
+          console.warn('Warning reassigning leads before deleting column:', reassignErr);
+        }
+
+        // B) Delete the removed columns from kanban_columns
+        const { error: delErr } = await supabase
+          .from('kanban_columns')
+          .delete()
+          .eq('store_id', storeId)
+          .in('id', deletedColumnIds);
+
+        if (delErr) {
+          console.error('Error deleting removed kanban columns:', delErr);
+        }
+      }
+
+      // 4. Upsert all normalized columns (every item has a valid UUID)
+      const upsertData = normalizedColumns.map((col) => ({
+        id: col.id,
+        store_id: storeId,
+        title: col.title,
+        color: col.color,
+        order_index: col.order,
+        sla_hours: col.slaHours,
+        default_template_id: col.defaultTemplateId || null,
+      }));
+
+      const { data: upsertedRows, error: upsertErr } = await supabase
+        .from('kanban_columns')
+        .upsert(upsertData)
+        .select();
+
+      if (upsertErr) {
+        console.error('Error upserting kanban columns:', upsertErr);
+        return {
+          success: false,
+          columns: normalizedColumns,
+          deletedColumnIds,
+          error: upsertErr.message,
+        };
+      }
+
+      // 5. Build final returned columns list ordered by order_index
+      const finalColumns: KanbanColumn[] = (upsertedRows && upsertedRows.length > 0)
+        ? upsertedRows
+            .sort((a, b) => a.order_index - b.order_index)
+            .map((col) => ({
+              id: col.id,
+              title: col.title,
+              color: col.color,
+              order: col.order_index,
+              slaHours: col.sla_hours,
+              defaultTemplateId: col.default_template_id,
+            }))
+        : normalizedColumns;
+
+      return {
+        success: true,
+        columns: finalColumns,
+        deletedColumnIds,
+        fallbackColumnId,
+      };
+    } catch (err: any) {
+      console.error('Exception in saveColumns:', err);
+      return {
+        success: false,
+        columns,
+        deletedColumnIds: [],
+        error: err?.message || 'Erro inesperado ao salvar etapas',
+      };
     }
-    return true;
   },
 
   // Fetch leads with column mapping
