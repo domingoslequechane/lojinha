@@ -941,18 +941,19 @@ export const ChatPanel: React.FC<ChatPanelProps> = ({
             <span className="absolute bottom-0 right-0 w-2 h-2 rounded-full bg-[#C1F76B] ring-2 ring-[#14382F]" />
           </div>
 
-          {/* Name and Phone on a SINGLE LINE */}
-          <div className="flex items-center gap-1.5 min-w-0 flex-1 truncate">
+          {/* Name on top, contact/phone underneath */}
+          <div className="flex flex-col min-w-0 flex-1 justify-center leading-tight">
             <h3 className="font-bold text-sm text-[#FDFEF8] truncate">
               {lead.name}
             </h3>
             {lead.phone && (
               <a
                 href={formatPhoneForCall(lead.phone)}
-                className="text-xs text-[#95BDB0] hover:text-[#C1F76B] flex-shrink-0 font-medium transition-colors"
+                className="text-[11px] text-[#95BDB0] hover:text-[#C1F76B] truncate font-normal transition-colors flex items-center gap-1 mt-0.5"
                 title={`Ligar para ${lead.phone}`}
               >
-                • {lead.phone}
+                <span>{lead.phone}</span>
+                {lead.location && <span>• {lead.location}</span>}
               </a>
             )}
           </div>
