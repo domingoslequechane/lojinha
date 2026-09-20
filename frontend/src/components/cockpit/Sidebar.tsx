@@ -5,6 +5,7 @@ import {
 } from 'lucide-react';
 import { ConfirmModal } from '../common/ConfirmModal';
 import { LoginhaLogo, LoginhaIcon } from '../common/LoginhaLogo';
+import { formatMoney } from '../../utils/formatters';
 
 interface SidebarProps {
   collapsed: boolean;
@@ -87,7 +88,7 @@ export const Sidebar: React.FC<SidebarProps> = ({
 
   return (
     <aside
-      className={`h-[100dvh] hidden md:flex flex-col bg-[#0F2D26] border-r border-[#235447] transition-all duration-300 z-30 ${
+      className={`h-full hidden md:flex flex-col bg-[#0F2D26]/95 backdrop-blur-md border-r border-[#235447] transition-all duration-300 z-30 ${
         collapsed ? 'w-16' : 'w-64'
       }`}
     >
@@ -214,7 +215,7 @@ export const Sidebar: React.FC<SidebarProps> = ({
           </div>
           <div className="flex items-center justify-between text-xs">
             <span className="text-[#95BDB0]">Valor no Funil:</span>
-            <span className="font-bold text-[#C1F76B]">{totalRevenue.toLocaleString()} MT</span>
+            <span className="font-bold text-[#C1F76B]">{formatMoney(totalRevenue)}</span>
           </div>
           {pendingFollowUps > 0 && (
             <div className="flex items-center justify-between text-xs pt-1 border-t border-[#235447] text-amber-400">

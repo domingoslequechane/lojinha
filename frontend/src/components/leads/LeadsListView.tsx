@@ -2,7 +2,7 @@ import React, { useState } from 'react';
 import { Users, Search, MessageSquare, Clock, MapPin, Tag, Baby, FileSpreadsheet, Trash2, CopySlash, Phone } from 'lucide-react';
 import { ContactLead, KanbanColumn } from '../../types';
 import { CustomSelect } from '../common/CustomSelect';
-import { formatPhoneForCall } from '../../utils/phoneUtils';
+import { formatPhoneForCall, formatMoney } from '../../utils/phoneUtils';
 
 interface LeadsListViewProps {
   leads: ContactLead[];
@@ -38,9 +38,9 @@ export const LeadsListView: React.FC<LeadsListViewProps> = ({
   });
 
   return (
-    <div className="w-full p-4 sm:p-6 bg-[#091E19] space-y-4 md:flex-1 md:h-full md:overflow-y-auto">
+    <div className="w-full max-w-full p-3 sm:p-6 bg-[#091E19] space-y-4 md:flex-1 md:h-full md:overflow-y-auto overflow-x-hidden">
       {/* Top Header */}
-      <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4">
+      <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3 sm:gap-4">
         <div>
           <h2 className="text-xl font-bold text-[#FDFEF8] flex items-center gap-2">
             <Users className="w-6 h-6 text-[#C1F76B]" />
@@ -52,7 +52,7 @@ export const LeadsListView: React.FC<LeadsListViewProps> = ({
         </div>
 
         {/* Filter controls */}
-        <div className="flex items-center gap-2 flex-wrap">
+        <div className="flex items-center gap-2 flex-wrap w-full sm:w-auto">
           <CustomSelect
             value={filterColumn}
             onChange={setFilterColumn}
@@ -64,7 +64,7 @@ export const LeadsListView: React.FC<LeadsListViewProps> = ({
                 color: c.color,
               })),
             ]}
-            className="min-w-[190px]"
+            className="w-full sm:w-auto sm:min-w-[170px]"
           />
 
           <input
@@ -72,29 +72,31 @@ export const LeadsListView: React.FC<LeadsListViewProps> = ({
             value={filterQuery}
             onChange={(e) => setFilterQuery(e.target.value)}
             placeholder="Filtrar por nome..."
-            className="bg-[#0F2D26] text-xs text-[#FDFEF8] px-3 py-2 rounded-xl border border-[#235447] focus:outline-none focus:border-[#C1F76B]"
+            className="w-full sm:w-auto flex-1 bg-[#0F2D26] text-xs text-[#FDFEF8] px-3 py-2 rounded-xl border border-[#235447] focus:outline-none focus:border-[#C1F76B]"
           />
 
-          {onOpenDeduplicate && (
-            <button
-              onClick={onOpenDeduplicate}
-              className="flex items-center gap-1.5 px-3.5 py-2 bg-[#14382F] hover:bg-amber-500/20 hover:border-amber-400/50 text-amber-300 rounded-xl text-xs font-bold border border-[#235447] transition-all duration-150 hover:scale-105 active:scale-95 cursor-pointer shadow-xs whitespace-nowrap"
-              title="Escanear e remover leads repetidos pelo número de telefone"
-            >
-              <CopySlash className="w-3.5 h-3.5" />
-              <span>Varredura de Duplicados</span>
-            </button>
-          )}
+          <div className="flex items-center gap-2 w-full sm:w-auto">
+            {onOpenDeduplicate && (
+              <button
+                onClick={onOpenDeduplicate}
+                className="flex-1 sm:flex-initial flex items-center justify-center gap-1.5 px-3.5 py-2 bg-[#14382F] hover:bg-amber-500/20 hover:border-amber-400/50 text-amber-300 rounded-xl text-xs font-bold border border-[#235447] transition-all duration-150 hover:scale-105 active:scale-95 cursor-pointer shadow-xs whitespace-nowrap"
+                title="Escanear e remover leads repetidos pelo número de telefone"
+              >
+                <CopySlash className="w-3.5 h-3.5" />
+                <span>Varredura</span>
+              </button>
+            )}
 
-          {onOpenImportCsv && (
-            <button
-              onClick={onOpenImportCsv}
-              className="flex items-center gap-1.5 px-3.5 py-2 bg-[#14382F] hover:bg-[#184339] hover:border-[#C1F76B]/40 text-[#C1F76B] rounded-xl text-xs font-bold border border-[#235447] transition-all duration-150 hover:scale-105 active:scale-95 cursor-pointer shadow-xs whitespace-nowrap"
-            >
-              <FileSpreadsheet className="w-3.5 h-3.5" />
-              <span>Importar CSV</span>
-            </button>
-          )}
+            {onOpenImportCsv && (
+              <button
+                onClick={onOpenImportCsv}
+                className="flex-1 sm:flex-initial flex items-center justify-center gap-1.5 px-3.5 py-2 bg-[#14382F] hover:bg-[#184339] hover:border-[#C1F76B]/40 text-[#C1F76B] rounded-xl text-xs font-bold border border-[#235447] transition-all duration-150 hover:scale-105 active:scale-95 cursor-pointer shadow-xs whitespace-nowrap"
+              >
+                <FileSpreadsheet className="w-3.5 h-3.5" />
+                <span>Importar CSV</span>
+              </button>
+            )}
+          </div>
         </div>
       </div>
 
@@ -204,7 +206,7 @@ export const LeadsListView: React.FC<LeadsListViewProps> = ({
                     </td>
 
                     <td className="p-3.5 font-bold text-[#C1F76B]">
-                      {lead.dealValue.toLocaleString()} MT
+                      {formatMoney(lead.dealValue)}
                     </td>
 
                     <td className="p-3.5" onClick={(e) => e.stopPropagation()}>
@@ -319,7 +321,7 @@ export const LeadsListView: React.FC<LeadsListViewProps> = ({
 
                   <div className="text-right flex-shrink-0">
                     <span className="font-bold text-xs text-[#C1F76B] bg-[#C1F76B]/15 px-2 py-0.5 rounded-md border border-[#C1F76B]/30 inline-block">
-                      {lead.dealValue.toLocaleString()} MT
+                      {formatMoney(lead.dealValue)}
                     </span>
                     {col && (
                       <div className="mt-1">

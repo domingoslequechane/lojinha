@@ -1,5 +1,6 @@
 import React, { useState, useEffect, useRef } from 'react';
 import { Routes, Route, Navigate, useLocation, useNavigate } from 'react-router-dom';
+import { Plus } from 'lucide-react';
 import { 
   initialColumns, 
   initialContacts, 
@@ -42,6 +43,7 @@ import { RegisterPage } from './components/auth/RegisterPage';
 import { EmailVerificationPage } from './components/auth/EmailVerificationPage';
 import { OnboardingPage } from './components/auth/OnboardingPage';
 import { ForgotPasswordPage } from './components/auth/ForgotPasswordPage';
+import { LandingPage } from './components/landing/LandingPage';
 import { useAuth } from './context/AuthContext';
 import { kanbanService, DEFAULT_STORE_ID } from './services/kanbanService';
 import { chatService } from './services/chatService';
@@ -180,6 +182,31 @@ function CockpitWorkspace() {
   const [isFollowUpListOpen, setIsFollowUpListOpen] = useState(false);
   const [leadForFollowUp, setLeadForFollowUp] = useState<ContactLead | null>(null);
   const [leadToDelete, setLeadToDelete] = useState<ContactLead | null>(null);
+
+  // Input focus detection to hide bottom navigation during mobile keyboard typing
+  const [isInputFocused, setIsInputFocused] = useState(false);
+
+  useEffect(() => {
+    const handleFocusIn = (e: FocusEvent) => {
+      const target = e.target as HTMLElement | null;
+      if (target && (target.tagName === 'INPUT' || target.tagName === 'TEXTAREA' || target.tagName === 'SELECT')) {
+        setIsInputFocused(true);
+      }
+    };
+
+    const handleFocusOut = () => {
+      setIsInputFocused(false);
+    };
+
+    window.addEventListener('focusin', handleFocusIn);
+    window.addEventListener('focusout', handleFocusOut);
+
+    return () => {
+      window.removeEventListener('focusin', handleFocusIn);
+      window.removeEventListener('focusout', handleFocusOut);
+    };
+  }, []);
+
 
   // 1. Initial Data Loading from Supabase (runs ONCE on mount / store switch — 0 polling loops)
   useEffect(() => {
@@ -541,6 +568,7 @@ function CockpitWorkspace() {
 
   // Selected lead object
   const activeLead = leads.find((l) => l.id === selectedLeadId) || null;
+  const isMobileNavHidden = Boolean((selectedLeadId && activeLead) || isInputFocused);
   const activeChatMessages = selectedLeadId ? messages[selectedLeadId] || [] : [];
   const defaultInstance = instances.find((i) => i.isDefault) || instances[0];
 
@@ -1001,7 +1029,11 @@ function CockpitWorkspace() {
   };
 
   return (
-    <div className="min-h-screen w-full flex flex-col md:flex-row md:h-screen md:overflow-hidden bg-[#091E19] text-[#FDFEF8] font-sans">
+    <div className="w-full max-w-[100vw] min-h-[100dvh] bg-[#091E19] text-[#FDFEF8] font-sans relative md:flex md:flex-row md:h-screen md:overflow-hidden overflow-x-hidden selection:bg-[#C1F76B]/30 selection:text-[#FDFEF8]">
+      {/* Ambient Glows matching Landing Page */}
+      <div className="absolute top-10 left-1/3 w-[500px] max-w-full h-[300px] bg-[#C1F76B]/05 rounded-full blur-[140px] pointer-events-none overflow-hidden" />
+      <div className="absolute bottom-10 right-10 w-80 max-w-full h-80 bg-[#27AE60]/05 rounded-full blur-[120px] pointer-events-none overflow-hidden" />
+
       {/* 1. Left Sidebar Navigation */}
       <Sidebar
         collapsed={sidebarCollapsed}
@@ -1017,9 +1049,9 @@ function CockpitWorkspace() {
         onLogout={handleLogout}
       />
 
-      {/* Main Workspace Area */}
-      <div className="flex-1 flex flex-col w-full min-h-screen md:min-h-0 md:h-full md:overflow-hidden pb-[calc(5rem+env(safe-area-inset-bottom,0px))] md:pb-0">
-        {/* 2. Top Header with Search, Status and Quick Actions */}
+      {/* Main Workspace Area (Natural flow on mobile matching landing page) */}
+      <main className="w-full max-w-full overflow-x-hidden pt-[4.5rem] md:pt-0 pb-24 md:pb-0 md:flex-1 md:flex md:flex-col md:h-full md:overflow-hidden md:min-h-0 min-w-0">
+        {/* 2. Top Floating Header */}
         <Header
           searchTerm={searchTerm}
           onSearchChange={setSearchTerm}
@@ -1043,8 +1075,8 @@ function CockpitWorkspace() {
         {activeTab === 'metrics' ? (
           <MetricsView columns={columns} leads={leads} />
         ) : activeTab === 'leads' ? (
-          <div className="flex-1 flex flex-col md:flex-row w-full md:h-[calc(100vh-64px)] md:overflow-hidden relative">
-            <div className={`flex-1 w-full md:h-full md:overflow-hidden flex flex-col ${selectedLeadId && activeLead ? 'hidden md:flex' : 'flex'}`}>
+          <div className="w-full md:flex-1 md:flex md:flex-row md:h-full md:overflow-hidden relative">
+            <div className={`w-full md:flex-1 md:h-full md:overflow-hidden md:flex md:flex-col ${selectedLeadId && activeLead ? 'hidden md:flex' : 'block'}`}>
               <LeadsListView
                 leads={leads}
                 columns={columns}
@@ -1134,9 +1166,9 @@ function CockpitWorkspace() {
           />
         ) : (
           /* Cockpit Mode: Central Kanban + Live Chat Side by Side */
-          <div className="flex-1 flex flex-col md:flex-row w-full md:h-[calc(100vh-64px)] md:overflow-hidden relative">
+          <div className="w-full md:flex-1 md:flex md:flex-row md:h-full md:overflow-hidden relative">
             {/* Center Kanban Board */}
-            <div className={`flex-1 w-full md:h-full md:overflow-hidden flex flex-col ${viewMode === 'split' ? 'hidden md:flex' : 'flex'}`}>
+            <div className={`w-full md:flex-1 md:h-full md:overflow-hidden md:flex md:flex-col ${viewMode === 'split' ? 'hidden md:flex' : 'block'}`}>
               <KanbanBoard
                 columns={columns}
                 leads={filteredLeads}
@@ -1174,7 +1206,22 @@ function CockpitWorkspace() {
             )}
           </div>
         )}
-      </div>
+      </main>
+
+      {/* Mobile Floating Action Button (FAB) + above bottom nav */}
+      {!isMobileNavHidden && (
+        <button
+          type="button"
+          onClick={() => {
+            setNewLeadDefaultColumn(undefined);
+            setIsNewLeadOpen(true);
+          }}
+          className="fixed bottom-20 right-4 md:hidden z-40 w-12 h-12 rounded-full bg-[#C1F76B] text-[#0F2D26] shadow-2xl shadow-[#C1F76B]/40 flex items-center justify-center font-bold text-2xl hover:scale-110 active:scale-95 transition-all duration-200 cursor-pointer border-2 border-[#0F2D26]"
+          title="Adicionar Novo Lead"
+        >
+          <Plus className="w-6 h-6 stroke-[3]" />
+        </button>
+      )}
 
       {/* Mobile Bottom Navigation Bar & Drawer (Mobile Only) */}
       <MobileNav
@@ -1189,6 +1236,7 @@ function CockpitWorkspace() {
         onOpenDeduplicate={() => setIsDeduplicateOpen(true)}
         onOpenColumnManager={() => setIsColumnManagerOpen(true)}
         onLogout={handleLogout}
+        hidden={isMobileNavHidden}
       />
 
       {/* Modals */}
@@ -1291,8 +1339,8 @@ export function App() {
         }
       />
 
-      {/* Root redirect to cockpit */}
-      <Route path="/" element={<Navigate to="/cockpit" replace />} />
+      {/* Public Landing Page */}
+      <Route path="/" element={<LandingPage />} />
 
       {/* Protected Cockpit Workspace Routes */}
       <Route
@@ -1353,7 +1401,7 @@ export function App() {
       />
 
       {/* Catch-all route */}
-      <Route path="*" element={<Navigate to="/cockpit" replace />} />
+      <Route path="*" element={<Navigate to="/" replace />} />
     </Routes>
   );
 }

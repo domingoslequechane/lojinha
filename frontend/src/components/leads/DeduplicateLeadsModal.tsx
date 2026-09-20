@@ -12,6 +12,7 @@ import {
   Check
 } from 'lucide-react';
 import { ContactLead, KanbanColumn } from '../../types';
+import { formatMoney } from '../../utils/phoneUtils';
 
 interface DeduplicateLeadsModalProps {
   isOpen: boolean;
@@ -260,8 +261,8 @@ export const DeduplicateLeadsModal: React.FC<DeduplicateLeadsModalProps> = ({
   const totalCopiesToDelete = selectedToDelete.size;
 
   return (
-    <div className="fixed inset-0 bg-black/80 backdrop-blur-xs flex items-center justify-center p-4 z-50 animate-in fade-in">
-      <div className="bg-[#091E19] border border-[#235447] rounded-3xl w-full max-w-3xl overflow-hidden shadow-2xl flex flex-col max-h-[90vh]">
+    <div className="fixed inset-0 bg-black/75 backdrop-blur-md flex items-end sm:items-center justify-center p-3 sm:p-4 z-50 animate-in fade-in duration-150">
+      <div className="bg-[#0F2D26] border border-[#235447] rounded-3xl w-full max-w-3xl overflow-hidden shadow-2xl flex flex-col max-h-[85vh] sm:max-h-[90vh] animate-in slide-in-from-bottom-4 sm:zoom-in-95 duration-200">
         {/* Header */}
         <div className="p-4 bg-[#14382F] border-b border-[#235447] flex items-center justify-between">
           <div className="flex items-center gap-3">
@@ -289,7 +290,7 @@ export const DeduplicateLeadsModal: React.FC<DeduplicateLeadsModalProps> = ({
         </div>
 
         {/* Content Body */}
-        <div className="p-5 space-y-4 overflow-y-auto flex-1 custom-scrollbar">
+        <div className="p-5 space-y-4 overflow-y-auto flex-1">
           {/* Success Banner */}
           {deletedCount !== null && (
             <div className="p-4 rounded-2xl bg-[#C1F76B]/15 border border-[#C1F76B]/30 text-[#C1F76B] text-xs flex items-center gap-3 animate-in zoom-in-95">
@@ -473,7 +474,7 @@ export const DeduplicateLeadsModal: React.FC<DeduplicateLeadsModalProps> = ({
                                     </span>
                                     {lead.dealValue > 0 && (
                                       <span className="text-[10px] text-[#C1F76B] font-bold">
-                                        {lead.dealValue.toLocaleString()} MT
+                                        {formatMoney(lead.dealValue)}
                                       </span>
                                     )}
                                   </div>

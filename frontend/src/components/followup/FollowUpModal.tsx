@@ -64,13 +64,13 @@ export const FollowUpModal: React.FC<FollowUpModalProps> = ({
   };
 
   return (
-    <div className="fixed inset-0 bg-black/75 backdrop-blur-xs flex items-center justify-center p-4 z-50">
-      <div className="bg-[#091E19] border border-[#235447] rounded-3xl w-full max-w-lg overflow-hidden shadow-2xl animate-in fade-in zoom-in duration-200 flex flex-col max-h-[90vh]">
+    <div className="fixed inset-0 bg-black/75 backdrop-blur-md flex items-end sm:items-center justify-center p-3 sm:p-4 z-50 animate-in fade-in duration-150">
+      <div className="bg-[#0F2D26] border border-[#235447] rounded-3xl w-full max-w-lg max-h-[85vh] sm:max-h-[90vh] overflow-hidden shadow-2xl animate-in slide-in-from-bottom-4 sm:zoom-in-95 duration-200 flex flex-col">
         {/* Header */}
-        <div className="p-4 bg-[#14382F] border-b border-[#235447] flex items-center justify-between">
-          <div className="flex items-center gap-3">
-            <div className="w-10 h-10 rounded-2xl bg-[#C1F76B]/15 text-[#C1F76B] border border-[#C1F76B]/30 flex items-center justify-center shadow-xs">
-              <FileText className="w-5 h-5" />
+        <div className="p-3 bg-[#14382F] border-b border-[#235447] flex items-center justify-between">
+          <div className="flex items-center gap-2.5">
+            <div className="w-8 h-8 rounded-xl bg-[#C1F76B]/15 text-[#C1F76B] border border-[#C1F76B]/30 flex items-center justify-center">
+              <FileText className="w-4 h-4" />
             </div>
             <div>
               <h3 className="font-bold text-sm text-[#FDFEF8]">Folha de Atendimento & Follow-up</h3>
@@ -86,7 +86,7 @@ export const FollowUpModal: React.FC<FollowUpModalProps> = ({
         </div>
 
         {/* Content: Scrollable */}
-        <div className="p-5 space-y-4 overflow-y-auto flex-1 custom-scrollbar">
+        <div className="p-3 space-y-3 overflow-y-auto flex-1">
           {/* Folha de Notas do Atendimento */}
           <div>
             <div className="flex items-center justify-between mb-2">
@@ -124,7 +124,7 @@ export const FollowUpModal: React.FC<FollowUpModalProps> = ({
             {/* Notepad Area */}
             <div className="relative rounded-2xl bg-[#0F2D26] border border-[#2D6B5A] focus-within:border-[#C1F76B] transition-colors p-3 shadow-inner">
               <textarea
-                rows={6}
+                rows={4}
                 value={notes}
                 onChange={(e) => setNotes(e.target.value)}
                 placeholder="Escreva como em uma folha de caderno os detalhes do atendimento: motivo de recusa, sugestões, itens do pedido, endereço de entrega ou o que ficou combinado..."
@@ -195,17 +195,17 @@ export const FollowUpModal: React.FC<FollowUpModalProps> = ({
         </div>
 
         {/* Footer */}
-        <div className="p-4 bg-[#0B241D] border-t border-[#235447] flex items-center justify-between gap-3">
+        <div className="p-3 bg-[#0B241D] border-t border-[#235447] flex items-center justify-between gap-3">
           <button
             onClick={onClose}
-            className="px-4 py-2.5 rounded-xl text-xs font-medium text-[#95BDB0] hover:text-[#FDFEF8] hover:bg-[#14382F] transition-all cursor-pointer"
+            className="px-4 py-2 rounded-xl text-xs font-medium text-[#95BDB0] hover:text-[#FDFEF8] hover:bg-[#14382F] transition-all cursor-pointer"
           >
             Cancelar
           </button>
           
           <button
             onClick={handleSave}
-            className="px-6 py-2.5 rounded-xl text-xs font-bold bg-[#C1F76B] text-[#0F2D26] hover:bg-[#b0ec53] shadow-md shadow-[#C1F76B]/25 hover:shadow-[#C1F76B]/40 transition-all hover:scale-105 active:scale-95 cursor-pointer flex items-center gap-1.5"
+            className="px-6 py-2 rounded-xl text-xs font-bold bg-[#C1F76B] text-[#0F2D26] hover:bg-[#b0ec53] shadow-md shadow-[#C1F76B]/25 hover:shadow-[#C1F76B]/40 transition-all hover:scale-105 active:scale-95 cursor-pointer flex items-center gap-1.5"
           >
             <Check className="w-4 h-4 stroke-[2.5]" />
             <span>{dateText.trim() ? 'Salvar Nota & Lembrete' : 'Salvar Nota de Atendimento'}</span>

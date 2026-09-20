@@ -114,6 +114,7 @@ export const MyStoreView: React.FC<MyStoreViewProps> = ({
   // Product Add / Edit State
   const [isAddingProduct, setIsAddingProduct] = useState(false);
   const [editingProductId, setEditingProductId] = useState<string | null>(null);
+  const [confirmDeleteId, setConfirmDeleteId] = useState<string | null>(null);
   const [productForm, setProductForm] = useState<StoreProduct>({
     id: '',
     title: '',
@@ -311,9 +312,9 @@ export const MyStoreView: React.FC<MyStoreViewProps> = ({
 • *Ponto de Retirada:* ${formData.shippingSettings?.pickupAddress || 'A combinar'}${formData.shippingSettings?.shippingNotes ? `\n\nℹ️ *Observação:* ${formData.shippingSettings.shippingNotes}` : ''}`.trim();
 
   return (
-    <div className="w-full p-3 sm:p-6 bg-[#091E19] space-y-4 sm:space-y-6 font-sans md:flex-1 md:h-full md:overflow-y-auto">
+    <div className="w-full max-w-full p-3 sm:p-6 bg-[#091E19] space-y-4 sm:space-y-6 font-sans md:flex-1 md:h-full md:overflow-y-auto overflow-x-hidden">
       {/* Top Header */}
-      <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4">
+      <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3 sm:gap-4">
         <div>
           <h2 className="text-xl font-bold text-[#FDFEF8] flex items-center gap-2">
             <Store className="w-6 h-6 text-[#C1F76B]" />
@@ -419,9 +420,9 @@ export const MyStoreView: React.FC<MyStoreViewProps> = ({
 
           {/* Add / Edit Product Modal */}
           {isAddingProduct && (
-            <div className="fixed inset-0 bg-black/80 backdrop-blur-xs flex items-center justify-center p-4 z-50 animate-in fade-in duration-150">
-              <div className="bg-[#0F2D26] border border-[#235447] rounded-3xl w-full max-w-lg overflow-hidden shadow-2xl">
-                <div className="p-4 bg-[#14382F] border-b border-[#235447] flex items-center justify-between">
+            <div className="fixed inset-0 bg-black/75 backdrop-blur-md flex items-end sm:items-center justify-center p-4 z-50 animate-in fade-in duration-150">
+              <div className="bg-[#0F2D26] border border-[#235447] rounded-3xl w-full max-w-lg max-h-[85vh] sm:max-h-[90vh] flex flex-col overflow-hidden shadow-2xl animate-in slide-in-from-bottom-4 sm:zoom-in-95 duration-200">
+                <div className="p-4 bg-[#14382F] border-b border-[#235447] flex items-center justify-between flex-shrink-0">
                   <div className="flex items-center gap-2">
                     <Sparkles className="w-4 h-4 text-[#C1F76B]" />
                     <h4 className="font-bold text-sm text-[#FDFEF8]">
@@ -440,7 +441,7 @@ export const MyStoreView: React.FC<MyStoreViewProps> = ({
                   </button>
                 </div>
 
-                <form onSubmit={handleSaveProduct} className="p-6 space-y-4 max-h-[80vh] overflow-y-auto">
+                <form onSubmit={handleSaveProduct} className="p-6 space-y-4 overflow-y-auto flex-1">
                   {/* Media (Photo or Video) Preview & Upload */}
                   <div>
                     <div className="flex items-center justify-between mb-2">
@@ -572,14 +573,13 @@ export const MyStoreView: React.FC<MyStoreViewProps> = ({
 
                   <div>
                     <label className="text-xs font-semibold text-[#95BDB0] block mb-1.5">
-                      Legenda enviada no WhatsApp com a mídia *
+                      Legenda enviada no WhatsApp com a mídia <span className="text-[#578577] font-normal">(Opcional)</span>
                     </label>
                     <textarea
                       rows={4}
-                      required
                       value={productForm.caption}
                       onChange={(e) => setProductForm({ ...productForm, caption: e.target.value })}
-                      placeholder="🌸 *Tablet Educativo 7'' Kids Rosa*&#10;Com capa antichoque, 50 jogos educativos offline..."
+                      placeholder="Insira a descrição, características, garantia ou detalhes do produto (opcional)...&#10;&#10;Ex: 🌸 *Tablet 7'' Kids Rosa*&#10;Com capa antichoque, 50 jogos educativos offline..."
                       className="w-full bg-[#14382F] text-xs text-[#FDFEF8] px-3.5 py-2.5 rounded-xl border border-[#2D6B5A] focus:border-[#C1F76B] focus:outline-none resize-none leading-relaxed"
                     />
                     <p className="text-[10px] text-[#95BDB0] mt-1">
@@ -663,7 +663,7 @@ export const MyStoreView: React.FC<MyStoreViewProps> = ({
                     </button>
                     <button
                       type="button"
-                      onClick={() => handleDeleteProduct(product.id)}
+                      onClick={() => setConfirmDeleteId(product.id)}
                       className="p-2 rounded-xl bg-[#14382F] hover:bg-red-500/20 hover:text-red-400 text-[#95BDB0] transition-colors cursor-pointer"
                       title="Excluir produto"
                     >
@@ -676,6 +676,46 @@ export const MyStoreView: React.FC<MyStoreViewProps> = ({
           )}
         </div>
       )}
+
+      {/* ── Delete Confirmation Modal ── */}
+      {confirmDeleteId && (() => {
+        const productToDelete = formData.products?.find((p) => p.id === confirmDeleteId);
+        return (
+          <div className="fixed inset-0 bg-black/75 backdrop-blur-md flex items-end sm:items-center justify-center p-4 z-50 animate-in fade-in duration-150">
+            <div className="bg-[#0F2D26] border border-[#235447] rounded-3xl w-full max-w-sm overflow-hidden shadow-2xl animate-in slide-in-from-bottom-4 sm:zoom-in-95 duration-200">
+              <div className="p-5 text-center space-y-3">
+                <div className="w-12 h-12 rounded-full bg-red-500/20 border border-red-500/30 flex items-center justify-center mx-auto">
+                  <Trash2 className="w-6 h-6 text-red-400" />
+                </div>
+                <h4 className="font-bold text-base text-[#FDFEF8]">Excluir produto?</h4>
+                <p className="text-sm text-[#95BDB0] leading-relaxed">
+                  <strong className="text-[#FDFEF8]">{productToDelete?.title || 'Este produto'}</strong> será removido permanentemente do catálogo. Esta ação não pode ser desfeita.
+                </p>
+              </div>
+              <div className="flex items-center gap-2 p-4 pt-0">
+                <button
+                  type="button"
+                  onClick={() => setConfirmDeleteId(null)}
+                  className="flex-1 py-2.5 rounded-xl bg-[#14382F] hover:bg-[#184339] text-[#95BDB0] hover:text-[#FDFEF8] text-xs font-semibold transition-colors cursor-pointer border border-[#235447]"
+                >
+                  Cancelar
+                </button>
+                <button
+                  type="button"
+                  onClick={() => {
+                    handleDeleteProduct(confirmDeleteId);
+                    setConfirmDeleteId(null);
+                  }}
+                  className="flex-1 py-2.5 rounded-xl bg-red-500/80 hover:bg-red-500 text-white text-xs font-bold transition-colors cursor-pointer flex items-center justify-center gap-1.5"
+                >
+                  <Trash2 className="w-3.5 h-3.5" />
+                  Excluir produto
+                </button>
+              </div>
+            </div>
+          </div>
+        );
+      })()}
 
       {/* ===================== ABA 2: CONTAS DE PAGAMENTO ===================== */}
       {activeSubTab === 'payments' && (

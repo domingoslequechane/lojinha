@@ -7,6 +7,7 @@ import {
   Clock, 
   ChevronLeft,
   ChevronRight, 
+  ChevronDown,
   Check,
   CheckCheck, 
   Play, 
@@ -29,15 +30,13 @@ import {
   Loader2,
   Timer,
   Pencil,
-  TrendingUp,
   Maximize2,
   Download,
   Video
 } from 'lucide-react';
 import { ContactLead, ChatMessage, MessageType, KanbanColumn, QuickReply, StoreSettings, StoreProduct } from '../../types';
-import { CustomSelect } from '../common/CustomSelect';
 import { EditLeadModal } from '../leads/EditLeadModal';
-import { formatPhoneForCall } from '../../utils/phoneUtils';
+import { formatPhoneForCall, formatMoney } from '../../utils/phoneUtils';
 
 /** Returns "Remove em Xh Ym" remaining until 48h expiry.
  *  Shown for all image/video messages — media is cleaned up after 48h. */
@@ -187,9 +186,9 @@ export const ChatPanel: React.FC<ChatPanelProps> = ({
   const [contextMenuMsgId, setContextMenuMsgId] = useState<string | null>(null);
   const [messageToDelete, setMessageToDelete] = useState<ChatMessage | null>(null);
 
-  // Header popovers: Notes and Funnel Journey
-  const [showNotesPopover, setShowNotesPopover] = useState(false);
-  const [showJourneyPopover, setShowJourneyPopover] = useState(false);
+  // Bottom Sheet Modals: Notes/Follow-up and Stage Selection
+  const [isNotesModalOpen, setIsNotesModalOpen] = useState(false);
+  const [isStageModalOpen, setIsStageModalOpen] = useState(false);
 
   // Maximized Media Lightbox & Gallery state
   const [viewingMediaIndex, setViewingMediaIndex] = useState<number | null>(null);
@@ -403,7 +402,10 @@ export const ChatPanel: React.FC<ChatPanelProps> = ({
   };
 
   const handleKeyDown = (e: React.KeyboardEvent) => {
-    if (e.key === 'Enter' && !e.shiftKey) {
+    // On mobile/touch devices, Enter key should insert a newline, NOT send.
+    // Only send on desktop (non-touch) with Enter (without Shift).
+    const isTouchDevice = 'ontouchstart' in window || navigator.maxTouchPoints > 0;
+    if (e.key === 'Enter' && !e.shiftKey && !isTouchDevice) {
       e.preventDefault();
       handleSend();
     }
@@ -791,123 +793,7 @@ export const ChatPanel: React.FC<ChatPanelProps> = ({
       )
     : [];
 
-  // Helper to render Notes Popover
-  const renderNotesPopoverContent = () => (
-    <div className="absolute right-0 mt-1.5 z-50 w-72 max-w-[calc(100vw-24px)] bg-[#0F2D26] border border-[#235447] rounded-2xl shadow-2xl p-3 animate-in fade-in zoom-in-95 duration-150 text-left">
-      <div className="flex items-center justify-between pb-2 border-b border-[#235447] mb-2">
-        <div className="flex items-center gap-1.5 text-xs font-bold text-[#FDFEF8]">
-          <FileText className="w-3.5 h-3.5 text-[#C1F76B]" />
-          <span>Nota & Follow-up</span>
-        </div>
-        <button
-          type="button"
-          onClick={() => {
-            setShowNotesPopover(false);
-            onOpenFollowUpModal(lead);
-          }}
-          className="p-1 rounded-lg bg-[#14382F] hover:bg-[#235447] text-[#C1F76B] hover:text-[#FDFEF8] transition-colors cursor-pointer"
-          title="Editar Nota"
-        >
-          <Pencil className="w-3.5 h-3.5" />
-        </button>
-      </div>
 
-      {lead.followUpDate && (
-        <div className="flex items-center gap-1.5 bg-amber-500/10 border border-amber-500/30 rounded-lg px-2.5 py-1 text-[11px] font-semibold text-amber-300 mb-2">
-          <Clock className="w-3 h-3 text-amber-400 flex-shrink-0" />
-          <span>Agendado para: {lead.followUpDate}</span>
-        </div>
-      )}
-
-      {lead.followUpNotes ? (
-        <p className="text-xs text-[#E3F2ED] whitespace-pre-line leading-relaxed max-h-40 overflow-y-auto pr-1">
-          {lead.followUpNotes}
-        </p>
-      ) : (
-        <p className="text-xs text-[#95BDB0]/70 italic py-2">
-          Nenhuma nota registrada. Clique na caneta para anotar detalhes.
-        </p>
-      )}
-
-      <div className="mt-3 pt-2 border-t border-[#235447]">
-        <button
-          type="button"
-          onClick={() => {
-            setShowNotesPopover(false);
-            onOpenFollowUpModal(lead);
-          }}
-          className="w-full py-1.5 px-3 rounded-xl bg-[#14382F] hover:bg-[#1C4E41] text-[#C1F76B] hover:text-[#FDFEF8] text-xs font-semibold flex items-center justify-center gap-1.5 transition-colors cursor-pointer border border-[#235447]"
-        >
-          <Pencil className="w-3 h-3" />
-          <span>{lead.followUpNotes ? 'Editar Nota' : '+ Adicionar Nota'}</span>
-        </button>
-      </div>
-    </div>
-  );
-
-  // Helper to render Journey Popover
-  const renderJourneyPopoverContent = () => (
-    <div className="absolute right-0 mt-1.5 z-50 w-80 max-w-[calc(100vw-24px)] bg-[#0F2D26] border border-[#235447] rounded-2xl shadow-2xl p-3 animate-in fade-in zoom-in-95 duration-150 text-left">
-      <div className="flex items-center justify-between pb-2 border-b border-[#235447] mb-2.5">
-        <div className="flex items-center gap-1.5 text-xs font-bold text-[#FDFEF8]">
-          <TrendingUp className="w-3.5 h-3.5 text-[#C1F76B]" />
-          <span>Jornada no Funil</span>
-        </div>
-        <span className="text-[10px] font-semibold text-[#95BDB0] bg-[#14382F] px-2 py-0.5 rounded-full">
-          {lead.stageHistory?.length || 1} {lead.stageHistory?.length === 1 ? 'movimento' : 'movimentos'}
-        </span>
-      </div>
-
-      {/* Timeline Dots Strip */}
-      <div className="flex items-center gap-1 overflow-x-auto py-2 px-2 mb-2.5 bg-[#14382F]/60 rounded-xl border border-[#235447]/60">
-        <div className="w-2.5 h-2.5 rounded-full bg-blue-400 flex-shrink-0" title="Entrada do Lead" />
-        <div className="h-px w-2.5 bg-[#2D6B5A] flex-shrink-0" />
-        {(lead.stageHistory || []).map((entry, idx) => {
-          const color = columns.find((c) => c.id === entry.toColumnId)?.color || '#C1F76B';
-          return (
-            <React.Fragment key={idx}>
-              <div
-                className="w-2.5 h-2.5 rounded-full border border-white/20 flex-shrink-0"
-                style={{ backgroundColor: color }}
-                title={`${entry.fromColumnTitle} → ${entry.toColumnTitle}`}
-              />
-              <div className="h-px w-2.5 bg-[#2D6B5A] flex-shrink-0" />
-            </React.Fragment>
-          );
-        })}
-        <div
-          className="w-3.5 h-3.5 rounded-full border-2 border-white flex-shrink-0 animate-pulse"
-          style={{ backgroundColor: currentColumn?.color || '#C1F76B' }}
-          title={`Etapa Atual: ${currentColumn?.title}`}
-        />
-      </div>
-
-      {/* History List */}
-      <div className="space-y-1.5 max-h-48 overflow-y-auto pr-1">
-        {(lead.stageHistory || []).map((entry, idx) => {
-          const color = columns.find((c) => c.id === entry.toColumnId)?.color || '#C1F76B';
-          return (
-            <div key={idx} className="flex items-start justify-between text-[11px] p-1.5 rounded-lg bg-[#14382F] border border-[#235447]">
-              <div className="flex items-center gap-1.5 truncate">
-                <span className="w-2 h-2 rounded-full flex-shrink-0" style={{ backgroundColor: color }} />
-                <span className="truncate text-[#FDFEF8] font-medium">{entry.toColumnTitle.replace(/^[^ ]+ /, '')}</span>
-              </div>
-              <span className="text-[10px] text-[#95BDB0] flex-shrink-0">{entry.movedAtLabel}</span>
-            </div>
-          );
-        })}
-      </div>
-
-      {/* Current Stage Summary */}
-      <div className="mt-2.5 pt-2 border-t border-[#235447] flex items-center justify-between text-[11px]">
-        <span className="text-[#95BDB0]">Fase Atual:</span>
-        <span className="font-bold flex items-center gap-1.5 text-[#FDFEF8]">
-          <span className="w-2 h-2 rounded-full" style={{ backgroundColor: currentColumn?.color || '#C1F76B' }} />
-          {currentColumn?.title.replace(/^[^ ]+ /, '')}
-        </span>
-      </div>
-    </div>
-  );
 
   return (
     <div className="w-full md:w-[480px] md:min-w-[420px] lg:w-[500px] h-full bg-[#091E19] border-l border-[#235447] flex flex-col z-20 shadow-2xl transition-all duration-200 animate-in fade-in slide-in-from-right-4 relative overflow-hidden">
@@ -984,79 +870,64 @@ export const ChatPanel: React.FC<ChatPanelProps> = ({
           </a>
         )}
 
-        {/* Column Stage Switcher (aligned left so it opens to the right on mobile) */}
-        <CustomSelect
-          variant="dot-only"
-          value={lead.columnId}
-          onChange={(newColId) => onChangeColumn(lead.id, newColId)}
-          options={columns.map((col) => ({
-            value: col.id,
-            label: col.title,
-            color: col.color,
-          }))}
-          align="left"
-        />
+        {/* Column Stage Switcher Button (opens bottom sheet modal) */}
+        <button
+          type="button"
+          onClick={() => setIsStageModalOpen(true)}
+          className={`p-2 rounded-xl border flex items-center justify-center gap-1.5 transition-all duration-150 active:scale-95 cursor-pointer ${
+            isStageModalOpen
+              ? 'bg-[#C1F76B]/20 border-[#C1F76B] text-[#C1F76B] shadow-sm shadow-[#C1F76B]/25'
+              : 'bg-[#14382F] hover:bg-[#184339] border-[#235447] text-[#FDFEF8]'
+          }`}
+          title={`Etapa do Funil: ${currentColumn?.title || 'Selecionar'} (Clique para mudar)`}
+        >
+          <span
+            className="w-3.5 h-3.5 rounded-full shadow-sm flex-shrink-0 animate-pulse"
+            style={{ backgroundColor: currentColumn?.color || '#C1F76B' }}
+          />
+          <ChevronDown className="w-3 h-3 text-[#95BDB0]" />
+        </button>
 
         {/* Edit Lead Info */}
         <button
           type="button"
           onClick={() => setIsEditModalOpen(true)}
-          className="p-2 rounded-xl border bg-[#14382F] border-[#235447] text-[#95BDB0] hover:text-[#C1F76B] hover:border-[#C1F76B] transition-all duration-150 active:scale-95"
+          className={`p-2 rounded-xl border transition-all duration-150 active:scale-95 ${
+            isEditModalOpen
+              ? 'bg-[#C1F76B]/20 border-[#C1F76B] text-[#C1F76B] shadow-sm shadow-[#C1F76B]/25'
+              : 'bg-[#14382F] border-[#235447] text-[#95BDB0] hover:text-[#C1F76B] hover:border-[#C1F76B]/60'
+          }`}
           title="Editar Informações do Cliente"
         >
           <Pencil className="w-4 h-4" />
         </button>
 
-        {/* Notes & Follow-up Button + Popover */}
-        <div className="relative">
-          <button
-            type="button"
-            onClick={() => {
-              setShowNotesPopover(!showNotesPopover);
-              setShowJourneyPopover(false);
-            }}
-            className={`p-2 rounded-xl border relative transition-all duration-150 active:scale-95 ${
-              showNotesPopover || lead.followUpNotes
-                ? 'bg-[#14382F] border-[#C1F76B] text-[#C1F76B] ring-1 ring-[#C1F76B]/30'
-                : 'bg-[#14382F] border-[#235447] text-[#95BDB0]'
-            }`}
-            title={lead.followUpNotes ? "Ver/Editar Notas" : "Adicionar Notas"}
-          >
-            <FileText className="w-4 h-4" />
-            {lead.followUpNotes && (
-              <span className="absolute top-1 right-1 w-1.5 h-1.5 rounded-full bg-[#C1F76B]" />
-            )}
-          </button>
-          {showNotesPopover && renderNotesPopoverContent()}
-        </div>
-
-        {/* Funnel Journey Button + Popover */}
-        <div className="relative">
-          <button
-            type="button"
-            onClick={() => {
-              setShowJourneyPopover(!showJourneyPopover);
-              setShowNotesPopover(false);
-            }}
-            className={`p-2 rounded-xl border relative transition-all duration-150 active:scale-95 ${
-              showJourneyPopover
-                ? 'bg-[#14382F] border-[#C1F76B] text-[#C1F76B] ring-1 ring-[#C1F76B]/30'
-                : 'bg-[#14382F] border-[#235447] text-[#95BDB0]'
-            }`}
-            title="Jornada no Funil"
-          >
-            <TrendingUp className="w-4 h-4" />
-          </button>
-          {showJourneyPopover && renderJourneyPopoverContent()}
-        </div>
+        {/* Notes & Follow-up Button (opens bottom sheet modal) */}
+        <button
+          type="button"
+          onClick={() => setIsNotesModalOpen(true)}
+          className={`p-2 rounded-xl border relative transition-all duration-150 active:scale-95 ${
+            isNotesModalOpen
+              ? 'bg-[#C1F76B]/25 border-[#C1F76B] text-[#C1F76B] shadow-md shadow-[#C1F76B]/30'
+              : lead.followUpNotes
+              ? 'bg-[#14382F] border-[#C1F76B]/60 text-[#C1F76B] hover:bg-[#C1F76B]/15'
+              : 'bg-[#14382F] border-[#235447] text-[#95BDB0] hover:text-[#C1F76B] hover:border-[#C1F76B]/60'
+          }`}
+          title={lead.followUpNotes ? "Ver/Editar Folha de Notas" : "Adicionar Nota"}
+        >
+          <FileText className="w-4 h-4" />
+          {lead.followUpNotes && (
+            <span className="absolute top-1 right-1 w-1.5 h-1.5 rounded-full bg-[#C1F76B]" />
+          )}
+        </button>
 
         {/* Follow-up Schedule Button */}
         <button
           onClick={() => onOpenFollowUpModal(lead)}
           className={`p-2 rounded-xl border transition-all duration-150 active:scale-95 ${
             lead.followUpDate
-              ? 'bg-amber-500/10 border-amber-500/40 text-amber-400'
-              : 'bg-[#14382F] border-[#235447] text-[#95BDB0]'
+              ? 'bg-amber-500/20 border-amber-400/70 text-amber-300 shadow-sm shadow-amber-500/25'
+              : 'bg-[#14382F] border-[#235447] text-[#95BDB0] hover:text-amber-300 hover:border-amber-500/50'
           }`}
           title={lead.followUpDate ? `Follow-up: ${lead.followUpDate}` : "Agendar Follow-up"}
         >
@@ -1118,17 +989,23 @@ export const ChatPanel: React.FC<ChatPanelProps> = ({
             </a>
           )}
 
-          <CustomSelect
-            variant="dot-only"
-            value={lead.columnId}
-            onChange={(newColId) => onChangeColumn(lead.id, newColId)}
-            options={columns.map((col) => ({
-              value: col.id,
-              label: col.title,
-              color: col.color,
-            }))}
-            align="right"
-          />
+          {/* Stage Switcher Button (opens bottom sheet modal) */}
+          <button
+            type="button"
+            onClick={() => setIsStageModalOpen(true)}
+            className={`p-2 rounded-xl border flex items-center justify-center gap-1.5 transition-all duration-150 hover:scale-105 active:scale-95 cursor-pointer ${
+              isStageModalOpen
+                ? 'bg-[#C1F76B]/20 border-[#C1F76B] text-[#C1F76B] shadow-sm shadow-[#C1F76B]/25'
+                : 'bg-[#0F2D26] hover:bg-[#14382F] border-[#235447] text-[#FDFEF8]'
+            }`}
+            title={`Etapa do Funil: ${currentColumn?.title || 'Selecionar'} (Clique para mudar)`}
+          >
+            <span
+              className="w-3.5 h-3.5 rounded-full shadow-sm flex-shrink-0 animate-pulse"
+              style={{ backgroundColor: currentColumn?.color || '#C1F76B' }}
+            />
+            <ChevronDown className="w-3 h-3 text-[#95BDB0]" />
+          </button>
 
           <button
             type="button"
@@ -1139,46 +1016,24 @@ export const ChatPanel: React.FC<ChatPanelProps> = ({
             <Pencil className="w-4 h-4" />
           </button>
 
-          <div className="relative">
-            <button
-              type="button"
-              onClick={() => {
-                setShowNotesPopover(!showNotesPopover);
-                setShowJourneyPopover(false);
-              }}
-              className={`p-2 rounded-xl border relative transition-all duration-150 hover:scale-105 active:scale-95 cursor-pointer ${
-                showNotesPopover || lead.followUpNotes
-                  ? 'bg-[#14382F] border-[#C1F76B] text-[#C1F76B] ring-1 ring-[#C1F76B]/30'
-                  : 'bg-[#0F2D26] border-[#235447] text-[#95BDB0] hover:text-[#FDFEF8] hover:border-[#2D6B5A]'
-              }`}
-              title={lead.followUpNotes ? "Ver/Editar Notas do Cliente" : "Adicionar Notas do Cliente"}
-            >
-              <FileText className="w-4 h-4" />
-              {lead.followUpNotes && (
-                <span className="absolute top-1.5 right-1.5 w-1.5 h-1.5 rounded-full bg-[#C1F76B] shadow-xs shadow-[#C1F76B]" />
-              )}
-            </button>
-            {showNotesPopover && renderNotesPopoverContent()}
-          </div>
-
-          <div className="relative">
-            <button
-              type="button"
-              onClick={() => {
-                setShowJourneyPopover(!showJourneyPopover);
-                setShowNotesPopover(false);
-              }}
-              className={`p-2 rounded-xl border relative transition-all duration-150 hover:scale-105 active:scale-95 cursor-pointer ${
-                showJourneyPopover
-                  ? 'bg-[#14382F] border-[#C1F76B] text-[#C1F76B] ring-1 ring-[#C1F76B]/30'
-                  : 'bg-[#0F2D26] border-[#235447] text-[#95BDB0] hover:text-[#FDFEF8] hover:border-[#2D6B5A]'
-              }`}
-              title="Jornada no Funil"
-            >
-              <TrendingUp className="w-4 h-4" />
-            </button>
-            {showJourneyPopover && renderJourneyPopoverContent()}
-          </div>
+          {/* Notes & Follow-up Button (opens bottom sheet modal) */}
+          <button
+            type="button"
+            onClick={() => setIsNotesModalOpen(true)}
+            className={`p-2 rounded-xl border relative transition-all duration-150 hover:scale-105 active:scale-95 cursor-pointer ${
+              isNotesModalOpen
+                ? 'bg-[#C1F76B]/25 border-[#C1F76B] text-[#C1F76B] shadow-md shadow-[#C1F76B]/30'
+                : lead.followUpNotes
+                ? 'bg-[#14382F] border-[#C1F76B]/60 text-[#C1F76B] hover:bg-[#C1F76B]/15'
+                : 'bg-[#0F2D26] border-[#235447] text-[#95BDB0] hover:text-[#FDFEF8] hover:border-[#2D6B5A]'
+            }`}
+            title={lead.followUpNotes ? "Ver/Editar Folha de Notas" : "Adicionar Nota"}
+          >
+            <FileText className="w-4 h-4" />
+            {lead.followUpNotes && (
+              <span className="absolute top-1.5 right-1.5 w-1.5 h-1.5 rounded-full bg-[#C1F76B] shadow-xs shadow-[#C1F76B]" />
+            )}
+          </button>
 
           <button
             onClick={() => onOpenFollowUpModal(lead)}
@@ -1217,7 +1072,7 @@ export const ChatPanel: React.FC<ChatPanelProps> = ({
         </div>
         <div className="flex items-center gap-2 flex-shrink-0">
           <span className="font-bold text-[#C1F76B] bg-[#C1F76B]/15 px-2 py-0.5 rounded text-[11px]">
-            {lead.dealValue.toLocaleString()} MT
+            {formatMoney(lead.dealValue)}
           </span>
           <Pencil className="w-3 h-3 text-[#95BDB0] group-hover:text-[#C1F76B] transition-colors" />
         </div>
@@ -1231,6 +1086,171 @@ export const ChatPanel: React.FC<ChatPanelProps> = ({
         onClose={() => setIsEditModalOpen(false)}
         onSave={(updated) => onUpdateLead?.(updated)}
       />
+
+      {/* Modal Inferior: Seleção de Fases do Funil */}
+      {isStageModalOpen && (
+        <div className="fixed inset-0 bg-black/75 backdrop-blur-sm z-50 flex items-end sm:items-center justify-center p-0 sm:p-4 animate-in fade-in duration-200">
+          <div 
+            className="fixed inset-0" 
+            onClick={() => setIsStageModalOpen(false)} 
+          />
+          <div className="relative w-full max-w-md bg-[#0F2D26] border border-[#235447] rounded-t-3xl sm:rounded-3xl shadow-2xl overflow-hidden animate-in slide-in-from-bottom-6 sm:zoom-in-95 duration-200 flex flex-col max-h-[85vh] z-10">
+            {/* Mobile Drag Handle */}
+            <div className="w-12 h-1 bg-[#235447] rounded-full mx-auto mt-2.5 mb-1 sm:hidden flex-shrink-0" />
+            
+            {/* Header */}
+            <div className="p-3.5 sm:p-4 bg-[#14382F] border-b border-[#235447] flex items-center justify-between flex-shrink-0">
+              <div className="flex items-center gap-2.5">
+                <div className="w-8 h-8 rounded-xl bg-[#C1F76B]/15 text-[#C1F76B] border border-[#C1F76B]/30 flex items-center justify-center">
+                  <span
+                    className="w-3.5 h-3.5 rounded-full"
+                    style={{ backgroundColor: currentColumn?.color || '#C1F76B' }}
+                  />
+                </div>
+                <div>
+                  <h3 className="font-bold text-sm text-[#FDFEF8]">Mover Etapa do Funil</h3>
+                  <p className="text-xs text-[#95BDB0] truncate max-w-[220px]">
+                    {lead.name} • Fase atual: <span className="text-[#C1F76B] font-semibold">{currentColumn?.title.replace(/^[^ ]+ /, '') || currentColumn?.title}</span>
+                  </p>
+                </div>
+              </div>
+              <button
+                type="button"
+                onClick={() => setIsStageModalOpen(false)}
+                className="p-1.5 rounded-xl text-[#95BDB0] hover:text-[#FDFEF8] hover:bg-[#0F2D26] transition-colors cursor-pointer"
+              >
+                <X className="w-4 h-4" />
+              </button>
+            </div>
+
+            {/* Stages List */}
+            <div className="p-3 sm:p-4 space-y-2 overflow-y-auto flex-1">
+              {columns.map((col) => {
+                const isSelected = col.id === lead.columnId;
+                return (
+                  <button
+                    key={col.id}
+                    type="button"
+                    onClick={() => {
+                      onChangeColumn(lead.id, col.id);
+                      setIsStageModalOpen(false);
+                    }}
+                    className={`w-full flex items-center justify-between gap-3 p-3 rounded-2xl border transition-all duration-150 text-left cursor-pointer active:scale-[0.98] ${
+                      isSelected
+                        ? 'bg-[#14382F] border-[#C1F76B] text-[#C1F76B] shadow-md shadow-[#C1F76B]/10'
+                        : 'bg-[#14382F]/60 hover:bg-[#14382F] border-[#235447] text-[#FDFEF8] hover:border-[#2D6B5A]'
+                    }`}
+                  >
+                    <div className="flex items-center gap-3 truncate">
+                      <span
+                        className={`w-3.5 h-3.5 rounded-full flex-shrink-0 transition-transform ${isSelected ? 'scale-125 ring-2 ring-[#C1F76B]/40' : ''}`}
+                        style={{ backgroundColor: col.color }}
+                      />
+                      <span className={`text-sm ${isSelected ? 'font-bold text-[#C1F76B]' : 'font-medium text-[#FDFEF8]'}`}>
+                        {col.title}
+                      </span>
+                    </div>
+
+                    {isSelected ? (
+                      <span className="flex items-center gap-1 text-xs font-bold text-[#C1F76B] bg-[#C1F76B]/15 px-2 py-0.5 rounded-lg border border-[#C1F76B]/30 flex-shrink-0">
+                        <Check className="w-3.5 h-3.5 stroke-[2.5]" />
+                        <span>Atual</span>
+                      </span>
+                    ) : (
+                      <span className="text-xs text-[#95BDB0]/60 flex-shrink-0">
+                        Mover aqui
+                      </span>
+                    )}
+                  </button>
+                );
+              })}
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* Modal Inferior: Folha de Notas & Follow-up */}
+      {isNotesModalOpen && (
+        <div className="fixed inset-0 bg-black/75 backdrop-blur-sm z-50 flex items-end sm:items-center justify-center p-0 sm:p-4 animate-in fade-in duration-200">
+          <div 
+            className="fixed inset-0" 
+            onClick={() => setIsNotesModalOpen(false)} 
+          />
+          <div className="relative w-full max-w-lg bg-[#0F2D26] border border-[#235447] rounded-t-3xl sm:rounded-3xl shadow-2xl overflow-hidden animate-in slide-in-from-bottom-6 sm:zoom-in-95 duration-200 flex flex-col max-h-[85vh] z-10">
+            {/* Mobile Drag Handle */}
+            <div className="w-12 h-1 bg-[#235447] rounded-full mx-auto mt-2.5 mb-1 sm:hidden flex-shrink-0" />
+
+            {/* Header */}
+            <div className="p-3.5 sm:p-4 bg-[#14382F] border-b border-[#235447] flex items-center justify-between flex-shrink-0">
+              <div className="flex items-center gap-2.5">
+                <div className="w-8 h-8 rounded-xl bg-[#C1F76B]/15 text-[#C1F76B] border border-[#C1F76B]/30 flex items-center justify-center">
+                  <FileText className="w-4 h-4" />
+                </div>
+                <div>
+                  <h3 className="font-bold text-sm text-[#FDFEF8]">Nota & Folha de Atendimento</h3>
+                  <p className="text-xs text-[#95BDB0] truncate max-w-[220px]">
+                    {lead.name} {lead.phone ? `• ${lead.phone}` : ''}
+                  </p>
+                </div>
+              </div>
+              <button
+                type="button"
+                onClick={() => setIsNotesModalOpen(false)}
+                className="p-1.5 rounded-xl text-[#95BDB0] hover:text-[#FDFEF8] hover:bg-[#0F2D26] transition-colors cursor-pointer"
+              >
+                <X className="w-4 h-4" />
+              </button>
+            </div>
+
+            {/* Body Content */}
+            <div className="p-4 space-y-3 overflow-y-auto flex-1">
+              {/* Follow-up reminder date alert if set */}
+              {lead.followUpDate && (
+                <div className="flex items-center gap-2 bg-amber-500/15 border border-amber-500/35 rounded-xl px-3 py-2 text-xs font-semibold text-amber-300">
+                  <Clock className="w-4 h-4 text-amber-400 flex-shrink-0" />
+                  <span>Agendamento de Retorno: <strong>{lead.followUpDate}</strong></span>
+                </div>
+              )}
+
+              {/* Notes display */}
+              {lead.followUpNotes ? (
+                <div className="p-3.5 rounded-2xl bg-[#14382F]/70 border border-[#2D6B5A] text-sm text-[#FDFEF8] whitespace-pre-line leading-relaxed max-h-60 overflow-y-auto">
+                  {lead.followUpNotes}
+                </div>
+              ) : (
+                <div className="p-6 text-center rounded-2xl bg-[#14382F]/40 border border-dashed border-[#235447]">
+                  <FileText className="w-8 h-8 text-[#95BDB0]/40 mx-auto mb-2" />
+                  <p className="text-xs text-[#95BDB0] font-medium">Nenhuma anotação registrada ainda para este cliente.</p>
+                  <p className="text-[11px] text-[#95BDB0]/60 mt-0.5">Use o botão abaixo para cadastrar notas rápidas de atendimento.</p>
+                </div>
+              )}
+            </div>
+
+            {/* Footer actions */}
+            <div className="p-3 bg-[#0B241D] border-t border-[#235447] flex items-center justify-between gap-2.5 flex-shrink-0">
+              <button
+                type="button"
+                onClick={() => setIsNotesModalOpen(false)}
+                className="px-4 py-2 rounded-xl text-xs font-semibold text-[#95BDB0] hover:text-[#FDFEF8] hover:bg-[#14382F] transition-colors cursor-pointer"
+              >
+                Fechar
+              </button>
+
+              <button
+                type="button"
+                onClick={() => {
+                  setIsNotesModalOpen(false);
+                  onOpenFollowUpModal(lead);
+                }}
+                className="px-5 py-2 rounded-xl text-xs font-bold bg-[#C1F76B] text-[#0F2D26] hover:bg-[#b0ec53] shadow-md shadow-[#C1F76B]/20 transition-all flex items-center gap-1.5 cursor-pointer hover:scale-105 active:scale-95"
+              >
+                <Pencil className="w-3.5 h-3.5" />
+                <span>{lead.followUpNotes ? 'Editar Nota / Reagendar' : '+ Escrever Nota'}</span>
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
 
       {/* Messages Area */}
       <div 
@@ -1554,10 +1574,10 @@ export const ChatPanel: React.FC<ChatPanelProps> = ({
       />
 
       {/* Message Input Bar & Interactive Popovers Container */}
-      <div ref={inputAreaRef} className="relative bg-[#14382F] border-t border-[#235447]">
+      <div ref={inputAreaRef} className="relative bg-[#14382F] border-t border-[#235447] pb-[env(safe-area-inset-bottom,0px)]">
         {/* 1. Emoji Picker Popover */}
         {showEmojiPicker && (
-          <div className="absolute bottom-full mb-2 left-3 z-50 bg-[#0F2D26] border border-[#2D6B5A] rounded-2xl shadow-2xl p-3 w-72 sm:w-80 animate-in fade-in zoom-in-95 duration-150">
+          <div className="absolute bottom-full mb-2 left-2 sm:left-3 z-50 bg-[#0F2D26] border border-[#2D6B5A] rounded-2xl shadow-2xl p-3 w-[calc(100vw-24px)] max-w-[320px] animate-in fade-in zoom-in-95 duration-150">
             <div className="flex items-center justify-between mb-2 pb-2 border-b border-[#235447]">
               <span className="text-xs font-bold text-[#FDFEF8] flex items-center gap-1.5">
                 <Smile className="w-3.5 h-3.5 text-amber-400" />
@@ -1598,7 +1618,7 @@ export const ChatPanel: React.FC<ChatPanelProps> = ({
 
         {/* 2. Attachment Menu Popover */}
         {showAttachMenu && (
-          <div className="absolute bottom-full mb-2 left-10 z-50 bg-[#0F2D26] border border-[#2D6B5A] rounded-2xl shadow-2xl p-2 w-64 animate-in fade-in zoom-in-95 duration-150 space-y-1">
+          <div className="absolute bottom-full mb-2 left-2 sm:left-10 z-50 bg-[#0F2D26] border border-[#2D6B5A] rounded-2xl shadow-2xl p-2 w-[calc(100vw-24px)] max-w-[260px] animate-in fade-in zoom-in-95 duration-150 space-y-1">
             <button
               type="button"
               onClick={() => {
@@ -1665,7 +1685,7 @@ export const ChatPanel: React.FC<ChatPanelProps> = ({
 
         {/* 3. Slash Command Suggestions Dropdown */}
         {matchingSlashReplies.length > 0 && (
-          <div className="absolute bottom-full mb-2 left-3 right-3 z-40 bg-[#0F2D26] border border-[#2D6B5A] rounded-2xl shadow-2xl p-2 max-h-48 overflow-y-auto animate-in fade-in slide-in-from-bottom-2 duration-150">
+          <div className="absolute bottom-full mb-2 left-2 right-2 sm:left-3 sm:right-3 z-40 bg-[#0F2D26] border border-[#2D6B5A] rounded-2xl shadow-2xl p-2 max-h-48 overflow-y-auto animate-in fade-in slide-in-from-bottom-2 duration-150">
             <div className="text-[10px] text-[#95BDB0] font-semibold uppercase px-2 py-1 border-b border-[#235447] mb-1">
               Atalhos de Resposta Rápida (Clique para usar)
             </div>
@@ -1834,22 +1854,6 @@ export const ChatPanel: React.FC<ChatPanelProps> = ({
               <button
                 type="button"
                 onClick={() => {
-                  setShowEmojiPicker(!showEmojiPicker);
-                  setShowAttachMenu(false);
-                }}
-                className={`p-2 rounded-xl transition-all duration-150 hover:scale-110 active:scale-90 cursor-pointer ${
-                  showEmojiPicker
-                    ? 'text-[#C1F76B] bg-[#14382F]'
-                    : 'text-[#95BDB0] hover:text-[#FDFEF8] hover:bg-[#14382F]'
-                }`}
-                title="Inserir Emoji"
-              >
-                <Smile className="w-5 h-5" />
-              </button>
-
-              <button
-                type="button"
-                onClick={() => {
                   setShowAttachMenu(!showAttachMenu);
                   setShowEmojiPicker(false);
                 }}
@@ -1863,7 +1867,7 @@ export const ChatPanel: React.FC<ChatPanelProps> = ({
                 <Paperclip className="w-5 h-5" />
               </button>
 
-              {/* Input box with auto-adjusting height starting compact at 42px */}
+              {/* Input box: starts at 1 line, grows smoothly */}
               <textarea
                 ref={textareaRef}
                 rows={1}
@@ -1872,7 +1876,7 @@ export const ChatPanel: React.FC<ChatPanelProps> = ({
                 onInput={(e) => {
                   const target = e.currentTarget;
                   target.style.height = 'auto';
-                  target.style.height = `${Math.min(Math.max(42, target.scrollHeight), 128)}px`;
+                  target.style.height = `${Math.min(target.scrollHeight, 128)}px`;
                 }}
                 onKeyDown={handleKeyDown}
                 placeholder={
@@ -1880,9 +1884,9 @@ export const ChatPanel: React.FC<ChatPanelProps> = ({
                     ? attachedMedias.length === 1
                       ? "Adicione uma legenda (opcional)..."
                       : `Legenda da mídia selecionada (${attachedMedias.findIndex(m => m.id === (activeMedia?.id || attachedMedias[0]?.id)) + 1}/${attachedMedias.length}) [opcional]...`
-                    : "Digite uma mensagem ou digite / para atalhos..."
+                    : "Mensagem..."
                 }
-                className="flex-1 min-h-[42px] max-h-32 bg-[#2D6B5A] text-sm text-[#FDFEF8] placeholder-[#95BDB0] px-3.5 py-2.5 rounded-2xl border border-transparent focus:border-[#C1F76B] focus:outline-none resize-none transition-[height] duration-75 leading-snug"
+                className="flex-1 min-h-[36px] max-h-32 bg-[#2D6B5A] text-sm text-[#FDFEF8] placeholder-[#95BDB0] px-3.5 py-2 rounded-2xl border border-transparent focus:border-[#C1F76B] focus:outline-none resize-none overflow-hidden transition-[height] duration-75 leading-snug"
               />
 
 
@@ -1916,9 +1920,9 @@ export const ChatPanel: React.FC<ChatPanelProps> = ({
 
       {/* Quick Tablet Catalog Modal */}
       {showCatalogModal && (
-        <div className="fixed inset-0 bg-black/80 backdrop-blur-xs flex items-center justify-center p-4 z-50">
-          <div className="bg-[#0F2D26] border border-[#235447] rounded-3xl w-full max-w-lg overflow-hidden shadow-2xl animate-in fade-in zoom-in-95 duration-200">
-            <div className="p-4 bg-[#14382F] border-b border-[#235447] flex items-center justify-between">
+        <div className="fixed inset-0 bg-black/75 backdrop-blur-md flex items-end sm:items-center justify-center p-4 z-50 animate-in fade-in duration-150">
+          <div className="bg-[#0F2D26] border border-[#235447] rounded-3xl w-full max-w-lg max-h-[85vh] sm:max-h-[90vh] flex flex-col overflow-hidden shadow-2xl animate-in slide-in-from-bottom-4 sm:zoom-in-95 duration-200">
+            <div className="p-4 bg-[#14382F] border-b border-[#235447] flex items-center justify-between flex-shrink-0">
               <div className="flex items-center gap-2">
                 <Sparkles className="w-4 h-4 text-pink-400" />
                 <h3 className="font-bold text-sm text-[#FDFEF8]">Catálogo de Produtos ({catalogProducts.length})</h3>
@@ -1948,7 +1952,7 @@ export const ChatPanel: React.FC<ChatPanelProps> = ({
               </div>
             </div>
 
-            <div className="p-4 max-h-[70vh] overflow-y-auto">
+            <div className="p-4 overflow-y-auto flex-1">
               {catalogProducts.length === 0 ? (
                 <div className="flex flex-col items-center justify-center py-10 text-center space-y-3">
                   <div className="w-14 h-14 rounded-2xl bg-[#14382F] border border-[#235447] flex items-center justify-center">
@@ -1986,7 +1990,7 @@ export const ChatPanel: React.FC<ChatPanelProps> = ({
 
       {/* Delete Confirmation Modal */}
       {messageToDelete && (
-        <div className="fixed inset-0 bg-black/80 backdrop-blur-xs flex items-center justify-center p-4 z-50 animate-in fade-in duration-150">
+        <div className="fixed inset-0 bg-black/75 backdrop-blur-md flex items-center justify-center p-4 z-50 animate-in fade-in duration-150">
           <div className="bg-[#0F2D26] border border-[#235447] rounded-3xl w-full max-w-sm overflow-hidden shadow-2xl animate-in zoom-in-95 duration-200">
             <div className="p-5 text-center space-y-3">
               <div className="w-12 h-12 rounded-2xl bg-red-500/15 border border-red-500/30 flex items-center justify-center mx-auto text-red-400">

@@ -68,31 +68,104 @@ export default async function handler(req: any, res: any) {
   return res.status(200).json({ received: true });
 }
 
+async function findLeadByPhone(storeId: string, phone: string) {
+  const digits = phone.replace(/\D/g, '');
+  if (!digits) return null;
+
+  const candidatePhones = new Set<string>();
+  candidatePhones.add(`+${digits}`);
+  candidatePhones.add(digits);
+
+  // Mozambican country code handling
+  if (digits.startsWith('258') && digits.length === 12) {
+    const local = digits.slice(3);
+    candidatePhones.add(`+${local}`);
+    candidatePhones.add(local);
+  } else if (digits.length === 9 && digits.startsWith('8')) {
+    candidatePhones.add(`+258${digits}`);
+    candidatePhones.add(`258${digits}`);
+  }
+
+  const phoneArray = Array.from(candidatePhones);
+
+  // 1. Direct match on candidate phone variations
+  const { data: directMatches } = await supabase
+    .from('leads')
+    .select('*')
+    .eq('store_id', storeId)
+    .in('phone', phoneArray)
+    .limit(1);
+
+  if (directMatches && directMatches.length > 0) {
+    return directMatches[0];
+  }
+
+  // 2. Partial match using the last 9 digits
+  if (digits.length >= 9) {
+    const suffix = digits.slice(-9);
+    const { data: suffixMatches } = await supabase
+      .from('leads')
+      .select('*')
+      .eq('store_id', storeId)
+      .ilike('phone', `%${suffix}%`)
+      .limit(1);
+
+    if (suffixMatches && suffixMatches.length > 0) {
+      return suffixMatches[0];
+    }
+  }
+
+  return null;
+}
+
 async function handleIncomingMessage(instanceId?: string, data?: Record<string, any>) {
   if (!instanceId || !data) return;
   const info = data.Info;
   if (!info || info.IsGroup) return;
 
   const fromMe: boolean = info.IsFromMe ?? false;
-  const chatJid: string = info.Chat || info.Sender || info.RemoteJid || '';
+  const messageSource = info.MessageSource || data.messageSource || {};
 
-  let directJid = '';
-  if (fromMe && info.Recipient && info.Recipient.includes('@s.whatsapp.net')) {
-    directJid = info.Recipient;
-  } else if (chatJid.includes('@s.whatsapp.net')) {
-    directJid = chatJid;
-  } else if (!fromMe && info.Sender && info.Sender.includes('@s.whatsapp.net')) {
-    directJid = info.Sender;
+  // When fromMe is true: extract ONLY the recipient/chat customer JID. Never use Sender!
+  let rawCustomerJid = '';
+  if (fromMe) {
+    rawCustomerJid =
+      info.Recipient ||
+      messageSource.Recipient ||
+      info.Chat ||
+      messageSource.Chat ||
+      info.RemoteJid ||
+      data.key?.remoteJid ||
+      data.recipient ||
+      '';
+  } else {
+    rawCustomerJid =
+      info.Sender ||
+      messageSource.Sender ||
+      info.Chat ||
+      messageSource.Chat ||
+      info.RemoteJid ||
+      data.key?.remoteJid ||
+      '';
   }
 
-  let cleanDigits = directJid ? directJid.split('@')[0].split(':')[0].replace(/\D/g, '') : '';
-  if (!cleanDigits) {
-    cleanDigits = chatJid.split('@')[0].split(':')[0].replace(/\D/g, '');
+  // Ignora grupos, status, newsletters
+  if (
+    info.IsGroup ||
+    rawCustomerJid.includes('@g.us') ||
+    rawCustomerJid.includes('broadcast') ||
+    rawCustomerJid.includes('@newsletter') ||
+    rawCustomerJid === 'status@broadcast'
+  ) {
+    return;
   }
-  if (!cleanDigits) return;
+
+  const cleanDigits = rawCustomerJid.split('@')[0].split(':')[0].replace(/\D/g, '');
+  // Rejeita números com tamanho inválido ou LIDs brutos (14-16 dígitos) não mapeados
+  if (!cleanDigits || cleanDigits.length < 8 || cleanDigits.length > 13) return;
 
   const phone = `+${cleanDigits}`;
-  const contactName = info.PushName || info.FullName || phone;
+  const contactName = !fromMe ? (info.PushName || info.FullName || phone) : phone;
 
   // Find store attached to this instance
   const { data: instRow } = await supabase
@@ -128,14 +201,9 @@ async function handleIncomingMessage(instanceId?: string, data?: Record<string, 
   const timeStr = ts.toLocaleTimeString('pt-PT', { hour: '2-digit', minute: '2-digit' });
   const dateStr = ts.toLocaleDateString('pt-PT');
 
-  // Find or create lead
+  // Find existing lead using robust search
+  const existingLead = await findLeadByPhone(storeId, phone);
   let leadId: string;
-  const { data: existingLead } = await supabase
-    .from('leads')
-    .select('id, unread_count, name')
-    .eq('store_id', storeId)
-    .eq('phone', phone)
-    .single();
 
   if (existingLead) {
     leadId = existingLead.id;

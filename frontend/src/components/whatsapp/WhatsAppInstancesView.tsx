@@ -362,9 +362,9 @@ export const WhatsAppInstancesView: React.FC<WhatsAppInstancesViewProps> = ({
   };
 
   return (
-    <div className="w-full p-3 sm:p-6 bg-[#091E19] space-y-4 sm:space-y-6 font-sans md:flex-1 md:h-full md:overflow-y-auto">
+    <div className="w-full max-w-full p-3 sm:p-6 bg-[#091E19] space-y-4 sm:space-y-6 font-sans md:flex-1 md:h-full md:overflow-y-auto overflow-x-hidden">
       {/* Top Header */}
-      <div className="flex flex-col md:flex-row md:items-center justify-between gap-4">
+      <div className="flex flex-col md:flex-row md:items-center justify-between gap-3 sm:gap-4">
         <div>
           <h2 className="text-xl font-bold text-[#FDFEF8] flex items-center gap-2">
             <Smartphone className="w-6 h-6 text-[#C1F76B]" />
@@ -377,7 +377,7 @@ export const WhatsAppInstancesView: React.FC<WhatsAppInstancesViewProps> = ({
 
         <button
           onClick={() => setIsNewInstanceModalOpen(true)}
-          className="px-4 py-2.5 bg-[#C1F76B] hover:bg-[#b0ec53] text-[#0F2D26] rounded-xl text-xs font-semibold shadow-md shadow-[#C1F76B]/20 transition-all flex items-center gap-1.5 self-start md:self-auto"
+          className="px-4 py-2.5 bg-[#C1F76B] hover:bg-[#b0ec53] text-[#0F2D26] rounded-xl text-xs font-semibold shadow-md shadow-[#C1F76B]/20 transition-all flex items-center gap-1.5 self-start md:self-auto flex-shrink-0"
         >
           <Plus className="w-4 h-4" />
           <span>Nova Instância</span>
@@ -567,8 +567,8 @@ export const WhatsAppInstancesView: React.FC<WhatsAppInstancesViewProps> = ({
 
       {/* QR Code / Pairing Code Connection Modal */}
       {selectedForQr && (
-        <div className="fixed inset-0 bg-black/80 backdrop-blur-xs flex items-center justify-center p-4 z-50">
-          <div className="bg-[#0F2D26] border border-[#235447] rounded-3xl w-full max-w-md overflow-hidden shadow-2xl animate-in fade-in zoom-in duration-200">
+        <div className="fixed inset-0 bg-black/75 backdrop-blur-md flex items-center justify-center p-4 z-50 animate-in fade-in duration-150">
+          <div className="bg-[#0F2D26] border border-[#235447] rounded-3xl w-full max-w-md overflow-hidden shadow-2xl animate-in zoom-in-95 duration-200">
             {/* Modal Header */}
             <div className="p-4 bg-[#14382F] border-b border-[#235447] flex items-center justify-between">
               <div className="flex items-center gap-2.5">
@@ -660,19 +660,19 @@ export const WhatsAppInstancesView: React.FC<WhatsAppInstancesViewProps> = ({
                 </div>
 
                 {/* Modal Body */}
-                <div className="p-6 flex flex-col items-center justify-center text-center space-y-4">
+                <div className="p-4 sm:p-6 flex flex-col items-center justify-center text-center space-y-4 max-w-full">
                   {pairingMethod === 'qr' ? (
                     <>
                       {/* Real QR Code Graphic from Evolution GO */}
-                      <div className="relative p-4 bg-white rounded-2xl shadow-xl flex items-center justify-center min-w-[240px] min-h-[240px]">
+                      <div className="relative p-3 sm:p-4 bg-white rounded-2xl shadow-xl flex items-center justify-center w-52 h-52 sm:w-60 sm:h-60 max-w-full">
                         {qrBase64 ? (
                           <img
                             src={qrBase64}
                             alt="QR Code WhatsApp"
-                            className="w-56 h-56 rounded-xl object-contain animate-in fade-in duration-300"
+                            className="w-full h-full rounded-xl object-contain animate-in fade-in duration-300"
                           />
                         ) : (
-                          <div className="w-56 h-56 flex flex-col items-center justify-center gap-3 text-zinc-600">
+                          <div className="w-full h-full flex flex-col items-center justify-center gap-3 text-zinc-600">
                             <RefreshCw className="w-8 h-8 animate-spin text-[#0F2D26]" />
                             <p className="text-xs font-semibold">
                               {isQrLoading ? 'Gerando QR Code...' : 'Aguardando QR Code...'}
@@ -776,8 +776,8 @@ export const WhatsAppInstancesView: React.FC<WhatsAppInstancesViewProps> = ({
 
       {/* Create New Instance Modal */}
       {isNewInstanceModalOpen && (
-        <div className="fixed inset-0 bg-black/70 backdrop-blur-xs flex items-center justify-center p-4 z-50">
-          <div className="bg-[#0F2D26] border border-[#235447] rounded-3xl w-full max-w-md overflow-hidden shadow-2xl animate-in fade-in zoom-in duration-200">
+        <div className="fixed inset-0 bg-black/75 backdrop-blur-md flex items-center justify-center p-4 z-50 animate-in fade-in duration-150">
+          <div className="bg-[#0F2D26] border border-[#235447] rounded-3xl w-full max-w-md overflow-hidden shadow-2xl animate-in zoom-in-95 duration-200">
             <div className="p-4 bg-[#14382F] border-b border-[#235447] flex items-center justify-between">
               <h3 className="font-bold text-sm text-[#FDFEF8] flex items-center gap-2">
                 <Plus className="w-4 h-4 text-[#C1F76B]" />

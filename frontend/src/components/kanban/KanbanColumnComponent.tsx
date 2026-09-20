@@ -2,6 +2,7 @@ import React, { useState } from 'react';
 import { Plus, Clock, MessageSquare, SlidersHorizontal } from 'lucide-react';
 import { ContactLead, KanbanColumn } from '../../types';
 import { KanbanCard } from './KanbanCard';
+import { formatMoney } from '../../utils/formatters';
 
 interface KanbanColumnComponentProps {
   column: KanbanColumn;
@@ -57,7 +58,7 @@ export const KanbanColumnComponent: React.FC<KanbanColumnComponentProps> = ({
       onDragOver={handleDragOver}
       onDragLeave={handleDragLeave}
       onDrop={handleDrop}
-      className={`flex flex-col w-[85vw] sm:w-80 sm:min-w-[320px] sm:max-w-[320px] min-h-[calc(100dvh-10rem)] md:min-h-0 md:h-full md:max-h-full rounded-2xl bg-[#0F2D26] border transition-all duration-200 flex-shrink-0 snap-center sm:snap-align-none md:overflow-hidden ${
+      className={`flex flex-col sm:w-80 sm:min-w-[320px] sm:max-w-[320px] md:h-full md:max-h-full rounded-2xl bg-[#0F2D26] border transition-all duration-200 flex-shrink-0 md:overflow-hidden ${
         isDragOver
           ? 'border-[#C1F76B] bg-[#14382F] shadow-xl shadow-[#C1F76B]/15 ring-2 ring-[#C1F76B]'
           : 'border-[#235447]'
@@ -113,12 +114,12 @@ export const KanbanColumnComponent: React.FC<KanbanColumnComponentProps> = ({
           {leads.length} {leads.length === 1 ? 'cliente' : 'clientes'}
         </span>
         <span className="font-bold text-[#C1F76B]">
-          {totalValue.toLocaleString()} MT
+          {formatMoney(totalValue)}
         </span>
       </div>
 
       {/* Cards Container with smooth vertical scroll */}
-      <div className="p-2.5 space-y-2.5 md:flex-1 md:min-h-0 md:overflow-y-auto kanban-card-scroll kanban-column-scroll">
+      <div className="p-2.5 space-y-2.5 md:flex-1 md:min-h-0 md:overflow-y-auto">
         {leads.length === 0 ? (
           <div className="h-32 border-2 border-dashed border-[#235447] rounded-xl flex flex-col items-center justify-center text-center p-4 text-[#95BDB0]">
             <p className="text-xs">Nenhum cliente nesta etapa</p>

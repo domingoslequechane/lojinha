@@ -79,13 +79,13 @@ export const EditLeadModal: React.FC<EditLeadModalProps> = ({
   };
 
   return (
-    <div className="fixed inset-0 bg-black/70 backdrop-blur-xs flex items-center justify-center p-4 z-50">
-      <div className="bg-[#0F2D26] border border-[#235447] rounded-3xl w-full max-w-lg overflow-hidden shadow-2xl animate-in fade-in zoom-in-95 duration-200">
+    <div className="fixed inset-0 bg-black/75 backdrop-blur-md flex items-end sm:items-center justify-center p-3 sm:p-4 z-50 animate-in fade-in duration-150">
+      <div className="bg-[#0F2D26] border border-[#235447] rounded-3xl w-full max-w-lg max-h-[85vh] sm:max-h-[90vh] flex flex-col overflow-hidden shadow-2xl animate-in slide-in-from-bottom-4 sm:zoom-in-95 duration-200">
         {/* Header */}
-        <div className="p-4 bg-[#14382F] border-b border-[#235447] flex items-center justify-between">
+        <div className="p-3 bg-[#14382F] border-b border-[#235447] flex items-center justify-between flex-shrink-0">
           <div className="flex items-center gap-2.5">
-            <div className="w-8 h-8 rounded-xl bg-[#C1F76B]/15 text-[#C1F76B] flex items-center justify-center">
-              <Pencil className="w-4 h-4" />
+            <div className="w-7 h-7 rounded-lg bg-[#C1F76B]/15 text-[#C1F76B] flex items-center justify-center">
+              <Pencil className="w-3.5 h-3.5" />
             </div>
             <div>
               <h3 className="font-bold text-sm text-[#FDFEF8]">Editar Informações do Cliente</h3>
@@ -102,7 +102,7 @@ export const EditLeadModal: React.FC<EditLeadModalProps> = ({
         </div>
 
         {/* Form */}
-        <form onSubmit={handleSubmit} className="p-5 space-y-3.5 max-h-[80vh] overflow-y-auto">
+        <form onSubmit={handleSubmit} className="p-3 space-y-2.5 overflow-y-auto flex-1">
           {/* Nome e Telefone */}
           <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
             <div>
@@ -278,7 +278,7 @@ export const EditLeadModal: React.FC<EditLeadModalProps> = ({
           </div>
 
           {/* Footer Actions */}
-          <div className="pt-2 flex items-center justify-end gap-2 border-t border-[#235447]">
+          <div className="pt-1.5 flex items-center justify-end gap-2 border-t border-[#235447]">
             <button
               type="button"
               onClick={onClose}

@@ -1,7 +1,7 @@
 import React from 'react';
 import { Clock, MessageSquare, Check, X, Calendar, UserCheck, Phone } from 'lucide-react';
 import { ContactLead } from '../../types';
-import { formatPhoneForCall } from '../../utils/phoneUtils';
+import { formatPhoneForCall, formatMoney } from '../../utils/phoneUtils';
 
 interface FollowUpListModalProps {
   isOpen: boolean;
@@ -21,10 +21,10 @@ export const FollowUpListModal: React.FC<FollowUpListModalProps> = ({
   if (!isOpen) return null;
 
   return (
-    <div className="fixed inset-0 bg-black/70 backdrop-blur-xs flex items-center justify-center p-4 z-50">
-      <div className="bg-[#0F2D26] border border-[#235447] rounded-3xl w-full max-w-xl overflow-hidden shadow-2xl animate-in fade-in zoom-in duration-200">
+    <div className="fixed inset-0 bg-black/75 backdrop-blur-md flex items-end sm:items-center justify-center p-3 sm:p-4 z-50 animate-in fade-in duration-150">
+      <div className="bg-[#0F2D26] border border-[#235447] rounded-3xl w-full max-w-xl max-h-[85vh] sm:max-h-[90vh] flex flex-col overflow-hidden shadow-2xl animate-in slide-in-from-bottom-4 sm:zoom-in-95 duration-200">
         {/* Header */}
-        <div className="p-4 bg-[#14382F] border-b border-[#235447] flex items-center justify-between">
+        <div className="p-4 bg-[#14382F] border-b border-[#235447] flex items-center justify-between flex-shrink-0">
           <div className="flex items-center gap-2.5">
             <div className="w-8 h-8 rounded-xl bg-amber-500/20 text-amber-400 flex items-center justify-center">
               <Clock className="w-4 h-4" />
@@ -45,7 +45,7 @@ export const FollowUpListModal: React.FC<FollowUpListModalProps> = ({
         </div>
 
         {/* List of Scheduled Leads */}
-        <div className="p-5 max-h-96 overflow-y-auto space-y-3">
+        <div className="p-4 sm:p-5 overflow-y-auto space-y-3 flex-1">
           {leadsWithFollowUp.length === 0 ? (
             <div className="p-8 text-center text-[#95BDB0]">
               <Calendar className="w-10 h-10 mx-auto mb-2 text-[#2D6B5A]" />
@@ -96,7 +96,7 @@ export const FollowUpListModal: React.FC<FollowUpListModalProps> = ({
 
                 <div className="flex items-center justify-between pt-1 border-t border-[#235447]/50">
                   <span className="text-xs font-bold text-[#C1F76B]">
-                    Interesse: {lead.dealValue.toLocaleString()} MT ({lead.productInterest || 'Tablet'})
+                    Interesse: {formatMoney(lead.dealValue)} ({lead.productInterest || 'Tablet'})
                   </span>
 
                   <div className="flex items-center gap-2">

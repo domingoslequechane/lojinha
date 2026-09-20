@@ -5,6 +5,7 @@ import {
   TrendingUp, 
   Smartphone, 
   Menu, 
+  Settings,
   X, 
   Zap, 
   Store, 
@@ -29,6 +30,7 @@ interface MobileNavProps {
   onOpenDeduplicate?: () => void;
   onOpenColumnManager?: () => void;
   onLogout?: () => void;
+  hidden?: boolean;
 }
 
 export const MobileNav: React.FC<MobileNavProps> = ({
@@ -43,6 +45,7 @@ export const MobileNav: React.FC<MobileNavProps> = ({
   onOpenDeduplicate,
   onOpenColumnManager,
   onLogout,
+  hidden = false,
 }) => {
   const [isMenuOpen, setIsMenuOpen] = useState(false);
 
@@ -81,8 +84,10 @@ export const MobileNav: React.FC<MobileNavProps> = ({
 
   return (
     <>
-      {/* Fixed Bottom Navigation Bar (Mobile only) */}
-      <nav className="fixed bottom-0 left-0 right-0 z-40 h-16 bg-[#0F2D26] border-t border-[#235447] flex items-center justify-around px-2 pb-safe md:hidden select-none shadow-2xl">
+      {/* Floating Bottom Navigation Bar (Mobile only) */}
+      <nav className={`fixed bottom-2.5 sm:bottom-4 left-1/2 -translate-x-1/2 w-[calc(100%-1rem)] sm:w-[calc(100%-2rem)] max-w-lg z-50 h-16 bg-[#0F2D26]/95 backdrop-blur-md border border-[#235447] rounded-2xl sm:rounded-3xl shadow-2xl flex items-center justify-around px-1 sm:px-2 select-none md:hidden transition-all duration-300 ease-in-out ${
+        hidden ? 'translate-y-32 opacity-0 pointer-events-none' : 'translate-y-0 opacity-100 pointer-events-auto'
+      }`}>
         {mainTabs.map((tab) => {
           const Icon = tab.icon;
           const isActive = activeTab === tab.id && !isMenuOpen;
@@ -92,13 +97,13 @@ export const MobileNav: React.FC<MobileNavProps> = ({
               key={tab.id}
               type="button"
               onClick={() => handleTabClick(tab.id)}
-              className={`flex flex-col items-center justify-center flex-1 h-full relative transition-all duration-150 active:scale-95 cursor-pointer ${
+              className={`flex flex-col items-center justify-center flex-1 min-w-0 h-full relative transition-all duration-150 active:scale-95 cursor-pointer px-0.5 ${
                 isActive ? 'text-[#C1F76B]' : 'text-[#95BDB0] hover:text-[#FDFEF8]'
               }`}
             >
               {/* Active Pill Indicator */}
               {isActive && (
-                <span className="absolute top-0 w-8 h-1 bg-[#C1F76B] rounded-b-full shadow-sm shadow-[#C1F76B]" />
+                <span className="absolute top-1.5 w-6 h-0.5 bg-[#C1F76B] rounded-full shadow-sm shadow-[#C1F76B]" />
               )}
 
               <div className="relative">
@@ -116,7 +121,7 @@ export const MobileNav: React.FC<MobileNavProps> = ({
                   />
                 )}
               </div>
-              <span className={`text-[10px] mt-1 ${isActive ? 'font-bold' : 'font-medium'}`}>
+              <span className={`text-[10px] mt-1 truncate max-w-full ${isActive ? 'font-bold' : 'font-medium'}`}>
                 {tab.label}
               </span>
             </button>
@@ -127,17 +132,17 @@ export const MobileNav: React.FC<MobileNavProps> = ({
         <button
           type="button"
           onClick={() => setIsMenuOpen(!isMenuOpen)}
-          className={`flex flex-col items-center justify-center flex-1 h-full relative transition-all duration-150 active:scale-95 cursor-pointer ${
+          className={`flex flex-col items-center justify-center flex-1 min-w-0 h-full relative transition-all duration-150 active:scale-95 cursor-pointer px-0.5 ${
             isMenuOpen || ['quickreplies', 'store', 'account'].includes(activeTab)
               ? 'text-[#C1F76B]'
               : 'text-[#95BDB0] hover:text-[#FDFEF8]'
           }`}
         >
           {isMenuOpen && (
-            <span className="absolute top-0 w-8 h-1 bg-[#C1F76B] rounded-b-full shadow-sm shadow-[#C1F76B]" />
+            <span className="absolute top-1.5 w-6 h-0.5 bg-[#C1F76B] rounded-full shadow-sm shadow-[#C1F76B]" />
           )}
           <Menu className="w-5 h-5 stroke-2" />
-          <span className="text-[10px] mt-1 font-medium">Menu</span>
+          <span className="text-[10px] mt-1 font-medium truncate max-w-full">Menu</span>
         </button>
       </nav>
 
@@ -146,12 +151,12 @@ export const MobileNav: React.FC<MobileNavProps> = ({
         <div className="fixed inset-0 z-50 md:hidden select-none animate-in fade-in duration-200">
           {/* Backdrop */}
           <div
-            className="absolute inset-0 bg-black/75 backdrop-blur-xs"
+            className="absolute inset-0 bg-black/75 backdrop-blur-md"
             onClick={() => setIsMenuOpen(false)}
           />
 
           {/* Sheet Container */}
-          <div className="absolute bottom-0 left-0 right-0 max-h-[85vh] bg-[#0F2D26] border-t border-[#235447] rounded-t-3xl p-5 shadow-2xl flex flex-col overflow-y-auto animate-in slide-in-from-bottom duration-250">
+          <div className="absolute bottom-0 left-0 right-0 max-h-[85%] bg-[#0F2D26] border-t border-[#235447] rounded-t-3xl p-5 shadow-2xl flex flex-col overflow-y-auto animate-in slide-in-from-bottom duration-250">
             {/* Handle bar */}
             <div className="w-12 h-1.5 bg-[#235447] rounded-full mx-auto mb-4" />
 

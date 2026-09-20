@@ -12,6 +12,7 @@ import {
 } from 'lucide-react';
 import { ContactLead, KanbanColumn } from '../../types';
 import { formatPhoneForCall } from '../../utils/phoneUtils';
+import { formatMoney } from '../../utils/formatters';
 
 interface KanbanCardProps {
   lead: ContactLead;
@@ -90,7 +91,7 @@ export const KanbanCard: React.FC<KanbanCardProps> = ({
         {/* Deal Value */}
         <div className="text-right">
           <span className="font-bold text-xs text-[#C1F76B] bg-[#C1F76B]/15 px-2 py-0.5 rounded-md border border-[#C1F76B]/30 inline-block shadow-xs">
-            {lead.dealValue.toLocaleString()} MT
+            {formatMoney(lead.dealValue)}
           </span>
           <p className="text-[10px] text-[#95BDB0] mt-1">{lead.lastMessageTime}</p>
         </div>
@@ -112,6 +113,14 @@ export const KanbanCard: React.FC<KanbanCardProps> = ({
         </div>
       )}
 
+      {/* Last message / conversation preview */}
+      {lead.lastMessage && !hasUnread && (
+        <div className="flex items-start gap-1.5 text-[10px] text-[#95BDB0] mb-1.5 px-0.5 line-clamp-2">
+          <MessageSquare className="w-3 h-3 flex-shrink-0 mt-0.5 text-[#578577]" />
+          <span className="line-clamp-2 leading-relaxed italic">{lead.lastMessage}</span>
+        </div>
+      )}
+
       {/* Child info / Product note */}
       {lead.childInfo && (
         <div className="flex items-center gap-1.5 text-[11px] text-[#D1EAE0] mb-2 bg-[#0F2D26]/80 px-2 py-1 rounded-lg border border-[#235447]/60">
@@ -127,12 +136,12 @@ export const KanbanCard: React.FC<KanbanCardProps> = ({
             e.stopPropagation();
             onOpenFollowUpModal(lead);
           }}
-          className="group/note mb-2.5 p-2 rounded-xl bg-[#091E19] border border-[#235447] hover:border-[#C1F76B]/60 transition-all cursor-pointer shadow-xs"
+          className="group/note mb-2 p-2 rounded-xl bg-[#091E19] border border-[#235447] hover:border-[#C1F76B]/60 transition-all cursor-pointer shadow-xs"
           title="Clique na nota para ver mais ou editar"
         >
-          <div className="flex items-center justify-between gap-1.5 mb-1.5">
+          <div className="flex items-center justify-between gap-1.5 mb-1">
             <div className="flex items-center gap-1.5 truncate">
-              <FileText className="w-3.5 h-3.5 text-[#C1F76B] flex-shrink-0" />
+              <FileText className="w-3 h-3 text-[#C1F76B] flex-shrink-0" />
               <span className="text-[10px] font-bold text-[#C1F76B] uppercase tracking-wider truncate">
                 Nota & Follow-up
               </span>
@@ -151,35 +160,18 @@ export const KanbanCard: React.FC<KanbanCardProps> = ({
             </div>
           </div>
 
-          {/* Texto curto da nota com reticências (...) */}
+          {/* Texto curto da nota */}
           {lead.followUpNotes ? (
             <p className="text-xs text-[#E3F2ED] line-clamp-2 leading-relaxed font-normal">
               {lead.followUpNotes}
             </p>
           ) : (
             <p className="text-xs text-amber-200/80 italic line-clamp-1">
-              Follow-up marcado para {lead.followUpDate}. Clique para ver ou adicionar nota...
+              Follow-up marcado para {lead.followUpDate}
             </p>
           )}
-
-          <div className="mt-1 flex items-center justify-end text-[9px] text-[#95BDB0]/60 group-hover/note:text-[#C1F76B] transition-colors">
-            <span>Clique para ver mais...</span>
-          </div>
         </div>
-      ) : (
-        /* Apenas UM botão quando não tem nota nem agendamento */
-        <button
-          type="button"
-          onClick={(e) => {
-            e.stopPropagation();
-            onOpenFollowUpModal(lead);
-          }}
-          className="w-full mb-2.5 py-2 px-2.5 rounded-xl border border-dashed border-[#245447] hover:border-[#C1F76B]/60 bg-[#0F2D26]/40 hover:bg-[#14382F] text-[11px] text-[#95BDB0] hover:text-[#C1F76B] flex items-center justify-center gap-1.5 transition-all duration-150 cursor-pointer text-center"
-        >
-          <FileText className="w-3.5 h-3.5 text-[#C1F76B]" />
-          <span>+ Adicionar nota de atendimento</span>
-        </button>
-      )}
+      ) : null}
 
       {/* Tags & Location */}
       <div className="flex flex-wrap items-center gap-1.5">

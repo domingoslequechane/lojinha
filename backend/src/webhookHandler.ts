@@ -142,23 +142,97 @@ async function handleLoggedOut(instanceId?: string): Promise<void> {
 // ----------------------------------------------------------------
 // Message
 // ----------------------------------------------------------------
-// Cache in-memory for LID -> Phone mapping
+// Cache in-memory for LID -> Phone mapping & Instance Tokens
 const lidToPhoneCache = new Map<string, { phone: string; name?: string }>();
+const instanceTokenCache = new Map<string, string>();
 let cachedContactsList: Array<{ Jid: string; PushName?: string; FirstName?: string; FullName?: string; BusinessName?: string }> = [];
 let contactsLastFetch = 0;
 
+async function getInstanceToken(instanceId: string): Promise<string> {
+  if (instanceTokenCache.has(instanceId)) {
+    return instanceTokenCache.get(instanceId)!;
+  }
+
+  // 1. Check DB last_connected JSON for token
+  const { data: row } = await supabase
+    .from('whatsapp_instances')
+    .select('last_connected')
+    .eq('id', instanceId)
+    .single();
+
+  if (row?.last_connected && row.last_connected.startsWith('{')) {
+    try {
+      const parsed = JSON.parse(row.last_connected);
+      if (parsed.token) {
+        instanceTokenCache.set(instanceId, parsed.token);
+        return parsed.token;
+      }
+    } catch {}
+  }
+
+  // 2. Fetch all instances from Evolution API to get token
+  try {
+    const all = await evolutionClient.getAllInstances();
+    const inst = all.find((i) => i.id === instanceId);
+    if (inst?.token) {
+      instanceTokenCache.set(instanceId, inst.token);
+      return inst.token;
+    }
+  } catch (err) {
+    console.error('[Webhook] Failed to fetch instance token from Evolution:', err);
+  }
+
+  return instanceId;
+}
+
 async function getOrFetchContacts(
-  instanceId: string
+  instanceId: string,
+  forceRefresh: boolean = false
 ): Promise<Array<{ Jid: string; PushName?: string; FirstName?: string; FullName?: string; BusinessName?: string }>> {
   const now = Date.now();
-  if (cachedContactsList.length > 0 && now - contactsLastFetch < 5 * 60 * 1000) {
+  if (!forceRefresh && cachedContactsList.length > 0 && now - contactsLastFetch < 5 * 60 * 1000) {
     return cachedContactsList;
   }
   try {
-    const list = await evolutionClient.getContacts(instanceId);
+    const token = await getInstanceToken(instanceId);
+    const list = await evolutionClient.getContacts(token);
     if (list && list.length > 0) {
       cachedContactsList = list;
       contactsLastFetch = now;
+
+      // Build 2-way name index from phone contacts
+      const phoneContacts = list.filter((c) => c.Jid && c.Jid.includes('@s.whatsapp.net'));
+      const lidContacts = list.filter((c) => c.Jid && c.Jid.includes('@lid'));
+
+      const nameToPhone = new Map<string, { phone: string; name: string }>();
+      for (const p of phoneContacts) {
+        const clean = p.Jid.split('@')[0].split(':')[0].replace(/\D/g, '');
+        if (clean && clean.length <= 13) {
+          const names = [p.PushName, p.FullName, p.FirstName, p.BusinessName].filter(Boolean);
+          for (const n of names) {
+            const lower = n!.trim().toLowerCase();
+            if (lower.length >= 2) {
+              nameToPhone.set(lower, { phone: `+${clean}`, name: p.FullName || p.PushName || p.FirstName || n! });
+            }
+          }
+        }
+      }
+
+      // Map each LID contact to its real phone number
+      for (const lidC of lidContacts) {
+        const lidDigits = lidC.Jid.split('@')[0].replace(/\D/g, '');
+        const lidNames = [lidC.PushName, lidC.FullName, lidC.FirstName, lidC.BusinessName].filter(Boolean);
+        for (const n of lidNames) {
+          const lower = n!.trim().toLowerCase();
+          if (nameToPhone.has(lower)) {
+            const match = nameToPhone.get(lower)!;
+            lidToPhoneCache.set(lidDigits, match);
+            break;
+          }
+        }
+      }
+
+      console.log(`[Webhook] Refreshed contacts: ${phoneContacts.length} phones, ${lidContacts.length} LIDs. Cached ${lidToPhoneCache.size} LID mappings.`);
     }
   } catch (err) {
     console.warn('[Webhook] Error fetching contacts list:', err);
@@ -166,34 +240,126 @@ async function getOrFetchContacts(
   return cachedContactsList;
 }
 
+/**
+ * Searches for an existing lead in the database using multiple phone number formats.
+ * Handles '+25884xxxxxxx', '25884xxxxxxx', '84xxxxxxx', spaces, and dashes.
+ */
+async function findLeadByPhone(storeId: string, phone: string) {
+  const digits = phone.replace(/\D/g, '');
+  if (!digits) return null;
+
+  const candidatePhones = new Set<string>();
+  candidatePhones.add(`+${digits}`);
+  candidatePhones.add(digits);
+
+  // Mozambican country code handling
+  if (digits.startsWith('258') && digits.length === 12) {
+    const local = digits.slice(3); // e.g. 868499221
+    candidatePhones.add(`+${local}`);
+    candidatePhones.add(local);
+  } else if (digits.length === 9 && digits.startsWith('8')) {
+    candidatePhones.add(`+258${digits}`);
+    candidatePhones.add(`258${digits}`);
+  }
+
+  const phoneArray = Array.from(candidatePhones);
+
+  // 1. Direct match on phone column with any candidate format
+  const { data: directMatches } = await supabase
+    .from('leads')
+    .select('*')
+    .eq('store_id', storeId)
+    .in('phone', phoneArray)
+    .limit(1);
+
+  if (directMatches && directMatches.length > 0) {
+    return directMatches[0];
+  }
+
+  // 2. Partial match using the last 9 digits (local Mozambican mobile number)
+  if (digits.length >= 9) {
+    const suffix = digits.slice(-9);
+    const { data: suffixMatches } = await supabase
+      .from('leads')
+      .select('*')
+      .eq('store_id', storeId)
+      .ilike('phone', `%${suffix}%`)
+      .limit(1);
+
+    if (suffixMatches && suffixMatches.length > 0) {
+      return suffixMatches[0];
+    }
+  }
+
+  return null;
+}
+
 async function resolveContact(
   instanceId: string,
   info: Record<string, any>,
+  data: Record<string, any>,
   fromMe: boolean
 ): Promise<{ phone: string; name: string } | null> {
-  const chatJid: string = info.Chat || info.Sender || info.RemoteJid || '';
-  
-  // 1. Direct @s.whatsapp.net resolution
-  let directJid = '';
-  if (fromMe && info.Recipient && info.Recipient.includes('@s.whatsapp.net')) {
-    directJid = info.Recipient;
-  } else if (chatJid.includes('@s.whatsapp.net')) {
-    directJid = chatJid;
-  } else if (!fromMe && info.Sender && info.Sender.includes('@s.whatsapp.net')) {
-    directJid = info.Sender;
+  const messageSource = info.MessageSource || data.messageSource || {};
+
+  // When fromMe is true (sent by store/owner):
+  // The customer is the RECIPIENT/CHAT. NEVER use Sender (which is the store itself!)
+  let rawCustomerJid = '';
+  if (fromMe) {
+    rawCustomerJid =
+      info.Recipient ||
+      messageSource.Recipient ||
+      info.Chat ||
+      messageSource.Chat ||
+      info.RemoteJid ||
+      data.key?.remoteJid ||
+      data.recipient ||
+      data.destination ||
+      data.chatJid ||
+      '';
+  } else {
+    // When fromMe is false (received from customer):
+    // The customer is the SENDER/CHAT
+    rawCustomerJid =
+      info.Sender ||
+      messageSource.Sender ||
+      info.Chat ||
+      messageSource.Chat ||
+      info.RemoteJid ||
+      data.key?.remoteJid ||
+      '';
   }
 
-  let cleanDigits = directJid ? directJid.split('@')[0].split(':')[0].replace(/\D/g, '') : '';
-  let contactName = !fromMe ? (info.PushName || '') : '';
+  if (!rawCustomerJid) return null;
 
-  // 2. LID resolution if needed
-  if (!cleanDigits || cleanDigits.startsWith('176020728590') || chatJid.includes('@lid')) {
-    const lidKey = (chatJid.includes('@lid') ? chatJid : info.Sender || '').split('@')[0].replace(/\D/g, '');
+  // Ignore group chats, broadcast status, newsletters, system messages
+  if (
+    info.IsGroup ||
+    messageSource.IsGroup ||
+    rawCustomerJid.includes('@g.us') ||
+    rawCustomerJid.includes('broadcast') ||
+    rawCustomerJid.includes('@newsletter') ||
+    rawCustomerJid === 'status@broadcast'
+  ) {
+    return null;
+  }
+
+  // 1. Direct @s.whatsapp.net resolution
+  let cleanDigits = '';
+  let contactName = !fromMe ? (info.PushName || data.pushName || '') : '';
+
+  if (rawCustomerJid.includes('@s.whatsapp.net')) {
+    cleanDigits = rawCustomerJid.split('@')[0].split(':')[0].replace(/\D/g, '');
+  }
+
+  // 2. LID resolution if needed (WhatsApp Linked Identity Devices)
+  if (!cleanDigits || cleanDigits.length > 13 || rawCustomerJid.includes('@lid')) {
+    const lidKey = rawCustomerJid.split('@')[0].replace(/\D/g, '');
     if (lidKey && lidToPhoneCache.has(lidKey)) {
       const cached = lidToPhoneCache.get(lidKey)!;
       cleanDigits = cached.phone.replace(/\D/g, '');
       if (!contactName) contactName = cached.name || '';
-    } else {
+    } else if (lidKey) {
       const contacts = await getOrFetchContacts(instanceId);
       const phoneContacts = contacts.filter((c) => c.Jid && c.Jid.includes('@s.whatsapp.net'));
       const lidContacts = contacts.filter((c) => c.Jid && c.Jid.includes('@lid'));
@@ -210,7 +376,7 @@ async function resolveContact(
           );
           if (match) {
             const clean = match.Jid.split('@')[0].split(':')[0].replace(/\D/g, '');
-            if (clean) {
+            if (clean && clean.length <= 13) {
               lidToPhoneCache.set(lidDigits, {
                 phone: `+${clean}`,
                 name: match.FullName || match.FirstName || match.PushName || targetName,
@@ -220,7 +386,7 @@ async function resolveContact(
         }
       }
 
-      if (lidKey && lidToPhoneCache.has(lidKey)) {
+      if (lidToPhoneCache.has(lidKey)) {
         const cached = lidToPhoneCache.get(lidKey)!;
         cleanDigits = cached.phone.replace(/\D/g, '');
         if (!contactName) contactName = cached.name || '';
@@ -228,18 +394,24 @@ async function resolveContact(
     }
   }
 
-  if (!cleanDigits) {
-    const fallbackDigits = chatJid.split('@')[0].split(':')[0].replace(/\D/g, '');
-    if (!fallbackDigits) return null;
-    cleanDigits = fallbackDigits;
+  // Strict Validation: Real phone numbers have 8 to 13 digits.
+  // Unresolved LIDs have 14 to 16 random digits and must NEVER be saved as phone numbers!
+  if (!cleanDigits || cleanDigits.length < 8 || cleanDigits.length > 13) {
+    console.log(`[Webhook] Ignored invalid phone / unresolved LID: ${rawCustomerJid} (${cleanDigits})`);
+    return null;
   }
 
-  const phone = `+${cleanDigits}`;
+  // Format with standard E.164 country code
+  let phone = `+${cleanDigits}`;
+  if (cleanDigits.length === 9 && cleanDigits.startsWith('8')) {
+    phone = `+258${cleanDigits}`;
+    cleanDigits = `258${cleanDigits}`;
+  }
 
-  // Se o nome estiver vazio ou for mensagem enviada por nós (fromMe), busca no catálogo de contactos do WhatsApp
-  if (!contactName || contactName === phone) {
+  // Lookup contact name in WhatsApp address book if missing or if message was sent fromMe
+  if (!contactName || contactName === phone || fromMe) {
     const contacts = await getOrFetchContacts(instanceId);
-    const matched = contacts.find((c) => c.Jid && c.Jid.includes(cleanDigits));
+    const matched = contacts.find((c) => c.Jid && c.Jid.includes(cleanDigits.slice(-9)));
     if (matched) {
       contactName = matched.FullName || matched.FirstName || matched.PushName || matched.BusinessName || '';
     }
@@ -254,16 +426,29 @@ async function resolveContact(
 async function handleMessage(instanceId?: string, data?: Record<string, any>): Promise<void> {
   if (!instanceId || !data) return;
 
-  const info = data.Info;
-  if (!info) return;
+  const info = data.Info || data.info || {};
+  const messageSource = info.MessageSource || data.messageSource || {};
 
-  // Ignora mensagens de grupos
-  if (info.IsGroup) return;
+  // Check if group or broadcast
+  if (
+    info.IsGroup ||
+    messageSource.IsGroup ||
+    info.Chat?.includes('@g.us') ||
+    info.Chat?.includes('broadcast') ||
+    info.Chat?.includes('@newsletter')
+  ) {
+    return;
+  }
 
-  const fromMe: boolean = info.IsFromMe ?? false;
+  const fromMe: boolean = 
+    info.IsFromMe ?? 
+    messageSource.IsFromMe ?? 
+    data.key?.fromMe ?? 
+    data.fromMe ?? 
+    false;
 
-  // Resolve telefone e nome do contacto considerando LIDs e mensagens fromMe
-  const resolved = await resolveContact(instanceId, info, fromMe);
+  // Resolve customer phone & name
+  const resolved = await resolveContact(instanceId, info, data, fromMe);
   if (!resolved || !resolved.phone) return;
 
   const phone = resolved.phone;
@@ -272,7 +457,7 @@ async function handleMessage(instanceId?: string, data?: Record<string, any>): P
   // Encontra a store vinculada a esta instância
   const { data: instRow } = await supabase
     .from('whatsapp_instances')
-    .select('store_id')
+    .select('store_id, phone')
     .eq('id', instanceId)
     .single();
 
@@ -283,8 +468,18 @@ async function handleMessage(instanceId?: string, data?: Record<string, any>): P
 
   const storeId = instRow.store_id;
 
+  // Prevent creating a lead of the store's own WhatsApp number
+  if (instRow.phone) {
+    const myClean = instRow.phone.replace(/\D/g, '');
+    const phoneClean = phone.replace(/\D/g, '');
+    if (myClean && phoneClean && (myClean === phoneClean || myClean.endsWith(phoneClean) || phoneClean.endsWith(myClean))) {
+      console.log(`[Webhook] Ignored message to/from own instance phone number: ${phone}`);
+      return;
+    }
+  }
+
   // Extrai conteúdo da mensagem
-  const msgObj = data.Message || {};
+  const msgObj = data.Message || data.message || {};
   let text = msgObj.conversation || msgObj.extendedTextMessage?.text || '';
   let type: 'text' | 'image' | 'audio' | 'video' | 'document' = 'text';
   let mediaUrl: string | null = null;
@@ -313,17 +508,11 @@ async function handleMessage(instanceId?: string, data?: Record<string, any>): P
   const dateStr = ts.toLocaleDateString('pt-PT');
 
   // ID da mensagem no WhatsApp (necessário para apagar para todos)
-  const whatsappMessageId: string | null = info.ID || info.MessageID || null;
+  const whatsappMessageId: string | null = info.ID || info.MessageID || data.key?.id || null;
 
-  // Encontra ou cria o lead no Kanban
+  // Encontra lead existente no Kanban usando busca flexível de telefone
   let leadId: string;
-
-  const { data: existingLead } = await supabase
-    .from('leads')
-    .select('id, unread_count, avatar, name')
-    .eq('store_id', storeId)
-    .eq('phone', phone)
-    .single();
+  const existingLead = await findLeadByPhone(storeId, phone);
 
   if (existingLead) {
     leadId = existingLead.id;
@@ -340,12 +529,13 @@ async function handleMessage(instanceId?: string, data?: Record<string, any>): P
     const targetColumnId = firstCol?.id || 'col-new';
     const lastMsgPreview = text || (type === 'image' ? (fromMe ? 'Foto enviada' : 'Foto recebida') : type === 'video' ? (fromMe ? 'Vídeo enviado' : 'Vídeo recebido') : type === 'audio' ? (fromMe ? 'Áudio enviado' : 'Áudio recebido') : (fromMe ? 'Mensagem enviada' : 'Mensagem recebida'));
 
-    // Cria novo lead na primeira coluna do Kanban ("Novo Lead") tanto para clientes que entram em contacto quanto para conversas iniciadas por nós
+    // Cria novo lead na primeira coluna do Kanban ("Novo Lead")
+    const leadNameToUse = senderName && senderName !== 'Bird Kids' ? senderName : phone;
     const { data: newLead, error: leadErr } = await supabase
       .from('leads')
       .insert({
         store_id: storeId,
-        name: senderName || phone,
+        name: leadNameToUse,
         phone,
         column_id: targetColumnId,
         unread_count: fromMe ? 0 : 1,

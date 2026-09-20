@@ -23,6 +23,7 @@ import {
   ShieldCheck
 } from 'lucide-react';
 import { ContactLead, KanbanColumn } from '../../types';
+import { formatMoney } from '../../utils/formatters';
 
 interface MetricsViewProps {
   columns: KanbanColumn[];
@@ -197,15 +198,15 @@ export const MetricsView: React.FC<MetricsViewProps> = ({ columns, leads }) => {
   const salesD = generateSplinePath(salesPoints);
 
   return (
-    <div className="w-full p-3 sm:p-6 bg-[#091E19] space-y-4 sm:space-y-6 font-sans md:flex-1 md:h-full md:overflow-y-auto">
+    <div className="w-full max-w-full p-3 sm:p-6 bg-[#091E19] space-y-4 sm:space-y-6 font-sans md:flex-1 md:h-full md:overflow-y-auto overflow-x-hidden">
       {/* Top Header & Period Selector */}
-      <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4">
+      <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3 sm:gap-4">
         <div>
           <h2 className="text-xl font-bold text-[#FDFEF8] flex items-center gap-2">
             <TrendingUp className="w-6 h-6 text-[#C1F76B]" />
             Métricas de Vendas & Performance Comercial
           </h2>
-          <p className="text-xs text-[#95BDB0] mt-1 flex items-center gap-2">
+          <p className="text-xs text-[#95BDB0] mt-1 flex items-center gap-2 flex-wrap">
             <span>Análise detalhada de conversão, velocidade de resposta no WhatsApp e gargalos de abandono</span>
             <span className="inline-flex items-center gap-1 text-[10px] text-[#C1F76B] bg-[#C1F76B]/15 px-2 py-0.5 rounded-full font-semibold">
               <span className="w-1.5 h-1.5 rounded-full bg-[#C1F76B] animate-ping" />
@@ -215,7 +216,7 @@ export const MetricsView: React.FC<MetricsViewProps> = ({ columns, leads }) => {
         </div>
 
         {/* Time Period Filter Pills */}
-        <div className="flex items-center bg-[#0F2D26] p-1 rounded-2xl border border-[#235447]">
+        <div className="flex items-center bg-[#0F2D26] p-1 rounded-2xl border border-[#235447] overflow-x-auto no-scrollbar max-w-full">
           {(
             [
               { id: 'today', label: 'Hoje' },
@@ -227,7 +228,7 @@ export const MetricsView: React.FC<MetricsViewProps> = ({ columns, leads }) => {
             <button
               key={period.id}
               onClick={() => setSelectedPeriod(period.id)}
-              className={`px-3.5 py-1.5 rounded-xl text-xs font-semibold transition-all duration-150 hover:scale-105 active:scale-95 cursor-pointer ${
+              className={`px-2.5 sm:px-3.5 py-1.5 rounded-xl text-xs font-semibold whitespace-nowrap transition-all duration-150 hover:scale-105 active:scale-95 cursor-pointer flex-shrink-0 ${
                 selectedPeriod === period.id
                   ? 'bg-[#C1F76B] text-[#0F2D26] shadow-md shadow-[#C1F76B]/30'
                   : 'text-[#95BDB0] hover:text-[#FDFEF8] hover:bg-[#14382F]'
@@ -250,7 +251,7 @@ export const MetricsView: React.FC<MetricsViewProps> = ({ columns, leads }) => {
             </div>
           </div>
           <div className="mt-3">
-            <h3 className="text-2xl font-black text-[#FDFEF8]">{totalValue.toLocaleString()} MT</h3>
+            <h3 className="text-2xl font-black text-[#FDFEF8]">{formatMoney(totalValue)}</h3>
             <p className="text-xs text-[#95BDB0] mt-1 flex items-center gap-1.5">
               <span className="text-[#C1F76B] font-bold flex items-center">
                 <ArrowUpRight className="w-3.5 h-3.5" />
@@ -271,13 +272,13 @@ export const MetricsView: React.FC<MetricsViewProps> = ({ columns, leads }) => {
             </div>
           </div>
           <div className="mt-3">
-            <h3 className="text-2xl font-black text-[#FDFEF8]">{wonValue.toLocaleString()} MT</h3>
+            <h3 className="text-2xl font-black text-[#FDFEF8]">{formatMoney(wonValue)}</h3>
             <p className="text-xs text-[#95BDB0] mt-1 flex items-center gap-1.5">
               <span className="text-emerald-400 font-bold flex items-center">
                 <CheckCircle2 className="w-3.5 h-3.5" />
                 {wonLeads.length} pedidos
               </span>
-              <span>• Méd: {avgTicket.toLocaleString()} MT</span>
+              <span>• Méd: {formatMoney(avgTicket)}</span>
             </p>
           </div>
           <div className="absolute -bottom-8 -right-8 w-24 h-24 rounded-full bg-emerald-500/10 blur-xl group-hover:bg-emerald-500/20 transition-all" />
@@ -378,7 +379,7 @@ export const MetricsView: React.FC<MetricsViewProps> = ({ columns, leads }) => {
                         <strong className="text-[#FDFEF8]">{col.count}</strong> clientes ({col.percentOfTotal}%)
                       </span>
                       <span className="font-bold text-[#C1F76B]">
-                        {col.val.toLocaleString()} MT
+                        {formatMoney(col.val)}
                       </span>
                     </div>
                   </div>
@@ -533,7 +534,7 @@ export const MetricsView: React.FC<MetricsViewProps> = ({ columns, leads }) => {
                   {trendData[hoveredTrendPoint].leads} Novos Contatos
                 </p>
                 <p className="text-blue-400 font-semibold">
-                  {trendData[hoveredTrendPoint].sales} Vendas ({trendData[hoveredTrendPoint].value.toLocaleString()} MT)
+                  {trendData[hoveredTrendPoint].sales} Vendas ({formatMoney(trendData[hoveredTrendPoint].value)})
                 </p>
               </div>
             )}
@@ -592,7 +593,7 @@ export const MetricsView: React.FC<MetricsViewProps> = ({ columns, leads }) => {
                       <strong className="text-[#FDFEF8]">{item.leadsCount} clientes</strong> ({item.percentage}%)
                     </span>
                     <span className="font-semibold text-orange-400">
-                      {item.valueAtRisk.toLocaleString()} MT retidos
+                      {formatMoney(item.valueAtRisk)} retidos
                     </span>
                   </div>
                 </div>
@@ -690,7 +691,7 @@ export const MetricsView: React.FC<MetricsViewProps> = ({ columns, leads }) => {
                 </div>
                 <div className="text-right flex-shrink-0 pl-2">
                   <span className="font-bold text-[#FDFEF8]">{prod.percentage}%</span>
-                  <span className="text-[10px] text-[#95BDB0] ml-1">({prod.revenue.toLocaleString()} MT)</span>
+                  <span className="text-[10px] text-[#95BDB0] ml-1">({formatMoney(prod.revenue)})</span>
                 </div>
               </div>
             ))}

@@ -157,9 +157,9 @@ export const QuickRepliesView: React.FC<QuickRepliesViewProps> = ({
   };
 
   return (
-    <div className="w-full p-3 sm:p-6 bg-[#091E19] space-y-4 sm:space-y-6 font-sans md:flex-1 md:h-full md:overflow-y-auto">
+    <div className="w-full max-w-full p-3 sm:p-6 bg-[#091E19] space-y-4 sm:space-y-6 font-sans md:flex-1 md:h-full md:overflow-y-auto overflow-x-hidden">
       {/* Top Header */}
-      <div className="flex flex-col md:flex-row md:items-center justify-between gap-4">
+      <div className="flex flex-col md:flex-row md:items-center justify-between gap-3 sm:gap-4">
         <div>
           <h2 className="text-xl font-bold text-[#FDFEF8] flex items-center gap-2">
             <Zap className="w-6 h-6 text-amber-400" />
@@ -172,7 +172,7 @@ export const QuickRepliesView: React.FC<QuickRepliesViewProps> = ({
 
         <button
           onClick={handleOpenNew}
-          className="px-4 py-2.5 bg-[#C1F76B] hover:bg-[#b0ec53] text-[#0F2D26] rounded-xl text-xs font-bold shadow-md shadow-[#C1F76B]/20 transition-all duration-150 hover:scale-105 active:scale-95 cursor-pointer flex items-center gap-1.5 self-start md:self-auto"
+          className="px-4 py-2.5 bg-[#C1F76B] hover:bg-[#b0ec53] text-[#0F2D26] rounded-xl text-xs font-bold shadow-md shadow-[#C1F76B]/20 transition-all duration-150 hover:scale-105 active:scale-95 cursor-pointer flex items-center gap-1.5 self-start md:self-auto flex-shrink-0"
         >
           <Plus className="w-4 h-4" />
           <span>Novo Snippet</span>
@@ -180,14 +180,14 @@ export const QuickRepliesView: React.FC<QuickRepliesViewProps> = ({
       </div>
 
       {/* Filter and Search Bar */}
-      <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3 bg-[#0F2D26] p-3 rounded-2xl border border-[#235447]">
+      <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3 bg-[#0F2D26] p-3 rounded-2xl border border-[#235447] w-full max-w-full">
         {/* Categories Tabs */}
-        <div className="flex items-center gap-1 overflow-x-auto pb-1 sm:pb-0 no-scrollbar [scrollbar-width:none] [-ms-overflow-style:none]">
+        <div className="flex items-center gap-1 overflow-x-auto pb-1 sm:pb-0 no-scrollbar [scrollbar-width:none] [-ms-overflow-style:none] max-w-full">
           {categories.map((cat) => (
             <button
               key={cat.id}
               onClick={() => setActiveCategory(cat.id)}
-              className={`px-3 py-1.5 rounded-xl text-xs font-medium whitespace-nowrap transition-all duration-150 hover:scale-105 active:scale-95 cursor-pointer flex items-center gap-1.5 ${
+              className={`px-3 py-1.5 rounded-xl text-xs font-medium whitespace-nowrap transition-all duration-150 hover:scale-105 active:scale-95 cursor-pointer flex items-center gap-1.5 flex-shrink-0 ${
                 activeCategory === cat.id
                   ? 'bg-[#C1F76B] text-[#0F2D26] font-semibold shadow-md shadow-[#C1F76B]/20'
                   : 'text-[#95BDB0] hover:text-[#FDFEF8] hover:bg-[#14382F]'
@@ -200,7 +200,7 @@ export const QuickRepliesView: React.FC<QuickRepliesViewProps> = ({
         </div>
 
         {/* Search */}
-        <div className="relative min-w-[220px]">
+        <div className="relative w-full sm:w-auto sm:min-w-[220px]">
           <Search className="w-3.5 h-3.5 text-[#95BDB0] absolute left-3 top-1/2 -translate-y-1/2" />
           <input
             type="text"
@@ -305,8 +305,8 @@ export const QuickRepliesView: React.FC<QuickRepliesViewProps> = ({
 
       {/* Create / Edit Drawer/Modal */}
       {isFormOpen && (
-        <div className="fixed inset-0 bg-black/70 backdrop-blur-xs flex items-center justify-center p-4 z-50">
-          <div className="bg-[#0F2D26] border border-[#235447] rounded-3xl w-full max-w-lg overflow-hidden shadow-2xl animate-in fade-in zoom-in duration-200">
+        <div className="fixed inset-0 bg-black/75 backdrop-blur-md flex items-center justify-center p-4 z-50 animate-in fade-in duration-150">
+          <div className="bg-[#0F2D26] border border-[#235447] rounded-3xl w-full max-w-lg overflow-hidden shadow-2xl animate-in zoom-in-95 duration-200">
             <div className="p-4 bg-[#14382F] border-b border-[#235447] flex items-center justify-between">
               <h3 className="font-bold text-sm text-[#FDFEF8] flex items-center gap-2">
                 <Zap className="w-4 h-4 text-amber-400" />

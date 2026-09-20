@@ -69,7 +69,10 @@ router.post('/:leadId/refresh-avatar', async (req: Request, res: Response) => {
   (async () => {
     try {
       console.log(`[Leads] Fetching avatar on-demand for ${lead.phone}...`);
-      const avatarUrl = await evolutionClient.getContactAvatar(instance.id, lead.phone);
+      const allInst = await evolutionClient.getAllInstances();
+      const matchedInst = allInst.find((i) => i.id === instance.id);
+      const token = matchedInst?.token || instance.id;
+      const avatarUrl = await evolutionClient.getContactAvatar(token, lead.phone);
       if (avatarUrl) {
         const { data: updatedLead } = await supabase
           .from('leads')

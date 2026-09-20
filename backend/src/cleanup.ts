@@ -52,14 +52,37 @@ async function cleanupExpiredMedia() {
   }
 }
 
+async function cleanupPhantomLids() {
+  try {
+    // 1. Fetch leads with fake LID numbers (> 13 digits, or starting with +780, +946, +202)
+    const { data: phantomLeads } = await supabase
+      .from('leads')
+      .select('id, phone, name, store_id')
+      .or('phone.ilike.+780%,phone.ilike.+946%,phone.ilike.+202%');
+
+    if (phantomLeads && phantomLeads.length > 0) {
+      console.log(`[cleanup] Found ${phantomLeads.length} phantom LID leads to clean up:`, phantomLeads.map(l => `${l.name} (${l.phone})`));
+      for (const pLead of phantomLeads) {
+        await supabase.from('messages').delete().eq('lead_id', pLead.id);
+        await supabase.from('leads').delete().eq('id', pLead.id);
+      }
+      console.log(`[cleanup] Successfully removed ${phantomLeads.length} phantom LID leads.`);
+    }
+  } catch (err) {
+    console.error('[cleanup] Error cleaning up phantom LIDs:', err);
+  }
+}
+
 export function startMediaCleanupJob() {
-  // Run immediately on startup to catch any already-expired media
+  // Run immediately on startup to catch any already-expired media and phantom LIDs
   cleanupExpiredMedia();
+  cleanupPhantomLids();
 
   // Then run every hour (at minute 0 of every hour)
   cron.schedule('0 * * * *', () => {
     console.log('[cleanup] Executando limpeza de midias com mais de 48h...');
     cleanupExpiredMedia();
+    cleanupPhantomLids();
   });
 
   console.log('[cleanup] Job de limpeza de midias agendado (a cada hora).');
