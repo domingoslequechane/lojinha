@@ -1320,169 +1320,239 @@ export const ChatPanel: React.FC<ChatPanelProps> = ({
                   ) : (
                     <>
                       {/* Media Image message */}
-                      {msg.type === 'image' && msg.mediaUrl && !msg.mediaUrl.startsWith('data:audio') && !/\.(mp3|wav|ogg|m4a|aac|flac|opus)($|\?)/i.test(msg.mediaUrl) && (() => {
-                        const expiryLabel = getMediaExpiryLabel(msg.createdAt);
-                        return (
-                          <div 
-                            onClick={() => handleOpenMediaViewer(msg.id)}
-                            className="mb-2 overflow-hidden rounded-xl relative group cursor-pointer select-none"
-                            title="Clique para ampliar a imagem e navegar na galeria"
-                          >
-                            {/* Expiry countdown badge */}
-                            {expiryLabel && (
-                              <div className="absolute top-2 left-2 z-20 flex items-center gap-1.5 bg-black/80 backdrop-blur-md border border-amber-400/40 rounded-full px-2.5 py-0.5 shadow-lg pointer-events-none">
-                                <Timer className="w-3.5 h-3.5 text-amber-400 flex-shrink-0 animate-pulse" />
-                                <span className="text-[11px] font-semibold text-amber-300 tracking-tight whitespace-nowrap">{expiryLabel}</span>
+                      {msg.type === 'image' && (
+                        msg.mediaUrl && !msg.mediaUrl.startsWith('data:audio') && !/\.(mp3|wav|ogg|m4a|aac|flac|opus)($|\?)/i.test(msg.mediaUrl) ? (() => {
+                          const expiryLabel = getMediaExpiryLabel(msg.createdAt);
+                          return (
+                            <div 
+                              onClick={() => handleOpenMediaViewer(msg.id)}
+                              className="mb-2 overflow-hidden rounded-xl relative group cursor-pointer select-none"
+                              title="Clique para ampliar a imagem e navegar na galeria"
+                            >
+                              {/* Expiry countdown badge */}
+                              {expiryLabel && (
+                                <div className="absolute top-2 left-2 z-20 flex items-center gap-1.5 bg-black/80 backdrop-blur-md border border-amber-400/40 rounded-full px-2.5 py-0.5 shadow-lg pointer-events-none">
+                                  <Timer className="w-3.5 h-3.5 text-amber-400 flex-shrink-0 animate-pulse" />
+                                  <span className="text-[11px] font-semibold text-amber-300 tracking-tight whitespace-nowrap">{expiryLabel}</span>
+                                </div>
+                              )}
+                              <img
+                                src={msg.mediaUrl}
+                                alt="Mídia"
+                                className="w-full max-h-56 object-cover group-hover:scale-105 transition-transform duration-200"
+                              />
+                              {/* Hover overlay hint */}
+                              <div className="absolute inset-0 bg-black/0 group-hover:bg-black/25 transition-colors flex items-center justify-center pointer-events-none">
+                                <div className="opacity-0 group-hover:opacity-100 transition-all duration-150 transform translate-y-1 group-hover:translate-y-0 bg-[#0F2D26]/90 border border-[#235447] text-[#C1F76B] p-2 rounded-full shadow-lg flex items-center gap-1">
+                                  <Maximize2 className="w-4 h-4" />
+                                </div>
                               </div>
-                            )}
-                            <img
-                              src={msg.mediaUrl}
-                              alt="Mídia"
-                              className="w-full max-h-56 object-cover group-hover:scale-105 transition-transform duration-200"
-                            />
-                            {/* Hover overlay hint */}
-                            <div className="absolute inset-0 bg-black/0 group-hover:bg-black/25 transition-colors flex items-center justify-center pointer-events-none">
-                              <div className="opacity-0 group-hover:opacity-100 transition-all duration-150 transform translate-y-1 group-hover:translate-y-0 bg-[#0F2D26]/90 border border-[#235447] text-[#C1F76B] p-2 rounded-full shadow-lg flex items-center gap-1">
-                                <Maximize2 className="w-4 h-4" />
+                              {msg.status === 'pending' && (
+                                <div className="absolute inset-0 bg-black/50 backdrop-blur-xs flex items-center justify-center z-10 select-none">
+                                  <div className="w-10 h-10 rounded-full border-3 border-white/20 border-t-[#C1F76B] animate-spin shadow-lg" />
+                                </div>
+                              )}
+                              {msg.mediaCaption && msg.mediaCaption.trim() && (
+                                <p className="text-xs text-[#FDFEF8]/90 mt-1.5 leading-relaxed">
+                                  {msg.mediaCaption}
+                                </p>
+                              )}
+                            </div>
+                          );
+                        })() : (
+                          <div className="flex items-center gap-3 py-1.5 pr-2 select-none min-w-[180px]">
+                            <div className="w-10 h-10 rounded-xl bg-[#0F2D26] border border-[#235447] flex items-center justify-center text-[#C1F76B] flex-shrink-0">
+                              <ImageIcon className="w-5 h-5" />
+                            </div>
+                            <div className="flex flex-col text-xs min-w-0 flex-1">
+                              <span className="font-semibold text-[#FDFEF8]">Foto {isMe ? 'enviada' : 'recebida'}</span>
+                              <span className="text-[11px] text-[#95BDB0] truncate">
+                                {msg.mediaCaption || 'Imagem do WhatsApp'}
+                              </span>
+                            </div>
+                          </div>
+                        )
+                      )}
+
+                      {/* Media Video message */}
+                      {msg.type === 'video' && (
+                        msg.mediaUrl ? (() => {
+                          const expiryLabel = getMediaExpiryLabel(msg.createdAt);
+                          return (
+                            <div className="mb-2 overflow-hidden rounded-xl bg-black max-w-sm relative group">
+                              {/* Expiry countdown badge */}
+                              {expiryLabel && (
+                                <div className="absolute top-2 left-2 z-20 flex items-center gap-1.5 bg-black/80 backdrop-blur-md border border-amber-400/40 rounded-full px-2.5 py-0.5 shadow-lg pointer-events-none">
+                                  <Timer className="w-3.5 h-3.5 text-amber-400 flex-shrink-0 animate-pulse" />
+                                  <span className="text-[11px] font-semibold text-amber-300 tracking-tight whitespace-nowrap">{expiryLabel}</span>
+                                </div>
+                              )}
+                              {/* Maximize button */}
+                              <button
+                                type="button"
+                                onClick={() => handleOpenMediaViewer(msg.id)}
+                                className="absolute top-2 right-2 z-20 p-1.5 rounded-full bg-black/70 hover:bg-[#0F2D26] text-[#95BDB0] hover:text-[#C1F76B] border border-[#235447] opacity-0 group-hover:opacity-100 transition-opacity cursor-pointer shadow-lg"
+                                title="Maximizar vídeo na galeria"
+                              >
+                                <Maximize2 className="w-3.5 h-3.5" />
+                              </button>
+                              <video
+                                src={msg.mediaUrl}
+                                controls
+                                playsInline
+                                preload="metadata"
+                                className="w-full max-h-72 rounded-xl object-contain bg-black"
+                              />
+                              {msg.status === 'pending' && (
+                                <div className="absolute inset-0 bg-black/60 backdrop-blur-xs flex items-center justify-center z-10 select-none">
+                                  <div className="w-12 h-12 rounded-full border-3 border-white/20 border-t-[#C1F76B] animate-spin shadow-lg" />
+                                </div>
+                              )}
+                              {((msg.mediaCaption && msg.mediaCaption.trim()) || (msg.text && msg.text.trim())) && (
+                                <p className="text-xs text-[#FDFEF8]/90 mt-1.5 p-1 leading-relaxed">
+                                  {msg.mediaCaption || msg.text}
+                                </p>
+                              )}
+                            </div>
+                          );
+                        })() : (
+                          <div className="flex items-center gap-3 py-1.5 pr-2 select-none min-w-[180px]">
+                            <div className="w-10 h-10 rounded-xl bg-[#0F2D26] border border-[#235447] flex items-center justify-center text-[#C1F76B] flex-shrink-0">
+                              <Video className="w-5 h-5" />
+                            </div>
+                            <div className="flex flex-col text-xs min-w-0 flex-1">
+                              <span className="font-semibold text-[#FDFEF8]">Vídeo {isMe ? 'enviado' : 'recebido'}</span>
+                              <span className="text-[11px] text-[#95BDB0] truncate">
+                                {msg.mediaCaption || 'Vídeo do WhatsApp'}
+                              </span>
+                            </div>
+                          </div>
+                        )
+                      )}
+
+                      {/* Audio Voice Note or MP3 Media message */}
+                      {(msg.type === 'audio' || (msg.mediaUrl && (msg.mediaUrl.startsWith('data:audio') || /\.(mp3|wav|ogg|m4a|aac|flac|opus)($|\?)/i.test(msg.mediaUrl)))) && (
+                        msg.mediaUrl ? (
+                          <div className="flex flex-col gap-1.5 py-1 pr-2 min-w-[230px]">
+                            <div className="flex items-center gap-3">
+                              <button
+                                type="button"
+                                onClick={() => toggleAudio(msg.id, msg.mediaUrl, msg.audioDuration)}
+                                className={`w-9 h-9 rounded-full flex items-center justify-center flex-shrink-0 transition-all shadow-md cursor-pointer ${
+                                  playingAudioId === msg.id
+                                    ? 'bg-[#219653] text-[#FDFEF8]'
+                                    : 'bg-[#C1F76B] hover:bg-[#b0ec53] text-[#0F2D26]'
+                                }`}
+                                title={playingAudioId === msg.id ? 'Pausar áudio' : 'Ouvir áudio'}
+                              >
+                                {playingAudioId === msg.id ? (
+                                  <Pause className="w-4 h-4 fill-current" />
+                                ) : (
+                                  <Play className="w-4 h-4 fill-current ml-0.5" />
+                                )}
+                              </button>
+                              <div className="flex-1">
+                                {/* Smooth WhatsApp Waveform Track */}
+                                <div
+                                  className="relative h-6 flex items-center cursor-pointer select-none py-1"
+                                  onClick={(e) => {
+                                    const rect = e.currentTarget.getBoundingClientRect();
+                                    const clickPct = Math.max(0, Math.min(1, (e.clientX - rect.left) / rect.width));
+                                    handleSeekAudio(msg.id, msg.mediaUrl, msg.audioDuration, clickPct);
+                                  }}
+                                >
+                                  {/* Waveform Bars */}
+                                  <div className="flex items-center justify-between gap-[3px] h-full w-full">
+                                    {[30, 60, 25, 80, 50, 95, 40, 70, 35, 90, 30, 65, 50, 35, 75, 45, 85, 60, 40, 75, 50, 80].map((val, idx, arr) => {
+                                      const barPct = (idx / (arr.length - 1)) * 100;
+                                      const isPlayed = (audioProgress[msg.id] || 0) >= barPct;
+                                      return (
+                                        <span
+                                          key={idx}
+                                          className={`w-[3px] rounded-full transition-colors duration-100 flex-shrink-0 ${
+                                            isPlayed
+                                              ? 'bg-[#C1F76B] shadow-xs shadow-[#C1F76B]/40'
+                                              : 'bg-[#95BDB0]/40'
+                                          }`}
+                                          style={{ height: `${val}%` }}
+                                        />
+                                      );
+                                    })}
+                                  </div>
+
+                                  {/* Scrubber thumb tracking current position */}
+                                  {playingAudioId === msg.id && (
+                                    <span
+                                      className="absolute top-1/2 -translate-y-1/2 w-2 h-2 rounded-full bg-[#C1F76B] shadow-md shadow-[#C1F76B] pointer-events-none -ml-1 transition-[left] duration-75 ease-linear"
+                                      style={{ left: `${Math.min(98, Math.max(2, audioProgress[msg.id] || 0))}%` }}
+                                    />
+                                  )}
+                                </div>
+
+                                {/* Status & Realtime Countdown Timer */}
+                                <div className="flex items-center justify-between text-[10px] text-[#95BDB0] mt-0.5">
+                                  <span className={playingAudioId === msg.id ? 'text-[#C1F76B] font-semibold' : ''}>
+                                    {playingAudioId === msg.id ? 'Reproduzindo...' : 'Áudio / MP3'}
+                                  </span>
+                                  <span className={`font-mono ${playingAudioId === msg.id ? 'text-[#C1F76B] font-bold' : ''}`}>
+                                    {playingAudioId === msg.id && audioRemaining[msg.id]
+                                      ? audioRemaining[msg.id]
+                                      : msg.audioDuration || '0:15'}
+                                  </span>
+                                </div>
                               </div>
                             </div>
-                            {msg.status === 'pending' && (
-                              <div className="absolute inset-0 bg-black/50 backdrop-blur-xs flex items-center justify-center z-10 select-none">
-                                <div className="w-10 h-10 rounded-full border-3 border-white/20 border-t-[#C1F76B] animate-spin shadow-lg" />
-                              </div>
-                            )}
                             {msg.mediaCaption && msg.mediaCaption.trim() && (
-                              <p className="text-xs text-[#FDFEF8]/90 mt-1.5 leading-relaxed">
+                              <p className="text-xs text-[#FDFEF8]/90 mt-1 leading-relaxed">
                                 {msg.mediaCaption}
                               </p>
                             )}
                           </div>
-                        );
-                      })()}
-
-                      {/* Media Video message */}
-                      {msg.type === 'video' && msg.mediaUrl && (() => {
-                        const expiryLabel = getMediaExpiryLabel(msg.createdAt);
-                        return (
-                          <div className="mb-2 overflow-hidden rounded-xl bg-black max-w-sm relative group">
-                            {/* Expiry countdown badge */}
-                            {expiryLabel && (
-                              <div className="absolute top-2 left-2 z-20 flex items-center gap-1.5 bg-black/80 backdrop-blur-md border border-amber-400/40 rounded-full px-2.5 py-0.5 shadow-lg pointer-events-none">
-                                <Timer className="w-3.5 h-3.5 text-amber-400 flex-shrink-0 animate-pulse" />
-                                <span className="text-[11px] font-semibold text-amber-300 tracking-tight whitespace-nowrap">{expiryLabel}</span>
-                              </div>
-                            )}
-                            {/* Maximize button */}
-                            <button
-                              type="button"
-                              onClick={() => handleOpenMediaViewer(msg.id)}
-                              className="absolute top-2 right-2 z-20 p-1.5 rounded-full bg-black/70 hover:bg-[#0F2D26] text-[#95BDB0] hover:text-[#C1F76B] border border-[#235447] opacity-0 group-hover:opacity-100 transition-opacity cursor-pointer shadow-lg"
-                              title="Maximizar vídeo na galeria"
-                            >
-                              <Maximize2 className="w-3.5 h-3.5" />
-                            </button>
-                            <video
-                              src={msg.mediaUrl}
-                              controls
-                              playsInline
-                              preload="metadata"
-                              className="w-full max-h-72 rounded-xl object-contain bg-black"
-                            />
-                            {msg.status === 'pending' && (
-                              <div className="absolute inset-0 bg-black/60 backdrop-blur-xs flex items-center justify-center z-10 select-none">
-                                <div className="w-12 h-12 rounded-full border-3 border-white/20 border-t-[#C1F76B] animate-spin shadow-lg" />
-                              </div>
-                            )}
-                            {((msg.mediaCaption && msg.mediaCaption.trim()) || (msg.text && msg.text.trim())) && (
-                              <p className="text-xs text-[#FDFEF8]/90 mt-1.5 p-1 leading-relaxed">
-                                {msg.mediaCaption || msg.text}
-                              </p>
-                            )}
-                          </div>
-                        );
-                      })()}
-
-                      {/* Audio Voice Note or MP3 Media message */}
-                      {(msg.type === 'audio' || (msg.mediaUrl && (msg.mediaUrl.startsWith('data:audio') || /\.(mp3|wav|ogg|m4a|aac|flac|opus)($|\?)/i.test(msg.mediaUrl)))) && (
-                        <div className="flex flex-col gap-1.5 py-1 pr-2 min-w-[230px]">
-                          <div className="flex items-center gap-3">
-                            <button
-                              type="button"
-                              onClick={() => toggleAudio(msg.id, msg.mediaUrl, msg.audioDuration)}
-                              className={`w-9 h-9 rounded-full flex items-center justify-center flex-shrink-0 transition-all shadow-md cursor-pointer ${
-                                playingAudioId === msg.id
-                                  ? 'bg-[#219653] text-[#FDFEF8]'
-                                  : 'bg-[#C1F76B] hover:bg-[#b0ec53] text-[#0F2D26]'
-                              }`}
-                              title={playingAudioId === msg.id ? 'Pausar áudio' : 'Ouvir áudio'}
-                            >
-                              {playingAudioId === msg.id ? (
-                                <Pause className="w-4 h-4 fill-current" />
-                              ) : (
-                                <Play className="w-4 h-4 fill-current ml-0.5" />
-                              )}
-                            </button>
-                            <div className="flex-1">
-                              {/* Smooth WhatsApp Waveform Track */}
-                              <div
-                                className="relative h-6 flex items-center cursor-pointer select-none py-1"
-                                onClick={(e) => {
-                                  const rect = e.currentTarget.getBoundingClientRect();
-                                  const clickPct = Math.max(0, Math.min(1, (e.clientX - rect.left) / rect.width));
-                                  handleSeekAudio(msg.id, msg.mediaUrl, msg.audioDuration, clickPct);
-                                }}
-                              >
-                                {/* Waveform Bars */}
-                                <div className="flex items-center justify-between gap-[3px] h-full w-full">
-                                  {[30, 60, 25, 80, 50, 95, 40, 70, 35, 90, 30, 65, 50, 35, 75, 45, 85, 60, 40, 75, 50, 80].map((val, idx, arr) => {
-                                    const barPct = (idx / (arr.length - 1)) * 100;
-                                    const isPlayed = (audioProgress[msg.id] || 0) >= barPct;
-                                    return (
-                                      <span
-                                        key={idx}
-                                        className={`w-[3px] rounded-full transition-colors duration-100 flex-shrink-0 ${
-                                          isPlayed
-                                            ? 'bg-[#C1F76B] shadow-xs shadow-[#C1F76B]/40'
-                                            : 'bg-[#95BDB0]/40'
-                                        }`}
-                                        style={{ height: `${val}%` }}
-                                      />
-                                    );
-                                  })}
-                                </div>
-
-                                {/* Scrubber thumb tracking current position */}
-                                {playingAudioId === msg.id && (
-                                  <span
-                                    className="absolute top-1/2 -translate-y-1/2 w-2 h-2 rounded-full bg-[#C1F76B] shadow-md shadow-[#C1F76B] pointer-events-none -ml-1 transition-[left] duration-75 ease-linear"
-                                    style={{ left: `${Math.min(98, Math.max(2, audioProgress[msg.id] || 0))}%` }}
-                                  />
-                                )}
-                              </div>
-
-                              {/* Status & Realtime Countdown Timer */}
-                              <div className="flex items-center justify-between text-[10px] text-[#95BDB0] mt-0.5">
-                                <span className={playingAudioId === msg.id ? 'text-[#C1F76B] font-semibold' : ''}>
-                                  {playingAudioId === msg.id ? 'Reproduzindo...' : 'Áudio / MP3'}
-                                </span>
-                                <span className={`font-mono ${playingAudioId === msg.id ? 'text-[#C1F76B] font-bold' : ''}`}>
-                                  {playingAudioId === msg.id && audioRemaining[msg.id]
-                                    ? audioRemaining[msg.id]
-                                    : msg.audioDuration || '0:15'}
-                                </span>
-                              </div>
+                        ) : (
+                          <div className="flex items-center gap-3 py-1.5 pr-2 select-none min-w-[180px]">
+                            <div className="w-10 h-10 rounded-xl bg-[#0F2D26] border border-[#235447] flex items-center justify-center text-[#C1F76B] flex-shrink-0">
+                              <Mic className="w-5 h-5" />
+                            </div>
+                            <div className="flex flex-col text-xs min-w-0 flex-1">
+                              <span className="font-semibold text-[#FDFEF8]">Mensagem de Voz</span>
+                              <span className="text-[11px] text-[#95BDB0] truncate">
+                                {msg.audioDuration ? `Duração: ${msg.audioDuration}` : 'Áudio do WhatsApp'}
+                              </span>
                             </div>
                           </div>
-                          {msg.mediaCaption && msg.mediaCaption.trim() && (
-                            <p className="text-xs text-[#FDFEF8]/90 mt-1 leading-relaxed">
-                              {msg.mediaCaption}
-                            </p>
-                          )}
+                        )
+                      )}
+
+                      {/* Document Message */}
+                      {msg.type === 'document' && (
+                        <div className="flex items-center gap-3 py-1.5 pr-2 min-w-[200px]">
+                          <div className="w-10 h-10 rounded-xl bg-[#0F2D26] border border-[#235447] flex items-center justify-center text-[#C1F76B] flex-shrink-0">
+                            <FileText className="w-5 h-5" />
+                          </div>
+                          <div className="flex flex-col text-xs min-w-0 flex-1">
+                            <span className="font-semibold text-[#FDFEF8] truncate">
+                              {msg.mediaCaption || 'Documento'}
+                            </span>
+                            {msg.mediaUrl ? (
+                              <a
+                                href={msg.mediaUrl}
+                                download={msg.mediaCaption || 'documento'}
+                                target="_blank"
+                                rel="noreferrer"
+                                className="text-[11px] text-[#C1F76B] hover:underline flex items-center gap-1 mt-0.5"
+                              >
+                                <Download className="w-3 h-3" />
+                                <span>Baixar arquivo</span>
+                              </a>
+                            ) : (
+                              <span className="text-[11px] text-[#95BDB0]/60">Documento do WhatsApp</span>
+                            )}
+                          </div>
                         </div>
                       )}
 
                       {/* Text Message */}
-                      {msg.text && msg.type !== 'image' && msg.type !== 'video' && (
+                      {msg.text && msg.type !== 'image' && msg.type !== 'video' && msg.type !== 'document' && (
                         <p className="whitespace-pre-line leading-relaxed text-[13.5px]">
                           {msg.text}
                         </p>

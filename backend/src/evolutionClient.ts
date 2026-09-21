@@ -249,6 +249,38 @@ export class EvolutionClient {
     }
   }
 
+  /** Baixa e decifra a mídia (imagem, vídeo, áudio, documento) de uma mensagem recebida via Evolution GO (POST /message/downloadmedia) */
+  async downloadMedia(
+    instanceToken: string,
+    messageObj: Record<string, any>
+  ): Promise<{ base64?: string; mimetype?: string; url?: string } | null> {
+    try {
+      console.log('[Evolution] Calling /message/downloadmedia to decrypt incoming media...');
+      const { data } = await this.client(instanceToken, 60000).post('/message/downloadmedia', {
+        message: messageObj,
+      });
+
+      if (!data) return null;
+
+      const base64 = data?.data?.base64 || data?.base64 || (typeof data?.data === 'string' && data.data.length > 50 ? data.data : undefined);
+      const mimetype = data?.data?.mimetype || data?.data?.mimeType || data?.mimetype || data?.mimeType;
+      const url = data?.data?.url || data?.url;
+
+      if (base64) {
+        console.log(`[Evolution] Media downloaded successfully (${base64.length} chars, mime: ${mimetype})`);
+        return { base64, mimetype, url };
+      }
+      if (url) {
+        console.log(`[Evolution] Media URL returned: ${url}`);
+        return { url, mimetype };
+      }
+      return null;
+    } catch (err: any) {
+      console.warn('[Evolution] /message/downloadmedia error:', err.response?.data || err.message);
+      return null;
+    }
+  }
+
   // ----------------------------------------------------------------
   // Helpers
   // ----------------------------------------------------------------

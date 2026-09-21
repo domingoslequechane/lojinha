@@ -478,29 +478,101 @@ async function handleMessage(instanceId?: string, data?: Record<string, any>): P
     }
   }
 
-  // Extrai conteúdo da mensagem
-  const msgObj = data.Message || data.message || {};
+  // Extrai e desembrulha o conteúdo da mensagem (incluindo viewOnce, ephemeral, etc.)
+  const rawMsg = data.Message || data.message || {};
+  let msgObj = rawMsg;
+  if (msgObj.ephemeralMessage?.message) msgObj = msgObj.ephemeralMessage.message;
+  if (msgObj.viewOnceMessage?.message) msgObj = msgObj.viewOnceMessage.message;
+  if (msgObj.viewOnceMessageV2?.message) msgObj = msgObj.viewOnceMessageV2.message;
+  if (msgObj.viewOnceMessageV2Extension?.message) msgObj = msgObj.viewOnceMessageV2Extension.message;
+  if (msgObj.documentWithCaptionMessage?.message) msgObj = msgObj.documentWithCaptionMessage.message;
+
   let text = msgObj.conversation || msgObj.extendedTextMessage?.text || '';
   let type: 'text' | 'image' | 'audio' | 'video' | 'document' = 'text';
-  let mediaUrl: string | null = null;
   let mediaCaption: string | null = null;
   let audioDuration: string | null = null;
+  let isMedia = false;
+  let rawBase64: string | null = null;
+  let rawMime: string | null = null;
+  let directMediaUrl: string | null = null;
 
   if (info.MediaType === 'image' || msgObj.imageMessage) {
     type = 'image';
-    mediaCaption = msgObj.imageMessage?.caption || null;
-    mediaUrl = msgObj.base64 ? `data:${msgObj.imageMessage?.mimetype || 'image/jpeg'};base64,${msgObj.base64}` : msgObj.imageMessage?.url || null;
-  } else if (info.MediaType === 'video' || msgObj.videoMessage) {
+    isMedia = true;
+    const img = msgObj.imageMessage || {};
+    mediaCaption = img.caption || null;
+    rawBase64 = img.base64 || msgObj.base64 || null;
+    rawMime = img.mimetype || 'image/jpeg';
+  } else if (info.MediaType === 'video' || msgObj.videoMessage || msgObj.ptvMessage) {
     type = 'video';
-    mediaCaption = msgObj.videoMessage?.caption || null;
-    mediaUrl = msgObj.base64 ? `data:${msgObj.videoMessage?.mimetype || 'video/mp4'};base64,${msgObj.base64}` : msgObj.videoMessage?.url || null;
+    isMedia = true;
+    const vid = msgObj.videoMessage || msgObj.ptvMessage || {};
+    mediaCaption = vid.caption || null;
+    rawBase64 = vid.base64 || msgObj.base64 || null;
+    rawMime = vid.mimetype || 'video/mp4';
   } else if (info.MediaType === 'audio' || msgObj.audioMessage) {
     type = 'audio';
-    const seconds = msgObj.audioMessage?.seconds || 0;
+    isMedia = true;
+    const aud = msgObj.audioMessage || {};
+    const seconds = aud.seconds || 0;
     const mins = Math.floor(seconds / 60);
     const secs = seconds % 60;
     audioDuration = `${mins}:${secs.toString().padStart(2, '0')}`;
-    mediaUrl = msgObj.base64 ? `data:audio/ogg;base64,${msgObj.base64}` : msgObj.audioMessage?.url || null;
+    rawBase64 = aud.base64 || msgObj.base64 || null;
+    rawMime = aud.mimetype || 'audio/ogg';
+  } else if (info.MediaType === 'document' || msgObj.documentMessage) {
+    type = 'document';
+    isMedia = true;
+    const doc = msgObj.documentMessage || {};
+    mediaCaption = doc.fileName || doc.caption || null;
+    rawBase64 = doc.base64 || msgObj.base64 || null;
+    rawMime = doc.mimetype || 'application/pdf';
+  } else if (info.MediaType === 'sticker' || msgObj.stickerMessage) {
+    type = 'image';
+    isMedia = true;
+    const stk = msgObj.stickerMessage || {};
+    rawBase64 = stk.base64 || msgObj.base64 || null;
+    rawMime = stk.mimetype || 'image/webp';
+  }
+
+  // Se for mensagem de mídia e não tiver base64 no webhook, baixa e decifra via Evolution GO
+  if (isMedia && !rawBase64) {
+    try {
+      const token = await getInstanceToken(instanceId);
+      if (token) {
+        console.log(`[Webhook] Decrypting and downloading incoming ${type} from Evolution GO...`);
+        const downloaded = await evolutionClient.downloadMedia(token, rawMsg);
+        if (downloaded) {
+          if (downloaded.base64) {
+            rawBase64 = downloaded.base64;
+            if (downloaded.mimetype) rawMime = downloaded.mimetype;
+          } else if (downloaded.url && !downloaded.url.includes('mmg.whatsapp.net')) {
+            directMediaUrl = downloaded.url;
+          }
+        }
+      }
+    } catch (err) {
+      console.warn(`[Webhook] Could not download media for message:`, err);
+    }
+  }
+
+  // Constrói URL ou Data URI da mídia
+  let mediaUrl: string | null = null;
+  if (rawBase64) {
+    const mimePrefix = rawMime || (type === 'video' ? 'video/mp4' : type === 'audio' ? 'audio/ogg' : 'image/jpeg');
+    const dataUri = rawBase64.startsWith('data:') ? rawBase64 : `data:${mimePrefix};base64,${rawBase64}`;
+    
+    // Salva cópia em disco local
+    saveBase64Media(dataUri, type);
+
+    // Para mídias até 8MB, armazena o data URI diretamente para funcionar em qualquer dispositivo (incluindo mobile e Vercel)
+    if (dataUri.length < 8 * 1024 * 1024) {
+      mediaUrl = dataUri;
+    } else {
+      mediaUrl = saveBase64Media(dataUri, type);
+    }
+  } else if (directMediaUrl) {
+    mediaUrl = directMediaUrl;
   }
 
   const ts = info.Timestamp ? new Date(info.Timestamp) : new Date();

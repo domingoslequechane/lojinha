@@ -7,6 +7,9 @@ const supabaseKey =
   process.env.SUPABASE_ANON_KEY ||
   'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6Im5pamx3enF4c2dtdXRwc3R1am96Iiwicm9sZSI6ImFub24iLCJpYXQiOjE3ODk2MDg0MzAsImV4cCI6MjEwNTE4NDQzMH0.dc7-S9vIX1s5ndIXFy9EYLNxzPqfaZE1-awsFGDZYqc';
 
+const EVOLUTION_API_URL = process.env.EVOLUTION_API_URL || 'https://practical-contentment-production-b0e4.up.railway.app';
+const EVOLUTION_API_KEY = process.env.EVOLUTION_API_KEY || '4296ef44b1c351a61c016fb652862dae';
+
 const supabase = createClient(supabaseUrl, supabaseKey);
 
 export default async function handler(req: any, res: any) {
@@ -177,24 +180,97 @@ async function handleIncomingMessage(instanceId?: string, data?: Record<string, 
   if (!instRow?.store_id) return;
   const storeId = instRow.store_id;
 
-  // Message content
-  const msgObj = data.Message || {};
+  // Extrai e desembrulha o conteúdo da mensagem
+  const rawMsg = data.Message || data.message || {};
+  let msgObj = rawMsg;
+  if (msgObj.ephemeralMessage?.message) msgObj = msgObj.ephemeralMessage.message;
+  if (msgObj.viewOnceMessage?.message) msgObj = msgObj.viewOnceMessage.message;
+  if (msgObj.viewOnceMessageV2?.message) msgObj = msgObj.viewOnceMessageV2.message;
+  if (msgObj.viewOnceMessageV2Extension?.message) msgObj = msgObj.viewOnceMessageV2Extension.message;
+  if (msgObj.documentWithCaptionMessage?.message) msgObj = msgObj.documentWithCaptionMessage.message;
+
   let text = msgObj.conversation || msgObj.extendedTextMessage?.text || '';
   let type: 'text' | 'image' | 'audio' | 'video' | 'document' = 'text';
-  let mediaUrl: string | null = null;
   let mediaCaption: string | null = null;
+  let audioDuration: string | null = null;
+  let isMedia = false;
+  let rawBase64: string | null = null;
+  let rawMime: string | null = null;
+  let directMediaUrl: string | null = null;
 
   if (info.MediaType === 'image' || msgObj.imageMessage) {
     type = 'image';
-    mediaCaption = msgObj.imageMessage?.caption || null;
-    mediaUrl = msgObj.base64 ? `data:${msgObj.imageMessage?.mimetype || 'image/jpeg'};base64,${msgObj.base64}` : msgObj.imageMessage?.url || null;
-  } else if (info.MediaType === 'video' || msgObj.videoMessage) {
+    isMedia = true;
+    const img = msgObj.imageMessage || {};
+    mediaCaption = img.caption || null;
+    rawBase64 = img.base64 || msgObj.base64 || null;
+    rawMime = img.mimetype || 'image/jpeg';
+  } else if (info.MediaType === 'video' || msgObj.videoMessage || msgObj.ptvMessage) {
     type = 'video';
-    mediaCaption = msgObj.videoMessage?.caption || null;
-    mediaUrl = msgObj.base64 ? `data:${msgObj.videoMessage?.mimetype || 'video/mp4'};base64,${msgObj.base64}` : msgObj.videoMessage?.url || null;
+    isMedia = true;
+    const vid = msgObj.videoMessage || msgObj.ptvMessage || {};
+    mediaCaption = vid.caption || null;
+    rawBase64 = vid.base64 || msgObj.base64 || null;
+    rawMime = vid.mimetype || 'video/mp4';
   } else if (info.MediaType === 'audio' || msgObj.audioMessage) {
     type = 'audio';
-    mediaUrl = msgObj.base64 ? `data:audio/ogg;base64,${msgObj.base64}` : msgObj.audioMessage?.url || null;
+    isMedia = true;
+    const aud = msgObj.audioMessage || {};
+    const seconds = aud.seconds || 0;
+    const mins = Math.floor(seconds / 60);
+    const secs = seconds % 60;
+    audioDuration = `${mins}:${secs.toString().padStart(2, '0')}`;
+    rawBase64 = aud.base64 || msgObj.base64 || null;
+    rawMime = aud.mimetype || 'audio/ogg';
+  } else if (info.MediaType === 'document' || msgObj.documentMessage) {
+    type = 'document';
+    isMedia = true;
+    const doc = msgObj.documentMessage || {};
+    mediaCaption = doc.fileName || doc.caption || null;
+    rawBase64 = doc.base64 || msgObj.base64 || null;
+    rawMime = doc.mimetype || 'application/pdf';
+  } else if (info.MediaType === 'sticker' || msgObj.stickerMessage) {
+    type = 'image';
+    isMedia = true;
+    const stk = msgObj.stickerMessage || {};
+    rawBase64 = stk.base64 || msgObj.base64 || null;
+    rawMime = stk.mimetype || 'image/webp';
+  }
+
+  // Se for mensagem de mídia e não tiver base64 no webhook, baixa e decifra via Evolution GO
+  if (isMedia && !rawBase64) {
+    try {
+      const resp = await fetch(`${EVOLUTION_API_URL}/message/downloadmedia`, {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+          apikey: EVOLUTION_API_KEY,
+        },
+        body: JSON.stringify({ message: rawMsg }),
+      });
+
+      if (resp.ok) {
+        const d: any = await resp.json();
+        const b64 = d?.data?.base64 || d?.base64 || (typeof d?.data === 'string' && d.data.length > 50 ? d.data : null);
+        const mime = d?.data?.mimetype || d?.data?.mimeType || d?.mimetype || d?.mimeType;
+        if (b64) {
+          rawBase64 = b64;
+          if (mime) rawMime = mime;
+        } else if (d?.data?.url || d?.url) {
+          directMediaUrl = d?.data?.url || d?.url;
+        }
+      }
+    } catch (err) {
+      console.warn('[Vercel Webhook] Error downloading media:', err);
+    }
+  }
+
+  let mediaUrl: string | null = null;
+  if (rawBase64) {
+    const mimePrefix = rawMime || (type === 'video' ? 'video/mp4' : type === 'audio' ? 'audio/ogg' : 'image/jpeg');
+    mediaUrl = rawBase64.startsWith('data:') ? rawBase64 : `data:${mimePrefix};base64,${rawBase64}`;
+  } else if (directMediaUrl && !directMediaUrl.includes('mmg.whatsapp.net')) {
+    mediaUrl = directMediaUrl;
   }
 
   const ts = info.Timestamp ? new Date(info.Timestamp) : new Date();
@@ -218,7 +294,7 @@ async function handleIncomingMessage(instanceId?: string, data?: Record<string, 
       .single();
 
     const targetColumnId = firstCol?.id || 'col-new';
-    const lastMsgPreview = text || (type === 'image' ? 'Foto' : type === 'video' ? 'Vídeo' : type === 'audio' ? 'Áudio' : 'Mensagem');
+    const lastMsgPreview = text || (type === 'image' ? (fromMe ? 'Foto enviada' : 'Foto recebida') : type === 'video' ? (fromMe ? 'Vídeo enviado' : 'Vídeo recebido') : type === 'audio' ? (fromMe ? 'Áudio enviado' : 'Áudio recebido') : 'Mensagem');
 
     const { data: newLead } = await supabase
       .from('leads')
@@ -265,6 +341,7 @@ async function handleIncomingMessage(instanceId?: string, data?: Record<string, 
     text: text || null,
     media_url: mediaUrl,
     media_caption: mediaCaption,
+    audio_duration: audioDuration,
     timestamp: timeStr,
     full_date: dateStr,
     status: fromMe ? 'sent' : 'delivered',
