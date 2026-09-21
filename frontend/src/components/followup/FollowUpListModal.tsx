@@ -1,7 +1,8 @@
 import React from 'react';
-import { Clock, MessageSquare, Check, X, Calendar, UserCheck, Phone } from 'lucide-react';
+import { Clock, MessageSquare, Check, X, Calendar, Phone } from 'lucide-react';
 import { ContactLead } from '../../types';
-import { formatPhoneForCall, formatMoney } from '../../utils/phoneUtils';
+import { formatPhoneForCall, formatMoney, formatFollowUpDate, followUpDaysRemaining } from '../../utils/phoneUtils';
+
 
 interface FollowUpListModalProps {
   isOpen: boolean;
@@ -79,11 +80,19 @@ export const FollowUpListModal: React.FC<FollowUpListModalProps> = ({
                     </div>
                   </div>
 
-                  <div className="text-right">
+                  <div className="text-right flex flex-col items-end gap-1">
                     <span className="inline-flex items-center gap-1.5 text-xs font-bold text-amber-300 bg-amber-500/15 border border-amber-500/30 px-2.5 py-1 rounded-xl">
                       <Clock className="w-3.5 h-3.5" />
-                      {lead.followUpDate}
+                      {formatFollowUpDate(lead.followUpDate)}
                     </span>
+                    {(() => {
+                      const days = followUpDaysRemaining(lead.followUpDate);
+                      if (days === null) return null;
+                      if (days === 0) return <span className="text-[10px] font-semibold text-[#C1F76B] bg-[#C1F76B]/10 px-2 py-0.5 rounded-full">Hoje</span>;
+                      if (days === 1) return <span className="text-[10px] font-semibold text-amber-300 bg-amber-400/10 px-2 py-0.5 rounded-full">Amanhã</span>;
+                      if (days > 1) return <span className="text-[10px] text-[#95BDB0] bg-[#0F2D26] px-2 py-0.5 rounded-full">{days} dias restantes</span>;
+                      return <span className="text-[10px] font-semibold text-red-400 bg-red-400/10 px-2 py-0.5 rounded-full">Atrasado</span>;
+                    })()}
                   </div>
                 </div>
 

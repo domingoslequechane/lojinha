@@ -535,37 +535,17 @@ async function handleMessage(instanceId?: string, data?: Record<string, any>): P
     rawMime = stk.mimetype || 'image/webp';
   }
 
-  // Se for mensagem de mídia e não tiver base64 no webhook, baixa e decifra via Evolution GO
-  if (isMedia && !rawBase64) {
-    try {
-      const token = await getInstanceToken(instanceId);
-      if (token) {
-        console.log(`[Webhook] Decrypting and downloading incoming ${type} from Evolution GO...`);
-        const downloaded = await evolutionClient.downloadMedia(token, rawMsg);
-        if (downloaded) {
-          if (downloaded.base64) {
-            rawBase64 = downloaded.base64;
-            if (downloaded.mimetype) rawMime = downloaded.mimetype;
-          } else if (downloaded.url && !downloaded.url.includes('mmg.whatsapp.net')) {
-            directMediaUrl = downloaded.url;
-          }
-        }
-      }
-    } catch (err) {
-      console.warn(`[Webhook] Could not download media for message:`, err);
-    }
-  }
+  // ATENÇÃO: A descarga de mídia (downloadMedia) é movida para background ASYNC
+  // para não bloquear a resposta instantânea ao cliente.
+  // O base64 que já vem no webhook é usado diretamente (casos comuns).
+  // Caso não venha base64, a mensagem é salva com media_url: null e o download
+  // acontece em background, atualizando a linha no Supabase após conclusão.
 
-  // Constrói URL ou Data URI da mídia
+  // Constrói URL ou Data URI da mídia (apenas com base64 que JÁ VEIO no webhook)
   let mediaUrl: string | null = null;
   if (rawBase64) {
     const mimePrefix = rawMime || (type === 'video' ? 'video/mp4' : type === 'audio' ? 'audio/ogg' : 'image/jpeg');
     const dataUri = rawBase64.startsWith('data:') ? rawBase64 : `data:${mimePrefix};base64,${rawBase64}`;
-    
-    // Salva cópia em disco local
-    saveBase64Media(dataUri, type);
-
-    // Para mídias até 8MB, armazena o data URI diretamente para funcionar em qualquer dispositivo (incluindo mobile e Vercel)
     if (dataUri.length < 8 * 1024 * 1024) {
       mediaUrl = dataUri;
     } else {
@@ -678,9 +658,10 @@ async function handleMessage(instanceId?: string, data?: Record<string, any>): P
     }
   }
 
-  // Salva mídia em disco se for base64 para permitir reprodução perfeita sem travar o Postgres
+  // Salva mídia em disco se já tiver base64 (evita gravar data URI gigante no Postgres)
   const publicMediaUrl = mediaUrl ? saveBase64Media(mediaUrl, type) : null;
 
+  // ─── INSERÇÃO IMEDIATA: message salva com media_url (ou null se download ainda não feito) ───
   const { data: insertedMsg, error: msgErr } = await supabase
     .from('messages')
     .insert({
@@ -689,7 +670,7 @@ async function handleMessage(instanceId?: string, data?: Record<string, any>): P
       from_me: fromMe,
       type,
       text: text || null,
-      media_url: publicMediaUrl,
+      media_url: publicMediaUrl,      // null se não havia base64 no webhook
       media_caption: mediaCaption,
       audio_duration: audioDuration,
       timestamp: timeStr,
@@ -744,9 +725,10 @@ async function handleMessage(instanceId?: string, data?: Record<string, any>): P
     }
   }
 
-  // Broadcast the new message INSTANTLY over WebSocket to all clients
+  // ─── BROADCAST INSTANTÂNEO — acontece AGORA, antes do download de mídia ───
   if (insertedMsg) {
     realtimeBroadcaster.broadcastMessage(storeId, insertedMsg, updatedLeadData);
+    console.log(`[Webhook] ✅ Broadcasted message instantly from ${phone} (${senderName}): ${text || type}`);
   }
 
   // Incrementa contagem de mensagens do dia na instância
@@ -765,7 +747,54 @@ async function handleMessage(instanceId?: string, data?: Record<string, any>): P
       .eq('id', instanceId);
   }
 
-  console.log(`[Webhook] Processed & broadcasted message from ${phone} (${senderName}): ${text || type}`);
+  // ─── DOWNLOAD DE MÍDIA EM BACKGROUND (não bloqueia o broadcast acima) ───
+  // Apenas quando não havia base64 no webhook e a mensagem é uma mídia
+  if (isMedia && !publicMediaUrl && insertedMsg) {
+    const capturedMsgId = insertedMsg.id;
+    const capturedStoreId = storeId;
+    const capturedType = type;
+    const capturedRawMsg = rawMsg;
+    const capturedInstanceId = instanceId;
+    const capturedRawMime = rawMime;
+
+    (async () => {
+      try {
+        console.log(`[Webhook] 🔄 Background: downloading ${capturedType} media for msg ${capturedMsgId}...`);
+        const token = await getInstanceToken(capturedInstanceId!);
+        if (!token) return;
+
+        const downloaded = await evolutionClient.downloadMedia(token, capturedRawMsg);
+        if (!downloaded) return;
+
+        let bgMediaUrl: string | null = null;
+        if (downloaded.base64) {
+          const mimePrefix = downloaded.mimetype || capturedRawMime || (capturedType === 'video' ? 'video/mp4' : capturedType === 'audio' ? 'audio/ogg' : 'image/jpeg');
+          const dataUri = downloaded.base64.startsWith('data:') ? downloaded.base64 : `data:${mimePrefix};base64,${downloaded.base64}`;
+          bgMediaUrl = saveBase64Media(dataUri, capturedType) || (dataUri.length < 8 * 1024 * 1024 ? dataUri : null);
+        } else if (downloaded.url && !downloaded.url.includes('mmg.whatsapp.net')) {
+          bgMediaUrl = downloaded.url;
+        }
+
+        if (!bgMediaUrl) return;
+
+        // Atualiza a linha da mensagem com a mídia descarregada
+        const { data: updatedMsg } = await supabase
+          .from('messages')
+          .update({ media_url: bgMediaUrl })
+          .eq('id', capturedMsgId)
+          .select('*')
+          .single();
+
+        if (updatedMsg) {
+          // O postgres_changes subscription no frontend já vai capturar o UPDATE automáticamente.
+          // Não chamamos broadcastMessage aqui para evitar duplicação no handler de INSERT.
+          console.log(`[Webhook] ✅ Background media download complete for msg ${capturedMsgId}`);
+        }
+      } catch (err) {
+        console.warn(`[Webhook] ⚠️ Background media download failed for msg ${capturedMsgId}:`, err);
+      }
+    })();
+  }
 }
 
 // ----------------------------------------------------------------

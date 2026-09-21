@@ -36,7 +36,7 @@ import {
 } from 'lucide-react';
 import { ContactLead, ChatMessage, MessageType, KanbanColumn, QuickReply, StoreSettings, StoreProduct } from '../../types';
 import { EditLeadModal } from '../leads/EditLeadModal';
-import { formatPhoneForCall, formatMoney } from '../../utils/phoneUtils';
+import { formatPhoneForCall, formatMoney, formatFollowUpDate } from '../../utils/phoneUtils';
 
 /** Returns "Remove em Xh Ym" remaining until 48h expiry.
  *  Shown for all image/video messages — media is cleaned up after 48h. */
@@ -929,7 +929,7 @@ export const ChatPanel: React.FC<ChatPanelProps> = ({
               ? 'bg-amber-500/20 border-amber-400/70 text-amber-300 shadow-sm shadow-amber-500/25'
               : 'bg-[#14382F] border-[#235447] text-[#95BDB0] hover:text-amber-300 hover:border-amber-500/50'
           }`}
-          title={lead.followUpDate ? `Follow-up: ${lead.followUpDate}` : "Agendar Follow-up"}
+          title={lead.followUpDate ? `Follow-up: ${formatFollowUpDate(lead.followUpDate)}` : "Agendar Follow-up"}
         >
           <Clock className="w-4 h-4" />
         </button>
@@ -1042,7 +1042,7 @@ export const ChatPanel: React.FC<ChatPanelProps> = ({
                 ? 'bg-amber-500/10 border-amber-500/40 text-amber-400 hover:bg-amber-500/20'
                 : 'bg-[#0F2D26] border-[#235447] text-[#95BDB0] hover:text-[#FDFEF8] hover:border-[#2D6B5A]'
             }`}
-            title={lead.followUpDate ? `Follow-up: ${lead.followUpDate}` : "Agendar Follow-up"}
+            title={lead.followUpDate ? `Follow-up: ${formatFollowUpDate(lead.followUpDate)}` : "Agendar Follow-up"}
           >
             <Clock className="w-4 h-4" />
           </button>
@@ -1208,7 +1208,7 @@ export const ChatPanel: React.FC<ChatPanelProps> = ({
               {lead.followUpDate && (
                 <div className="flex items-center gap-2 bg-amber-500/15 border border-amber-500/35 rounded-xl px-3 py-2 text-xs font-semibold text-amber-300">
                   <Clock className="w-4 h-4 text-amber-400 flex-shrink-0" />
-                  <span>Agendamento de Retorno: <strong>{lead.followUpDate}</strong></span>
+                  <span>Agendamento de Retorno: <strong>{formatFollowUpDate(lead.followUpDate)}</strong></span>
                 </div>
               )}
 

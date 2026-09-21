@@ -11,7 +11,7 @@ import {
   Phone
 } from 'lucide-react';
 import { ContactLead, KanbanColumn } from '../../types';
-import { formatPhoneForCall } from '../../utils/phoneUtils';
+import { formatPhoneForCall, formatFollowUpDate } from '../../utils/phoneUtils';
 import { formatMoney } from '../../utils/formatters';
 
 interface KanbanCardProps {
@@ -151,7 +151,7 @@ export const KanbanCard: React.FC<KanbanCardProps> = ({
               {lead.followUpDate && (
                 <span className="inline-flex items-center gap-1 text-[9px] font-semibold text-amber-300 bg-amber-500/15 border border-amber-500/30 px-1.5 py-0.5 rounded-md truncate max-w-[120px]">
                   <Clock className="w-2.5 h-2.5 text-amber-400 flex-shrink-0" />
-                  <span className="truncate">{lead.followUpDate}</span>
+                  <span className="truncate">{formatFollowUpDate(lead.followUpDate)}</span>
                 </span>
               )}
               <span className="opacity-0 group-hover/note:opacity-100 transition-opacity text-[10px] text-[#C1F76B] flex items-center gap-0.5 font-medium">
@@ -167,7 +167,7 @@ export const KanbanCard: React.FC<KanbanCardProps> = ({
             </p>
           ) : (
             <p className="text-xs text-amber-200/80 italic line-clamp-1">
-              Follow-up marcado para {lead.followUpDate}
+              Follow-up marcado para {formatFollowUpDate(lead.followUpDate)}
             </p>
           )}
         </div>

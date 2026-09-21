@@ -2,7 +2,7 @@ import React, { useState } from 'react';
 import { Users, Search, MessageSquare, Clock, MapPin, Tag, Baby, FileSpreadsheet, Trash2, CopySlash, Phone } from 'lucide-react';
 import { ContactLead, KanbanColumn } from '../../types';
 import { CustomSelect } from '../common/CustomSelect';
-import { formatPhoneForCall, formatMoney } from '../../utils/phoneUtils';
+import { formatPhoneForCall, formatMoney, formatFollowUpDate } from '../../utils/phoneUtils';
 
 interface LeadsListViewProps {
   leads: ContactLead[];
@@ -216,7 +216,7 @@ export const LeadsListView: React.FC<LeadsListViewProps> = ({
                           className="text-amber-400 hover:text-amber-300 hover:underline flex items-center gap-1 transition-all duration-150 hover:scale-105 active:scale-95 cursor-pointer"
                         >
                           <Clock className="w-3 h-3" />
-                          <span>{lead.followUpDate}</span>
+                          <span>{formatFollowUpDate(lead.followUpDate)}</span>
                         </button>
                       ) : (
                         <button
