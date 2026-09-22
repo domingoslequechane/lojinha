@@ -332,8 +332,8 @@ async function handleIncomingMessage(instanceId?: string, data?: Record<string, 
     if (recent && recent.length > 0) return;
   }
 
-  // Insert message into Supabase
-  await supabase.from('messages').insert({
+  // Insert message into Supabase and capture the inserted row
+  const { data: insertedMsg } = await supabase.from('messages').insert({
     store_id: storeId,
     lead_id: leadId,
     from_me: fromMe,
@@ -345,11 +345,11 @@ async function handleIncomingMessage(instanceId?: string, data?: Record<string, 
     timestamp: timeStr,
     full_date: dateStr,
     status: fromMe ? 'sent' : 'delivered',
-  });
+  }).select('*').single();
 
   // Update lead
   const lastMsgText = text || (type === 'image' ? (fromMe ? 'Foto enviada' : 'Foto recebida') : type === 'video' ? (fromMe ? 'Vídeo enviado' : 'Vídeo recebido') : type === 'audio' ? (fromMe ? 'Áudio enviado' : 'Áudio recebido') : 'Mensagem');
-  await supabase
+  const { data: updatedLead } = await supabase
     .from('leads')
     .update({
       last_message: lastMsgText,
@@ -357,5 +357,45 @@ async function handleIncomingMessage(instanceId?: string, data?: Record<string, 
       last_message_timestamp: Date.now(),
       ...(!fromMe ? { unread_count: (existingLead?.unread_count || 0) + 1 } : {}),
     })
-    .eq('id', leadId);
+    .eq('id', leadId)
+    .select('*')
+    .single();
+
+  // ⚡ INSTANT BROADCAST via Supabase Realtime
+  if (insertedMsg) {
+    try {
+      const broadcastChannel = supabase.channel('lojinha-realtime-global');
+      await broadcastChannel.send({
+        type: 'broadcast',
+        event: 'message:new',
+        payload: {
+          storeId,
+          message: insertedMsg,
+          lead: updatedLead || existingLead,
+        },
+      });
+      supabase.removeChannel(broadcastChannel);
+    } catch (broadcastErr) {
+      console.warn('[Vercel Webhook] Broadcast failed (non-fatal):', broadcastErr);
+    }
+
+    // Broadcast lead update for kanban card refresh
+    if (updatedLead) {
+      try {
+        const leadChannel = supabase.channel('lojinha-realtime-global-lead');
+        await leadChannel.send({
+          type: 'broadcast',
+          event: 'lead:change',
+          payload: {
+            storeId,
+            eventType: existingLead ? 'UPDATE' : 'INSERT',
+            lead: updatedLead,
+          },
+        });
+        supabase.removeChannel(leadChannel);
+      } catch (e) {
+        // non-fatal
+      }
+    }
+  }
 }
