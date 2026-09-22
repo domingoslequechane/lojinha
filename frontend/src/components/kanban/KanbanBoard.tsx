@@ -69,47 +69,68 @@ export const KanbanBoard: React.FC<KanbanBoardProps> = ({
     setActiveMobileColumnId(colId);
   };
 
-  // Desktop horizontal wheel handler
+  // Desktop scroll handler:
+  // - Pure horizontal deltaX (trackpad 2-finger swipe) → scrolls board horizontally
+  // - Shift+wheel → scrolls board horizontally
+  // - Vertical deltaY inside a scrollable column → passes through (native vertical scroll)
+  // - Vertical deltaY on board background or column header → scrolls board horizontally
+  // ⚠️ DO NOT remove this — without it, trackpad horizontal swipe stops working on desktop
   useEffect(() => {
     const board = boardRef.current;
     if (!board) return;
 
     const handleWheel = (e: WheelEvent) => {
+      // Only intercept on desktop
       if (window.innerWidth < 768) return;
 
-      if (Math.abs(e.deltaX) > Math.abs(e.deltaY)) {
-        board.scrollLeft += e.deltaX;
-        e.preventDefault();
+      const absDeltaX = Math.abs(e.deltaX);
+      const absDeltaY = Math.abs(e.deltaY);
+
+      // Pure horizontal trackpad swipe → board scrolls left/right naturally
+      if (absDeltaX > absDeltaY) {
+        // Let browser handle it (board has overflow-x-auto)
         return;
       }
 
+      // Shift+scroll → explicit horizontal scroll intent
       if (e.shiftKey) {
         board.scrollLeft += e.deltaY;
         e.preventDefault();
         return;
       }
 
+      // Check if cursor is inside a vertically-scrollable column container
       const target = e.target as HTMLElement | null;
-      const scrollableCol = target?.closest('.overflow-y-auto') as HTMLElement | null;
+      // Walk up the DOM tree looking for the column's scrollable cards container
+      let el: HTMLElement | null = target;
+      let scrollableCol: HTMLElement | null = null;
+      while (el && el !== board) {
+        if (
+          el.scrollHeight > el.clientHeight + 2 &&
+          (getComputedStyle(el).overflowY === 'auto' || getComputedStyle(el).overflowY === 'scroll')
+        ) {
+          scrollableCol = el;
+          break;
+        }
+        el = el.parentElement;
+      }
 
       if (scrollableCol) {
-        const canScrollVertically = scrollableCol.scrollHeight > scrollableCol.clientHeight;
-        if (!canScrollVertically) {
-          board.scrollLeft += e.deltaY;
-          e.preventDefault();
-          return;
-        }
-
-        const isAtTop = scrollableCol.scrollTop <= 0 && e.deltaY < 0;
-        const isAtBottom =
-          scrollableCol.scrollTop + scrollableCol.clientHeight >= scrollableCol.scrollHeight - 1 &&
+        // Inside a scrollable column — let vertical scroll happen naturally
+        // Only redirect to board-horizontal when hitting top or bottom boundary
+        const atTop = scrollableCol.scrollTop <= 0 && e.deltaY < 0;
+        const atBottom =
+          scrollableCol.scrollTop + scrollableCol.clientHeight >= scrollableCol.scrollHeight - 2 &&
           e.deltaY > 0;
 
-        if (isAtTop || isAtBottom) {
-          board.scrollLeft += e.deltaY * 0.7;
+        if (atTop || atBottom) {
+          // At boundary → redirect to horizontal board scroll
+          board.scrollLeft += e.deltaY * 0.5;
           e.preventDefault();
         }
+        // else: let the column scroll vertically — do NOT call preventDefault()
       } else {
+        // On board background / column header / non-scrollable area → horizontal board scroll
         board.scrollLeft += e.deltaY;
         e.preventDefault();
       }

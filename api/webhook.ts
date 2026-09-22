@@ -1,3 +1,23 @@
+// ============================================================
+// ⚡ VERCEL WEBHOOK HANDLER — Evolution GO → Supabase → Frontend
+// ============================================================
+// ARCHITECTURE (DO NOT BREAK):
+//   Evolution API (WhatsApp) → Vercel /api/webhook (this file)
+//                            → Saves message to Supabase DB
+//                            → ⚡ Broadcasts via Supabase Realtime (CRITICAL!)
+//
+// ⚠️  WARNING: This file MUST broadcast via supabase.channel().send()
+//     after every message insert. Without the broadcast, the frontend
+//     only receives messages after a page refresh (realtime is broken).
+//
+//     The Railway backend (webhookHandler.ts) also has broadcasting,
+//     but Evolution GO webhooks point to THIS Vercel endpoint — not Railway.
+//     So ALL realtime delivery depends on the broadcast at the end of
+//     handleIncomingMessage() in this file.
+//
+//     DO NOT remove the "⚡ INSTANT BROADCAST via Supabase Realtime" block.
+// ============================================================
+
 import { createClient } from '@supabase/supabase-js';
 
 const supabaseUrl = process.env.VITE_SUPABASE_URL || process.env.SUPABASE_URL || 'https://nijlwzqxsgmutpstujoz.supabase.co';
@@ -11,6 +31,7 @@ const EVOLUTION_API_URL = process.env.EVOLUTION_API_URL || 'https://practical-co
 const EVOLUTION_API_KEY = process.env.EVOLUTION_API_KEY || '4296ef44b1c351a61c016fb652862dae';
 
 const supabase = createClient(supabaseUrl, supabaseKey);
+
 
 export default async function handler(req: any, res: any) {
   // Allow CORS
