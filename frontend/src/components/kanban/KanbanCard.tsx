@@ -36,6 +36,7 @@ export const KanbanCard: React.FC<KanbanCardProps> = ({
   return (
     <div
       draggable
+      data-kanban-card="true"
       onDragStart={(e) => onDragStart(e, lead.id)}
       onClick={() => onSelect(lead)}
       className={`group relative p-3 rounded-2xl cursor-pointer transition-all duration-150 border hover:scale-[1.015] active:scale-[0.99] ${

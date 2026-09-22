@@ -183,6 +183,37 @@ function CockpitWorkspace() {
   const [leadForFollowUp, setLeadForFollowUp] = useState<ContactLead | null>(null);
   const [leadToDelete, setLeadToDelete] = useState<ContactLead | null>(null);
 
+  // Ref for the chat panel — used by the click-outside handler below
+  const chatPanelRef = useRef<HTMLDivElement>(null);
+
+  // Click-outside to close chat:
+  // - Clicking a Kanban card (data-kanban-card) → switches lead, chat stays open
+  // - Clicking elsewhere outside the chat panel → closes chat
+  useEffect(() => {
+    if (window.innerWidth < 768) return; // mobile handled differently
+    const isChatOpen = () => selectedLeadIdRef.current !== null;
+
+    const handleMouseDown = (e: MouseEvent) => {
+      if (!isChatOpen()) return;
+      const target = e.target as HTMLElement | null;
+      if (!target) return;
+      // Click inside the chat panel → keep open
+      if (chatPanelRef.current?.contains(target)) return;
+      // Click on a kanban card → keep open (card onClick will switch the lead)
+      if (target.closest('[data-kanban-card]')) return;
+      // Click on any modal / overlay / dropdown → keep open
+      if (target.closest('[role="dialog"]')) return;
+      if (target.closest('[data-overlay]')) return;
+      // Otherwise → close chat
+      setSelectedLeadId(null);
+      setViewMode('kanban-only');
+    };
+
+    document.addEventListener('mousedown', handleMouseDown);
+    return () => document.removeEventListener('mousedown', handleMouseDown);
+  // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, []);
+
   // Input focus detection to hide bottom navigation during mobile keyboard typing
   const [isInputFocused, setIsInputFocused] = useState(false);
 
@@ -1125,33 +1156,23 @@ function CockpitWorkspace() {
             {/* Right Chat Panel inside Leads view without navigating away */}
             {selectedLeadId && activeLead && (
               <div
+                ref={chatPanelRef}
                 className="fixed inset-0 z-50 md:static md:inset-auto md:z-auto md:flex h-full w-full md:w-auto"
-                onClick={() => setSelectedLeadId(null)}
               >
-                {/* Desktop: invisible backdrop that closes on click outside the chat */}
-                <div
-                  className="hidden md:block fixed inset-0 z-0"
-                  aria-hidden="true"
+                <ChatPanel
+                  lead={activeLead}
+                  columns={columns}
+                  messages={activeChatMessages}
+                  quickReplies={quickReplies}
+                  storeSettings={storeSettings}
+                  onSendMessage={handleSendMessage}
+                  onDeleteMessage={handleDeleteMessage}
+                  onChangeColumn={handleMoveLead}
+                  onOpenFollowUpModal={handleOpenFollowUp}
+                  onUpdateLead={handleUpdateLead}
+                  onCloseChat={() => setSelectedLeadId(null)}
+                  onNavigateToSettings={() => navigate('/store')}
                 />
-                <div
-                  className="relative z-10 w-full md:w-auto h-full md:h-full flex"
-                  onClick={(e) => e.stopPropagation()}
-                >
-                  <ChatPanel
-                    lead={activeLead}
-                    columns={columns}
-                    messages={activeChatMessages}
-                    quickReplies={quickReplies}
-                    storeSettings={storeSettings}
-                    onSendMessage={handleSendMessage}
-                    onDeleteMessage={handleDeleteMessage}
-                    onChangeColumn={handleMoveLead}
-                    onOpenFollowUpModal={handleOpenFollowUp}
-                    onUpdateLead={handleUpdateLead}
-                    onCloseChat={() => setSelectedLeadId(null)}
-                    onNavigateToSettings={() => navigate('/store')}
-                  />
-                </div>
               </div>
             )}
 
@@ -1199,39 +1220,26 @@ function CockpitWorkspace() {
             {/* Right Chat Panel (Active only in Cockpit split mode) */}
             {viewMode === 'split' && (
               <div
+                ref={chatPanelRef}
                 className="fixed inset-0 z-50 md:static md:inset-auto md:z-auto md:flex h-full w-full md:w-auto"
-                onClick={() => {
-                  setSelectedLeadId(null);
-                  setViewMode('kanban-only');
-                }}
               >
-                {/* Desktop: invisible backdrop that closes on click outside the chat */}
-                <div
-                  className="hidden md:block fixed inset-0 z-0"
-                  aria-hidden="true"
+                <ChatPanel
+                  lead={activeLead}
+                  columns={columns}
+                  messages={activeChatMessages}
+                  quickReplies={quickReplies}
+                  storeSettings={storeSettings}
+                  onSendMessage={handleSendMessage}
+                  onDeleteMessage={handleDeleteMessage}
+                  onChangeColumn={handleMoveLead}
+                  onOpenFollowUpModal={handleOpenFollowUp}
+                  onUpdateLead={handleUpdateLead}
+                  onCloseChat={() => {
+                    setSelectedLeadId(null);
+                    setViewMode('kanban-only');
+                  }}
+                  onNavigateToSettings={() => navigate('/store')}
                 />
-                <div
-                  className="relative z-10 w-full md:w-auto h-full md:h-full flex"
-                  onClick={(e) => e.stopPropagation()}
-                >
-                  <ChatPanel
-                    lead={activeLead}
-                    columns={columns}
-                    messages={activeChatMessages}
-                    quickReplies={quickReplies}
-                    storeSettings={storeSettings}
-                    onSendMessage={handleSendMessage}
-                    onDeleteMessage={handleDeleteMessage}
-                    onChangeColumn={handleMoveLead}
-                    onOpenFollowUpModal={handleOpenFollowUp}
-                    onUpdateLead={handleUpdateLead}
-                    onCloseChat={() => {
-                      setSelectedLeadId(null);
-                      setViewMode('kanban-only');
-                    }}
-                    onNavigateToSettings={() => navigate('/store')}
-                  />
-                </div>
               </div>
             )}
           </div>
