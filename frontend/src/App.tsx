@@ -1124,23 +1124,37 @@ function CockpitWorkspace() {
 
             {/* Right Chat Panel inside Leads view without navigating away */}
             {selectedLeadId && activeLead && (
-              <div className="fixed inset-0 z-50 md:static md:inset-auto md:z-auto md:flex h-full w-full md:w-auto">
-                <ChatPanel
-                  lead={activeLead}
-                  columns={columns}
-                  messages={activeChatMessages}
-                  quickReplies={quickReplies}
-                  storeSettings={storeSettings}
-                  onSendMessage={handleSendMessage}
-                  onDeleteMessage={handleDeleteMessage}
-                  onChangeColumn={handleMoveLead}
-                  onOpenFollowUpModal={handleOpenFollowUp}
-                  onUpdateLead={handleUpdateLead}
-                  onCloseChat={() => setSelectedLeadId(null)}
-                  onNavigateToSettings={() => navigate('/store')}
+              <div
+                className="fixed inset-0 z-50 md:static md:inset-auto md:z-auto md:flex h-full w-full md:w-auto"
+                onClick={() => setSelectedLeadId(null)}
+              >
+                {/* Desktop: invisible backdrop that closes on click outside the chat */}
+                <div
+                  className="hidden md:block fixed inset-0 z-0"
+                  aria-hidden="true"
                 />
+                <div
+                  className="relative z-10 w-full md:w-auto h-full md:h-full flex"
+                  onClick={(e) => e.stopPropagation()}
+                >
+                  <ChatPanel
+                    lead={activeLead}
+                    columns={columns}
+                    messages={activeChatMessages}
+                    quickReplies={quickReplies}
+                    storeSettings={storeSettings}
+                    onSendMessage={handleSendMessage}
+                    onDeleteMessage={handleDeleteMessage}
+                    onChangeColumn={handleMoveLead}
+                    onOpenFollowUpModal={handleOpenFollowUp}
+                    onUpdateLead={handleUpdateLead}
+                    onCloseChat={() => setSelectedLeadId(null)}
+                    onNavigateToSettings={() => navigate('/store')}
+                  />
+                </div>
               </div>
             )}
+
           </div>
         ) : activeTab === 'quickreplies' ? (
           <QuickRepliesView
@@ -1184,24 +1198,40 @@ function CockpitWorkspace() {
 
             {/* Right Chat Panel (Active only in Cockpit split mode) */}
             {viewMode === 'split' && (
-              <div className="fixed inset-0 z-50 md:static md:inset-auto md:z-auto md:flex h-full w-full md:w-auto">
-                <ChatPanel
-                  lead={activeLead}
-                  columns={columns}
-                  messages={activeChatMessages}
-                  quickReplies={quickReplies}
-                  storeSettings={storeSettings}
-                  onSendMessage={handleSendMessage}
-                  onDeleteMessage={handleDeleteMessage}
-                  onChangeColumn={handleMoveLead}
-                  onOpenFollowUpModal={handleOpenFollowUp}
-                  onUpdateLead={handleUpdateLead}
-                  onCloseChat={() => {
-                    setSelectedLeadId(null);
-                    setViewMode('kanban-only');
-                  }}
-                  onNavigateToSettings={() => navigate('/store')}
+              <div
+                className="fixed inset-0 z-50 md:static md:inset-auto md:z-auto md:flex h-full w-full md:w-auto"
+                onClick={() => {
+                  setSelectedLeadId(null);
+                  setViewMode('kanban-only');
+                }}
+              >
+                {/* Desktop: invisible backdrop that closes on click outside the chat */}
+                <div
+                  className="hidden md:block fixed inset-0 z-0"
+                  aria-hidden="true"
                 />
+                <div
+                  className="relative z-10 w-full md:w-auto h-full md:h-full flex"
+                  onClick={(e) => e.stopPropagation()}
+                >
+                  <ChatPanel
+                    lead={activeLead}
+                    columns={columns}
+                    messages={activeChatMessages}
+                    quickReplies={quickReplies}
+                    storeSettings={storeSettings}
+                    onSendMessage={handleSendMessage}
+                    onDeleteMessage={handleDeleteMessage}
+                    onChangeColumn={handleMoveLead}
+                    onOpenFollowUpModal={handleOpenFollowUp}
+                    onUpdateLead={handleUpdateLead}
+                    onCloseChat={() => {
+                      setSelectedLeadId(null);
+                      setViewMode('kanban-only');
+                    }}
+                    onNavigateToSettings={() => navigate('/store')}
+                  />
+                </div>
               </div>
             )}
           </div>
