@@ -69,12 +69,13 @@ export const KanbanBoard: React.FC<KanbanBoardProps> = ({
     setActiveMobileColumnId(colId);
   };
 
-  // Desktop scroll handler:
-  // - Pure horizontal deltaX (trackpad 2-finger swipe) → scrolls board horizontally
-  // - Shift+wheel → scrolls board horizontally
-  // - Vertical deltaY inside a scrollable column → passes through (native vertical scroll)
-  // - Vertical deltaY on board background or column header → scrolls board horizontally
-  // ⚠️ DO NOT remove this — without it, trackpad horizontal swipe stops working on desktop
+  // Desktop scroll handler — works for both mouse wheel and trackpad:
+  // - Trackpad horizontal swipe (deltaX > deltaY) → browser handles board horizontal scroll naturally
+  // - Shift+wheel → explicit board horizontal scroll
+  // - Mouse/trackpad vertical scroll inside a column → EXPLICITLY scrolls that column
+  // - Mouse/trackpad vertical scroll on board background → scrolls board horizontally
+  // - At column boundary (top/bottom) → redirects to board horizontal scroll
+  // ⚠️ DO NOT remove this — without it, trackpad horizontal swipe and column scroll both break
   useEffect(() => {
     const board = boardRef.current;
     if (!board) return;
@@ -86,29 +87,25 @@ export const KanbanBoard: React.FC<KanbanBoardProps> = ({
       const absDeltaX = Math.abs(e.deltaX);
       const absDeltaY = Math.abs(e.deltaY);
 
-      // Pure horizontal trackpad swipe → board scrolls left/right naturally
+      // Pure horizontal trackpad swipe → let browser handle naturally (board has overflow-x-auto)
       if (absDeltaX > absDeltaY) {
-        // Let browser handle it (board has overflow-x-auto)
         return;
       }
 
-      // Shift+scroll → explicit horizontal scroll intent
+      // Shift+scroll → explicit horizontal scroll
       if (e.shiftKey) {
         board.scrollLeft += e.deltaY;
         e.preventDefault();
         return;
       }
 
-      // Check if cursor is inside a vertically-scrollable column container
+      // Walk up the DOM from the event target to find a scrollable column container
       const target = e.target as HTMLElement | null;
-      // Walk up the DOM tree looking for the column's scrollable cards container
       let el: HTMLElement | null = target;
       let scrollableCol: HTMLElement | null = null;
       while (el && el !== board) {
-        if (
-          el.scrollHeight > el.clientHeight + 2 &&
-          (getComputedStyle(el).overflowY === 'auto' || getComputedStyle(el).overflowY === 'scroll')
-        ) {
+        const ov = getComputedStyle(el).overflowY;
+        if (el.scrollHeight > el.clientHeight + 2 && (ov === 'auto' || ov === 'scroll')) {
           scrollableCol = el;
           break;
         }
@@ -116,21 +113,23 @@ export const KanbanBoard: React.FC<KanbanBoardProps> = ({
       }
 
       if (scrollableCol) {
-        // Inside a scrollable column — let vertical scroll happen naturally
-        // Only redirect to board-horizontal when hitting top or bottom boundary
         const atTop = scrollableCol.scrollTop <= 0 && e.deltaY < 0;
         const atBottom =
           scrollableCol.scrollTop + scrollableCol.clientHeight >= scrollableCol.scrollHeight - 2 &&
           e.deltaY > 0;
 
         if (atTop || atBottom) {
-          // At boundary → redirect to horizontal board scroll
+          // At column boundary → redirect to horizontal board scroll
           board.scrollLeft += e.deltaY * 0.5;
-          e.preventDefault();
+        } else {
+          // Inside column with room to scroll — explicitly scroll the column vertically.
+          // This works for both mouse wheel (large discrete deltaY) and trackpad (small pixel deltaY).
+          scrollableCol.scrollTop += e.deltaY;
         }
-        // else: let the column scroll vertically — do NOT call preventDefault()
+        // Always prevent default when inside a column — we handle everything explicitly
+        e.preventDefault();
       } else {
-        // On board background / column header / non-scrollable area → horizontal board scroll
+        // On board background / column header → horizontal board scroll
         board.scrollLeft += e.deltaY;
         e.preventDefault();
       }
