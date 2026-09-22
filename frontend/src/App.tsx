@@ -161,6 +161,18 @@ function CockpitWorkspace() {
     return saved ? JSON.parse(saved) : initialStoreSettings;
   });
 
+  // When currentStoreId changes (e.g. from DEFAULT to real storeId after auth loads),
+  // re-read localStorage so cached settings are restored before Supabase responds.
+  const prevStoreIdRef = useRef<string>(currentStoreId);
+  useEffect(() => {
+    if (prevStoreIdRef.current === currentStoreId) return;
+    prevStoreIdRef.current = currentStoreId;
+    const saved = localStorage.getItem(`lojinha_store_settings_${currentStoreId}`);
+    if (saved) {
+      try { setStoreSettings(JSON.parse(saved)); } catch { /* ignore */ }
+    }
+  }, [currentStoreId]);
+
   // UI state: on reload, default to full Kanban mode with chat closed
   const [selectedLeadId, setSelectedLeadId] = useState<string | null>(null);
   const selectedLeadIdRef = useRef<string | null>(null);
@@ -1042,11 +1054,10 @@ function CockpitWorkspace() {
   };
 
   const handleSaveStoreSettings = async (updated: StoreSettings) => {
-    setStoreSettings(updated);
-    try {
-      await storeService.saveStoreSettings(updated, currentStoreId);
-    } catch (err) {
-      console.error('Failed to persist store settings to Supabase:', err);
+    setStoreSettings(updated); // Optimistically update local state immediately
+    const ok = await storeService.saveStoreSettings(updated, currentStoreId);
+    if (!ok) {
+      console.error('[App] Failed to save store settings to Supabase — check RLS policies on stores/store_settings tables.');
     }
   };
 

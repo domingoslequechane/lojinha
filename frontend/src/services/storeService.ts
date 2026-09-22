@@ -86,55 +86,61 @@ export const storeService = {
 
   // Save store settings & sync products
   async saveStoreSettings(settings: Partial<StoreSettings>, storeId: string = DEFAULT_STORE_ID): Promise<boolean> {
-    try {
-      if (settings.storeName !== undefined || settings.slogan !== undefined || settings.city !== undefined || settings.logoUrl !== undefined || settings.bannerUrl !== undefined || settings.phone !== undefined) {
-        await supabase
-          .from('stores')
-          .upsert({
-            id: storeId,
-            name: settings.storeName || '',
-            slogan: settings.slogan || '',
-            city: settings.city || '',
-            phone: settings.phone || '',
-            logo_url: settings.logoUrl || '',
-            banner_url: settings.bannerUrl || '',
-            updated_at: new Date().toISOString(),
-          });
-      }
+    let success = true;
 
-      if (settings.paymentSettings || settings.shippingSettings || settings.twoFactorWhatsAppEnabled !== undefined) {
-        await supabase
-          .from('store_settings')
-          .upsert({
-            store_id: storeId,
-            mpesa_number: settings.paymentSettings?.mpesaNumber || '',
-            mpesa_name: settings.paymentSettings?.mpesaName || '',
-            emola_number: settings.paymentSettings?.emolaNumber || '',
-            emola_name: settings.paymentSettings?.emolaName || '',
-            bank_name: settings.paymentSettings?.bankName || null,
-            bank_account: settings.paymentSettings?.bankAccount || null,
-            custom_instructions: settings.paymentSettings?.customInstructions || '',
-            maputo_fee: settings.shippingSettings?.maputoFee || '',
-            matola_fee: settings.shippingSettings?.matolaFee || '',
-            provinces_fee: settings.shippingSettings?.provincesFee || '',
-            pickup_address: settings.shippingSettings?.pickupAddress || '',
-            shipping_notes: settings.shippingSettings?.shippingNotes || null,
-            two_factor_whatsapp_enabled: settings.twoFactorWhatsAppEnabled ?? false,
-            two_factor_phone: settings.twoFactorPhone || null,
-            updated_at: new Date().toISOString(),
-          });
-      }
+    // Always upsert the stores table (name, slogan, city, phone, logo, banner)
+    const { error: storeError } = await supabase
+      .from('stores')
+      .upsert({
+        id: storeId,
+        name: settings.storeName ?? '',
+        slogan: settings.slogan ?? '',
+        city: settings.city ?? '',
+        phone: settings.phone ?? '',
+        logo_url: settings.logoUrl ?? '',
+        banner_url: settings.bannerUrl ?? '',
+        updated_at: new Date().toISOString(),
+      });
 
-      // If products array is included, sync with DB
-      if (settings.products !== undefined) {
-        await this.syncProducts(settings.products, storeId);
-      }
-
-      return true;
-    } catch (err) {
-      console.error('Error saving store settings:', err);
-      return false;
+    if (storeError) {
+      console.error('[storeService] Error upserting stores table:', storeError);
+      success = false;
     }
+
+    // Always upsert store_settings (payments, shipping, 2FA)
+    const { error: settingsError } = await supabase
+      .from('store_settings')
+      .upsert({
+        store_id: storeId,
+        mpesa_number: settings.paymentSettings?.mpesaNumber ?? '',
+        mpesa_name: settings.paymentSettings?.mpesaName ?? '',
+        emola_number: settings.paymentSettings?.emolaNumber ?? '',
+        emola_name: settings.paymentSettings?.emolaName ?? '',
+        bank_name: settings.paymentSettings?.bankName || null,
+        bank_account: settings.paymentSettings?.bankAccount || null,
+        custom_instructions: settings.paymentSettings?.customInstructions ?? '',
+        maputo_fee: settings.shippingSettings?.maputoFee ?? '',
+        matola_fee: settings.shippingSettings?.matolaFee ?? '',
+        provinces_fee: settings.shippingSettings?.provincesFee ?? '',
+        pickup_address: settings.shippingSettings?.pickupAddress ?? '',
+        shipping_notes: settings.shippingSettings?.shippingNotes || null,
+        two_factor_whatsapp_enabled: settings.twoFactorWhatsAppEnabled ?? false,
+        two_factor_phone: settings.twoFactorPhone ?? null,
+        updated_at: new Date().toISOString(),
+      });
+
+    if (settingsError) {
+      console.error('[storeService] Error upserting store_settings table:', settingsError);
+      success = false;
+    }
+
+    // Sync products if provided
+    if (settings.products !== undefined) {
+      const ok = await this.syncProducts(settings.products, storeId);
+      if (!ok) success = false;
+    }
+
+    return success;
   },
 
   // Sync entire products list with Supabase
