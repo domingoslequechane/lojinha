@@ -3,8 +3,15 @@
  * Handles SW registration, permission request, and subscription management.
  */
 
-const VAPID_PUBLIC_KEY = import.meta.env.VITE_VAPID_PUBLIC_KEY as string;
-const BACKEND_URL = import.meta.env.VITE_BACKEND_URL as string || 'https://practical-contentment-production-b0e4.up.railway.app';
+// VAPID public key — public, safe to embed in client code (not a secret)
+// Fallback hardcoded so push works even if Vercel env var is not set
+const VAPID_PUBLIC_KEY =
+  (import.meta.env.VITE_VAPID_PUBLIC_KEY as string) ||
+  'BMPkxDQtiyMN9Mn2pweNIhrfjcaywqYZccvlqxOE6rYpWP6HqU_AhbWKtuPhleHzaGodIIF0csbZeTWAM0MjfXs';
+
+const BACKEND_URL =
+  (import.meta.env.VITE_BACKEND_URL as string) ||
+  'https://practical-contentment-production-b0e4.up.railway.app';
 
 function urlBase64ToUint8Array(base64String: string): ArrayBuffer {
   const padding = '='.repeat((4 - (base64String.length % 4)) % 4);

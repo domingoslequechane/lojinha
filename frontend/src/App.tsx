@@ -215,10 +215,31 @@ function CockpitWorkspace() {
   const [pushPermission, setPushPermission] = useState<NotificationPermission | 'unsupported'>(
     isPushSupported() ? getPermissionStatus() : 'unsupported'
   );
+  const [pushLoading, setPushLoading] = useState(false);
+  const [pushError, setPushError] = useState<string | null>(null);
 
   const handleEnablePush = async () => {
-    const ok = await subscribeToPush(currentStoreId);
-    if (ok) setPushPermission('granted');
+    setPushLoading(true);
+    setPushError(null);
+    try {
+      const ok = await subscribeToPush(currentStoreId);
+      if (ok) {
+        setPushPermission('granted');
+      } else {
+        // Check if iOS not in PWA mode
+        const isIos = /iphone|ipad|ipod/i.test(navigator.userAgent);
+        const isInStandalone = ('standalone' in navigator && (navigator as any).standalone);
+        if (isIos && !isInStandalone) {
+          setPushError('iOS: adicione a app ao ecrã inicial primeiro (Share → Add to Home Screen)');
+        } else if (Notification.permission === 'denied') {
+          setPushError('Permissão bloqueada. Vá às definições do browser e permita notificações para este site.');
+        } else {
+          setPushError('Não foi possível activar. Tente novamente.');
+        }
+      }
+    } finally {
+      setPushLoading(false);
+    }
   };
 
   const [leadForFollowUp, setLeadForFollowUp] = useState<ContactLead | null>(null);
@@ -1165,17 +1186,31 @@ function CockpitWorkspace() {
 
         {/* Push Notification Permission Banner */}
         {pushPermission === 'default' && isPushSupported() && (
-          <div className="mx-3 mt-2 mb-0 flex items-center justify-between gap-3 bg-[#0F2D26] border border-[#C1F76B]/30 rounded-2xl px-4 py-2.5 animate-in fade-in">
-            <div className="flex items-center gap-2 text-xs text-[#D1EAE0]">
-              <span className="text-lg">🔔</span>
-              <span>Ative as notificações para receber alertas de mensagens e agendamentos mesmo com o app fechado.</span>
+          <div className="mx-3 mt-2 mb-0 flex flex-col gap-1.5 bg-[#0F2D26] border border-[#C1F76B]/30 rounded-2xl px-4 py-3 animate-in fade-in">
+            <div className="flex items-center justify-between gap-3">
+              <div className="flex items-center gap-2 text-xs text-[#D1EAE0]">
+                <span className="text-lg">{pushLoading ? '⏳' : '🔔'}</span>
+                <span>Ative as notificações para receber alertas de mensagens e agendamentos mesmo com o app fechado.</span>
+              </div>
+              <button
+                onClick={handleEnablePush}
+                disabled={pushLoading}
+                className="flex-shrink-0 px-3 py-1.5 rounded-xl text-xs font-bold bg-[#C1F76B] text-[#0F2D26] hover:bg-[#b0ec53] disabled:opacity-50 disabled:cursor-not-allowed transition-all cursor-pointer whitespace-nowrap"
+              >
+                {pushLoading ? 'A activar…' : 'Ativar'}
+              </button>
             </div>
-            <button
-              onClick={handleEnablePush}
-              className="flex-shrink-0 px-3 py-1.5 rounded-xl text-xs font-bold bg-[#C1F76B] text-[#0F2D26] hover:bg-[#b0ec53] transition-all cursor-pointer whitespace-nowrap"
-            >
-              Ativar
-            </button>
+            {pushError && (
+              <p className="text-xs text-amber-400 leading-relaxed pl-7">{pushError}</p>
+            )}
+          </div>
+        )}
+
+        {/* Push success toast */}
+        {pushPermission === 'granted' && (
+          <div className="mx-3 mt-2 mb-0 flex items-center gap-2 bg-[#0F2D26] border border-[#C1F76B]/40 rounded-2xl px-4 py-2 animate-in fade-in text-xs text-[#C1F76B] font-semibold">
+            <span>✅</span>
+            <span>Notificações push activadas!</span>
           </div>
         )}
 
