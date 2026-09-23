@@ -14,8 +14,11 @@ import {
   SlidersHorizontal, 
   LogOut,
   ChevronRight,
-  Wifi
+  Wifi,
+  Download,
+  User
 } from 'lucide-react';
+import { usePwaInstall } from '../../hooks/usePwaInstall';
 import { LoginhaLogo } from '../common/LoginhaLogo';
 
 interface MobileNavProps {
@@ -29,6 +32,7 @@ interface MobileNavProps {
   onOpenImportCsv?: () => void;
   onOpenDeduplicate?: () => void;
   onOpenColumnManager?: () => void;
+  onOpenPwaModal?: () => void;
   onLogout?: () => void;
   hidden?: boolean;
 }
@@ -44,9 +48,11 @@ export const MobileNav: React.FC<MobileNavProps> = ({
   onOpenImportCsv,
   onOpenDeduplicate,
   onOpenColumnManager,
+  onOpenPwaModal,
   onLogout,
   hidden = false,
 }) => {
+  const { canInstall, isInstalled, install } = usePwaInstall();
   const [isMenuOpen, setIsMenuOpen] = useState(false);
 
   const mainTabs = [
@@ -226,6 +232,56 @@ export const MobileNav: React.FC<MobileNavProps> = ({
                   <div className="text-left">
                     <p className="text-xs font-bold">Minha Loja & Catálogo</p>
                     <p className="text-[10px] text-[#95BDB0]">Produtos, fotos e preços</p>
+                  </div>
+                </div>
+                <ChevronRight className="w-4 h-4 text-[#95BDB0]" />
+              </button>
+
+              <button
+                type="button"
+                onClick={() => handleTabClick('account')}
+                className={`w-full flex items-center justify-between p-3 rounded-2xl transition-all ${
+                  activeTab === 'account'
+                    ? 'bg-[#14382F] text-[#C1F76B] border border-[#235447]'
+                    : 'bg-[#14382F]/60 hover:bg-[#14382F] text-[#FDFEF8] border border-transparent'
+                }`}
+              >
+                <div className="flex items-center gap-3">
+                  <div className="w-8 h-8 rounded-xl bg-purple-500/15 text-purple-400 flex items-center justify-center">
+                    <Settings className="w-4 h-4" />
+                  </div>
+                  <div className="text-left">
+                    <p className="text-xs font-bold">Configurações da Conta</p>
+                    <p className="text-[10px] text-[#95BDB0]">Perfil, Senha, Notificações & PWA</p>
+                  </div>
+                </div>
+                <ChevronRight className="w-4 h-4 text-[#95BDB0]" />
+              </button>
+
+              {/* Install PWA Option in drawer */}
+              <button
+                type="button"
+                onClick={async () => {
+                  setIsMenuOpen(false);
+                  if (canInstall) {
+                    await install();
+                  } else {
+                    onOpenPwaModal?.();
+                  }
+                }}
+                className="w-full flex items-center justify-between p-3 rounded-2xl transition-all bg-[#14382F]/60 hover:bg-[#14382F] text-[#FDFEF8] border border-[#C1F76B]/20 cursor-pointer"
+              >
+                <div className="flex items-center gap-3">
+                  <div className="w-8 h-8 rounded-xl bg-[#C1F76B]/15 text-[#C1F76B] flex items-center justify-center">
+                    <Download className="w-4 h-4" />
+                  </div>
+                  <div className="text-left">
+                    <p className="text-xs font-bold text-[#C1F76B]">
+                      {isInstalled ? 'Instruções do Aplicativo' : 'Instalar Aplicativo (PWA)'}
+                    </p>
+                    <p className="text-[10px] text-[#95BDB0]">
+                      {isInstalled ? '✓ App já instalada no dispositivo' : 'Acesso rápido na tela inicial'}
+                    </p>
                   </div>
                 </div>
                 <ChevronRight className="w-4 h-4 text-[#95BDB0]" />

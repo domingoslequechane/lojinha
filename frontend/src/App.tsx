@@ -51,6 +51,7 @@ import { storeService } from './services/storeService';
 import { realtimeService } from './services/realtimeService';
 import { evolutionService } from './services/evolutionService';
 import { subscribeToPush, getPermissionStatus, onLeadOpenMessage, isPushSupported } from './services/pushService';
+import { InstallPwaModal } from './components/common/InstallPwaModal';
 import { ErrorBoundary } from './components/common/ErrorBoundary';
 
 // Protected Route Wrapper
@@ -212,11 +213,13 @@ function CockpitWorkspace() {
   const [newLeadDefaultColumn, setNewLeadDefaultColumn] = useState<string | undefined>();
   const [isFollowUpModalOpen, setIsFollowUpModalOpen] = useState(false);
   const [isFollowUpListOpen, setIsFollowUpListOpen] = useState(false);
+  const [isInstallPwaModalOpen, setIsInstallPwaModalOpen] = useState(false);
   const [pushPermission, setPushPermission] = useState<NotificationPermission | 'unsupported'>(
     isPushSupported() ? getPermissionStatus() : 'unsupported'
   );
   const [pushLoading, setPushLoading] = useState(false);
   const [pushError, setPushError] = useState<string | null>(null);
+  const [pushSuccessToast, setPushSuccessToast] = useState(false);
 
   const handleEnablePush = async () => {
     setPushLoading(true);
@@ -225,6 +228,8 @@ function CockpitWorkspace() {
       const ok = await subscribeToPush(currentStoreId);
       if (ok) {
         setPushPermission('granted');
+        setPushSuccessToast(true);
+        setTimeout(() => setPushSuccessToast(false), 4000);
       } else {
         // Check if iOS not in PWA mode
         const isIos = /iphone|ipad|ipod/i.test(navigator.userAgent);
@@ -1181,10 +1186,12 @@ function CockpitWorkspace() {
           activeInstanceName={defaultInstance?.name}
           activeInstanceStatus={defaultInstance?.status}
           onNavigateToWhatsApp={() => navigate('/whatsapp')}
+          onOpenPwaModal={() => setIsInstallPwaModalOpen(true)}
+          onOpenAccountSettings={() => handleSelectTab('account')}
         />
 
 
-        {/* Push Notification Permission Banner */}
+        {/* Push Notification Permission Request Banner (Only shown when permission is 'default') */}
         {pushPermission === 'default' && isPushSupported() && (
           <div className="mx-3 mt-2 mb-0 flex flex-col gap-1.5 bg-[#0F2D26] border border-[#C1F76B]/30 rounded-2xl px-4 py-3 animate-in fade-in">
             <div className="flex items-center justify-between gap-3">
@@ -1206,11 +1213,11 @@ function CockpitWorkspace() {
           </div>
         )}
 
-        {/* Push success toast */}
-        {pushPermission === 'granted' && (
+        {/* Temporary Push success toast (Only shown briefly for 4s right after user grants permission) */}
+        {pushSuccessToast && (
           <div className="mx-3 mt-2 mb-0 flex items-center gap-2 bg-[#0F2D26] border border-[#C1F76B]/40 rounded-2xl px-4 py-2 animate-in fade-in text-xs text-[#C1F76B] font-semibold">
             <span>✅</span>
-            <span>Notificações push activadas!</span>
+            <span>Notificações push ativadas com sucesso!</span>
           </div>
         )}
 
@@ -1309,6 +1316,7 @@ function CockpitWorkspace() {
         ) : activeTab === 'account' ? (
           <StoreSettingsView
             store={storeSettings}
+            storeId={currentStoreId}
             onSaveStore={handleSaveStoreSettings}
           />
         ) : (
@@ -1385,6 +1393,7 @@ function CockpitWorkspace() {
         onOpenImportCsv={() => setIsImportCsvOpen(true)}
         onOpenDeduplicate={() => setIsDeduplicateOpen(true)}
         onOpenColumnManager={() => setIsColumnManagerOpen(true)}
+        onOpenPwaModal={() => setIsInstallPwaModalOpen(true)}
         onLogout={handleLogout}
         hidden={isMobileNavHidden}
       />
@@ -1447,6 +1456,12 @@ function CockpitWorkspace() {
         leads={leads}
         columns={columns}
         onDeleteDuplicateLeads={handleDeleteDuplicateLeads}
+      />
+
+      {/* PWA Installation Modal */}
+      <InstallPwaModal
+        isOpen={isInstallPwaModalOpen}
+        onClose={() => setIsInstallPwaModalOpen(false)}
       />
     </div>
   );

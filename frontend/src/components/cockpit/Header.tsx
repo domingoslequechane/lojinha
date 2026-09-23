@@ -8,8 +8,11 @@ import {
   FileSpreadsheet, 
   CopySlash,
   Bell,
-  X
+  X,
+  Download,
+  Settings
 } from 'lucide-react';
+import { usePwaInstall } from '../../hooks/usePwaInstall';
 
 interface HeaderProps {
   searchTerm: string;
@@ -24,6 +27,8 @@ interface HeaderProps {
   activeInstanceName?: string;
   activeInstanceStatus?: string;
   onNavigateToWhatsApp?: () => void;
+  onOpenPwaModal?: () => void;
+  onOpenAccountSettings?: () => void;
 }
 
 export const Header: React.FC<HeaderProps> = ({
@@ -39,7 +44,10 @@ export const Header: React.FC<HeaderProps> = ({
   activeInstanceName = 'Vendas Tablets',
   activeInstanceStatus = 'disconnected',
   onNavigateToWhatsApp,
+  onOpenPwaModal,
+  onOpenAccountSettings,
 }) => {
+  const { canInstall, isInstalled, install } = usePwaInstall();
   const [isSearchOpenMobile, setIsSearchOpenMobile] = useState(false);
   const mobileInputRef = useRef<HTMLInputElement>(null);
 
@@ -166,6 +174,24 @@ export const Header: React.FC<HeaderProps> = ({
               <Search className="w-4 h-4" />
             </button>
 
+            {/* PWA Install Button (Mobile) */}
+            {!isInstalled && (
+              <button
+                type="button"
+                onClick={async () => {
+                  if (canInstall) {
+                    await install();
+                  } else {
+                    onOpenPwaModal?.();
+                  }
+                }}
+                className="md:hidden p-2 rounded-xl bg-[#14382F] hover:bg-[#184339] text-[#C1F76B] border border-[#C1F76B]/40 active:scale-95 transition-all"
+                title="Instalar Aplicativo"
+              >
+                <Download className="w-4 h-4" />
+              </button>
+            )}
+
             {/* Notification Bell (Follow-ups & Alerts) */}
             <button
               type="button"
@@ -184,6 +210,25 @@ export const Header: React.FC<HeaderProps> = ({
                 </span>
               )}
             </button>
+
+            {/* PWA Install Button (Desktop) */}
+            {!isInstalled && (
+              <button
+                type="button"
+                onClick={async () => {
+                  if (canInstall) {
+                    await install();
+                  } else {
+                    onOpenPwaModal?.();
+                  }
+                }}
+                className="hidden sm:flex items-center gap-1.5 px-3 py-2 bg-[#14382F] hover:bg-[#C1F76B]/15 hover:border-[#C1F76B]/60 text-[#C1F76B] rounded-xl text-xs font-semibold border border-[#C1F76B]/30 transition-all duration-150 hover:scale-105 active:scale-95 cursor-pointer shadow-xs"
+                title="Instalar aplicativo no computador ou celular"
+              >
+                <Download className="w-3.5 h-3.5" />
+                <span className="hidden xl:inline">Instalar App</span>
+              </button>
+            )}
 
             {/* Varredura de Duplicados (Desktop) */}
             {onOpenDeduplicate && (

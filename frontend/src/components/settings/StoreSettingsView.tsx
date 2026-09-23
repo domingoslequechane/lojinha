@@ -16,21 +16,37 @@ import {
   Download,
   Sparkles,
   CheckCircle2,
+  Bell,
+  BellRing,
+  BellOff,
+  ShieldCheck,
+  MessageSquare,
+  Clock,
+  Package,
 } from 'lucide-react';
 import { useNavigate } from 'react-router-dom';
 import { useAuth } from '../../context/AuthContext';
 import { ConfirmModal } from '../common/ConfirmModal';
 import { InstallPwaModal } from '../common/InstallPwaModal';
 import { usePwaInstall } from '../../hooks/usePwaInstall';
+import { 
+  subscribeToPush, 
+  unsubscribeFromPush, 
+  getPermissionStatus, 
+  isPushSupported,
+  NotificationPermission 
+} from '../../services/pushService';
 import { StoreSettings } from '../../types';
 
 interface StoreSettingsViewProps {
   store: StoreSettings;
+  storeId?: string;
   onSaveStore: (updated: StoreSettings) => void;
 }
 
 export const StoreSettingsView: React.FC<StoreSettingsViewProps> = ({
   store,
+  storeId = '29de077e-a057-48c4-9869-20e5ce9dee3f',
   onSaveStore,
 }) => {
   const navigate = useNavigate();
@@ -43,6 +59,49 @@ export const StoreSettingsView: React.FC<StoreSettingsViewProps> = ({
   const [showLogoutConfirm, setShowLogoutConfirm] = useState(false);
   const [showInstallModal, setShowInstallModal] = useState(false);
   const { canInstall, isInstalled, install } = usePwaInstall();
+
+  // Push Notifications state
+  const [pushPermission, setPushPermission] = useState<NotificationPermission | 'unsupported'>(
+    isPushSupported() ? getPermissionStatus() : 'unsupported'
+  );
+  const [pushLoading, setPushLoading] = useState(false);
+  const [pushMessage, setPushMessage] = useState<{ type: 'success' | 'error'; text: string } | null>(null);
+
+  const handleTogglePush = async () => {
+    setPushLoading(true);
+    setPushMessage(null);
+    try {
+      if (pushPermission === 'granted') {
+        await unsubscribeFromPush(storeId);
+        setPushPermission('default');
+        setPushMessage({ type: 'success', text: 'Notificações push desativadas neste dispositivo.' });
+      } else {
+        const ok = await subscribeToPush(storeId);
+        if (ok) {
+          setPushPermission('granted');
+          setPushMessage({ type: 'success', text: 'Notificações push ativadas com sucesso!' });
+        } else {
+          const current = getPermissionStatus();
+          setPushPermission(current);
+          if (current === 'denied') {
+            setPushMessage({
+              type: 'error',
+              text: 'Permissão bloqueada no navegador. Permita notificações nas configurações do site.',
+            });
+          } else {
+            setPushMessage({
+              type: 'error',
+              text: 'Não foi possível ativar as notificações. Verifique a conexão e tente novamente.',
+            });
+          }
+        }
+      }
+    } catch (err: any) {
+      setPushMessage({ type: 'error', text: err?.message || 'Erro ao configurar notificações.' });
+    } finally {
+      setPushLoading(false);
+    }
+  };
 
   const bannerInputRef = useRef<HTMLInputElement>(null);
   const logoInputRef = useRef<HTMLInputElement>(null);
@@ -186,10 +245,10 @@ export const StoreSettingsView: React.FC<StoreSettingsViewProps> = ({
         <div>
           <h2 className="text-xl font-bold text-[#FDFEF8] flex items-center gap-2">
             <User className="w-6 h-6 text-[#C1F76B]" />
-            Minha Conta
+            Configurações da Conta
           </h2>
           <p className="text-xs text-[#95BDB0] mt-1">
-            Gerencie o perfil e a identidade visual da sua loja
+            Gerencie identidade da loja, aplicativo, notificações push e segurança
           </p>
         </div>
 
@@ -565,56 +624,166 @@ export const StoreSettingsView: React.FC<StoreSettingsViewProps> = ({
               </div>
             )}
           </div>
+        </div>
 
-          {/* PWA / App Installation Card */}
-          <div className="p-4 sm:p-5 rounded-2xl bg-[#14382F] border border-[#235447] space-y-3 mt-4">
-            <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3">
-              <div className="flex items-start sm:items-center gap-3">
-                <div className="w-10 h-10 rounded-xl bg-[#C1F76B]/15 text-[#C1F76B] flex items-center justify-center flex-shrink-0">
-                  <Smartphone className="w-5 h-5" />
-                </div>
+        {/* Section: Push Notifications & Realtime Alerts */}
+        <div className="p-6 rounded-3xl bg-[#0F2D26] border border-[#235447] space-y-4">
+          <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3 border-b border-[#235447] pb-3">
+            <h3 className="text-sm font-bold text-[#FDFEF8] flex items-center gap-2">
+              <Bell className="w-4 h-4 text-[#C1F76B]" />
+              Notificações Push & Alertas
+            </h3>
+            <div className="flex items-center gap-2">
+              {pushPermission === 'granted' ? (
+                <span className="inline-flex items-center gap-1.5 text-xs font-bold px-2.5 py-1 rounded-xl bg-[#C1F76B]/15 text-[#C1F76B] border border-[#C1F76B]/30">
+                  <span className="w-2 h-2 rounded-full bg-[#C1F76B] animate-pulse" />
+                  Notificações Ativas
+                </span>
+              ) : pushPermission === 'denied' ? (
+                <span className="inline-flex items-center gap-1.5 text-xs font-bold px-2.5 py-1 rounded-xl bg-red-500/15 text-red-400 border border-red-500/30">
+                  <BellOff className="w-3.5 h-3.5" />
+                  Bloqueado no Navegador
+                </span>
+              ) : (
+                <span className="inline-flex items-center gap-1.5 text-xs font-bold px-2.5 py-1 rounded-xl bg-amber-500/15 text-amber-300 border border-amber-500/30">
+                  Desativado
+                </span>
+              )}
+            </div>
+          </div>
+
+          <div className="space-y-3">
+            <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3 p-4 rounded-2xl bg-[#14382F] border border-[#235447]">
+              <div>
+                <p className="text-xs font-bold text-[#FDFEF8]">
+                  Alertas em Tempo Real no Dispositivo
+                </p>
+                <p className="text-[11px] text-[#95BDB0] mt-0.5">
+                  Receba avisos imediatos na área de notificações do seu celular ou PC mesmo com a aba fechada.
+                </p>
+              </div>
+
+              <button
+                type="button"
+                onClick={handleTogglePush}
+                disabled={pushLoading}
+                className={`flex-shrink-0 px-4 py-2 rounded-xl text-xs font-bold flex items-center justify-center gap-2 transition-all cursor-pointer shadow-md disabled:opacity-50 ${
+                  pushPermission === 'granted'
+                    ? 'bg-[#0F2D26] hover:bg-red-500/15 text-red-300 hover:text-red-200 border border-[#235447] hover:border-red-500/40'
+                    : 'bg-[#C1F76B] hover:bg-[#b0ec53] text-[#0F2D26] shadow-[#C1F76B]/25 hover:scale-105 active:scale-95'
+                }`}
+              >
+                {pushLoading ? (
+                  <span>Processando...</span>
+                ) : pushPermission === 'granted' ? (
+                  <>
+                    <BellOff className="w-3.5 h-3.5" />
+                    <span>Desativar Notificações</span>
+                  </>
+                ) : (
+                  <>
+                    <BellRing className="w-3.5 h-3.5" />
+                    <span>Ativar Notificações Push</span>
+                  </>
+                )}
+              </button>
+            </div>
+
+            {pushMessage && (
+              <div
+                className={`p-3 rounded-xl text-xs font-medium flex items-center gap-2 animate-in fade-in ${
+                  pushMessage.type === 'success'
+                    ? 'bg-[#C1F76B]/15 text-[#C1F76B] border border-[#C1F76B]/30'
+                    : 'bg-amber-500/15 text-amber-300 border border-amber-500/30'
+                }`}
+              >
+                <span>{pushMessage.type === 'success' ? '✅' : '⚠️'}</span>
+                <span>{pushMessage.text}</span>
+              </div>
+            )}
+
+            {/* List of active alert types */}
+            <div className="grid grid-cols-1 sm:grid-cols-3 gap-2.5 pt-1">
+              <div className="p-3 rounded-xl bg-[#14382F]/60 border border-[#235447] flex items-start gap-2.5">
+                <MessageSquare className="w-4 h-4 text-sky-400 flex-shrink-0 mt-0.5" />
                 <div>
-                  <div className="flex items-center gap-2">
-                    <h4 className="text-xs font-bold text-[#FDFEF8]">Aplicativo Lojinha (PWA)</h4>
-                    {isInstalled ? (
-                      <span className="inline-flex items-center gap-1 text-[10px] font-bold px-2 py-0.5 rounded-full bg-[#C1F76B]/20 text-[#C1F76B] border border-[#C1F76B]/30">
-                        <CheckCircle2 className="w-3 h-3" /> Instalado
-                      </span>
-                    ) : (
-                      <span className="inline-flex items-center gap-1 text-[10px] font-bold px-2 py-0.5 rounded-full bg-amber-500/20 text-amber-300 border border-amber-500/30">
-                        Disponível
-                      </span>
-                    )}
-                  </div>
-                  <p className="text-[11px] text-[#95BDB0] mt-0.5">
-                    {isInstalled
-                      ? 'O aplicativo está instalado neste dispositivo. Notificações e atalho ativo.'
-                      : 'Instale o app no seu celular ou computador para acesso instantâneo e notificações.'}
-                  </p>
+                  <p className="text-[11px] font-bold text-[#FDFEF8]">Novas Mensagens WhatsApp</p>
+                  <p className="text-[10px] text-[#95BDB0]">Alerta instantâneo a cada resposta de cliente</p>
                 </div>
               </div>
 
-              <div className="flex items-center gap-2">
-                <button
-                  type="button"
-                  onClick={async () => {
-                    if (canInstall) {
-                      await install();
-                    } else {
-                      setShowInstallModal(true);
-                    }
-                  }}
-                  className={`w-full sm:w-auto px-4 py-2 rounded-xl text-xs font-bold flex items-center justify-center gap-2 transition-all cursor-pointer shadow-md ${
-                    isInstalled
-                      ? 'bg-[#0F2D26] hover:bg-[#184339] text-[#D1EAE0] border border-[#235447]'
-                      : 'bg-[#C1F76B] hover:bg-[#b0ec53] text-[#0F2D26] shadow-[#C1F76B]/20 hover:scale-105 active:scale-95'
-                  }`}
-                >
-                  <Download className="w-4 h-4" />
-                  <span>{isInstalled ? 'Como Instalar em Outros' : 'Instalar Aplicativo'}</span>
-                </button>
+              <div className="p-3 rounded-xl bg-[#14382F]/60 border border-[#235447] flex items-start gap-2.5">
+                <Clock className="w-4 h-4 text-amber-400 flex-shrink-0 mt-0.5" />
+                <div>
+                  <p className="text-[11px] font-bold text-[#FDFEF8]">Follow-ups Agendados</p>
+                  <p className="text-[10px] text-[#95BDB0]">Aviso 30 min antes e na hora do agendamento</p>
+                </div>
+              </div>
+
+              <div className="p-3 rounded-xl bg-[#14382F]/60 border border-[#235447] flex items-start gap-2.5">
+                <Package className="w-4 h-4 text-[#C1F76B] flex-shrink-0 mt-0.5" />
+                <div>
+                  <p className="text-[11px] font-bold text-[#FDFEF8]">Entregas & Pedidos</p>
+                  <p className="text-[10px] text-[#95BDB0]">Alerta com endereço e produtos a entregar</p>
+                </div>
               </div>
             </div>
+          </div>
+        </div>
+
+        {/* Section: PWA / App Installation Card */}
+        <div className="p-6 rounded-3xl bg-[#0F2D26] border border-[#235447] space-y-4">
+          <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3 border-b border-[#235447] pb-3">
+            <h3 className="text-sm font-bold text-[#FDFEF8] flex items-center gap-2">
+              <Smartphone className="w-4 h-4 text-[#C1F76B]" />
+              Aplicativo Móvel & Desktop (PWA)
+            </h3>
+            <div className="flex items-center gap-2">
+              {isInstalled ? (
+                <span className="inline-flex items-center gap-1.5 text-xs font-bold px-2.5 py-1 rounded-xl bg-[#C1F76B]/15 text-[#C1F76B] border border-[#C1F76B]/30">
+                  <CheckCircle2 className="w-3.5 h-3.5" />
+                  Instalado neste Dispositivo
+                </span>
+              ) : (
+                <span className="inline-flex items-center gap-1.5 text-xs font-bold px-2.5 py-1 rounded-xl bg-amber-500/15 text-amber-300 border border-amber-500/30">
+                  Instalação Disponível
+                </span>
+              )}
+            </div>
+          </div>
+
+          <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3 p-4 rounded-2xl bg-[#14382F] border border-[#235447]">
+            <div>
+              <p className="text-xs font-bold text-[#FDFEF8]">
+                {isInstalled
+                  ? 'Aplicativo Configurado e Ativo'
+                  : 'Instale o Lojinha no seu Celular ou Computador'}
+              </p>
+              <p className="text-[11px] text-[#95BDB0] mt-0.5">
+                {isInstalled
+                  ? 'Você já está usando a versão aplicativo com carregamento instantâneo e alertas em segundo plano.'
+                  : 'Tenha acesso direto em 1 toque pela tela inicial, tela cheia sem barras e notificações.'}
+              </p>
+            </div>
+
+            <button
+              type="button"
+              onClick={async () => {
+                if (canInstall) {
+                  await install();
+                } else {
+                  setShowInstallModal(true);
+                }
+              }}
+              className={`flex-shrink-0 px-4 py-2.5 rounded-xl text-xs font-bold flex items-center justify-center gap-2 transition-all cursor-pointer shadow-md ${
+                isInstalled
+                  ? 'bg-[#0F2D26] hover:bg-[#184339] text-[#D1EAE0] border border-[#235447]'
+                  : 'bg-[#C1F76B] hover:bg-[#b0ec53] text-[#0F2D26] shadow-[#C1F76B]/20 hover:scale-105 active:scale-95'
+              }`}
+            >
+              <Download className="w-4 h-4" />
+              <span>{isInstalled ? 'Guia de Instalação em Outros' : 'Instalar Aplicativo Agora'}</span>
+            </button>
           </div>
         </div>
 
