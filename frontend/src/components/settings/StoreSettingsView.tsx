@@ -13,10 +13,15 @@ import {
   LogOut,
   Smartphone,
   Upload,
+  Download,
+  Sparkles,
+  CheckCircle2,
 } from 'lucide-react';
 import { useNavigate } from 'react-router-dom';
 import { useAuth } from '../../context/AuthContext';
 import { ConfirmModal } from '../common/ConfirmModal';
+import { InstallPwaModal } from '../common/InstallPwaModal';
+import { usePwaInstall } from '../../hooks/usePwaInstall';
 import { StoreSettings } from '../../types';
 
 interface StoreSettingsViewProps {
@@ -36,6 +41,8 @@ export const StoreSettingsView: React.FC<StoreSettingsViewProps> = ({
   const [showSuccessToast, setShowSuccessToast] = useState(false);
   const [errorMessage, setErrorMessage] = useState<string | null>(null);
   const [showLogoutConfirm, setShowLogoutConfirm] = useState(false);
+  const [showInstallModal, setShowInstallModal] = useState(false);
+  const { canInstall, isInstalled, install } = usePwaInstall();
 
   const bannerInputRef = useRef<HTMLInputElement>(null);
   const logoInputRef = useRef<HTMLInputElement>(null);
@@ -558,6 +565,57 @@ export const StoreSettingsView: React.FC<StoreSettingsViewProps> = ({
               </div>
             )}
           </div>
+
+          {/* PWA / App Installation Card */}
+          <div className="p-4 sm:p-5 rounded-2xl bg-[#14382F] border border-[#235447] space-y-3 mt-4">
+            <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3">
+              <div className="flex items-start sm:items-center gap-3">
+                <div className="w-10 h-10 rounded-xl bg-[#C1F76B]/15 text-[#C1F76B] flex items-center justify-center flex-shrink-0">
+                  <Smartphone className="w-5 h-5" />
+                </div>
+                <div>
+                  <div className="flex items-center gap-2">
+                    <h4 className="text-xs font-bold text-[#FDFEF8]">Aplicativo Lojinha (PWA)</h4>
+                    {isInstalled ? (
+                      <span className="inline-flex items-center gap-1 text-[10px] font-bold px-2 py-0.5 rounded-full bg-[#C1F76B]/20 text-[#C1F76B] border border-[#C1F76B]/30">
+                        <CheckCircle2 className="w-3 h-3" /> Instalado
+                      </span>
+                    ) : (
+                      <span className="inline-flex items-center gap-1 text-[10px] font-bold px-2 py-0.5 rounded-full bg-amber-500/20 text-amber-300 border border-amber-500/30">
+                        Disponível
+                      </span>
+                    )}
+                  </div>
+                  <p className="text-[11px] text-[#95BDB0] mt-0.5">
+                    {isInstalled
+                      ? 'O aplicativo está instalado neste dispositivo. Notificações e atalho ativo.'
+                      : 'Instale o app no seu celular ou computador para acesso instantâneo e notificações.'}
+                  </p>
+                </div>
+              </div>
+
+              <div className="flex items-center gap-2">
+                <button
+                  type="button"
+                  onClick={async () => {
+                    if (canInstall) {
+                      await install();
+                    } else {
+                      setShowInstallModal(true);
+                    }
+                  }}
+                  className={`w-full sm:w-auto px-4 py-2 rounded-xl text-xs font-bold flex items-center justify-center gap-2 transition-all cursor-pointer shadow-md ${
+                    isInstalled
+                      ? 'bg-[#0F2D26] hover:bg-[#184339] text-[#D1EAE0] border border-[#235447]'
+                      : 'bg-[#C1F76B] hover:bg-[#b0ec53] text-[#0F2D26] shadow-[#C1F76B]/20 hover:scale-105 active:scale-95'
+                  }`}
+                >
+                  <Download className="w-4 h-4" />
+                  <span>{isInstalled ? 'Como Instalar em Outros' : 'Instalar Aplicativo'}</span>
+                </button>
+              </div>
+            </div>
+          </div>
         </div>
 
         {/* Save and Logout Buttons */}
@@ -596,6 +654,12 @@ export const StoreSettingsView: React.FC<StoreSettingsViewProps> = ({
           navigate('/login');
         }}
         onCancel={() => setShowLogoutConfirm(false)}
+      />
+
+      {/* PWA Installation Instructions Modal */}
+      <InstallPwaModal
+        isOpen={showInstallModal}
+        onClose={() => setShowInstallModal(false)}
       />
     </div>
   );

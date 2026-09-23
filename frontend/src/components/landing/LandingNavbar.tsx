@@ -7,12 +7,17 @@ import {
   LayoutDashboard, 
   LogIn, 
   Sparkles,
-  Zap
+  Zap,
+  Download
 } from 'lucide-react';
 import { useAuth } from '../../context/AuthContext';
+import { usePwaInstall } from '../../hooks/usePwaInstall';
+import { InstallPwaModal } from '../common/InstallPwaModal';
 
 export const LandingNavbar: React.FC = () => {
   const { isAuthenticated, user } = useAuth();
+  const { canInstall, isInstalled, install } = usePwaInstall();
+  const [showInstallModal, setShowInstallModal] = useState(false);
   const [isScrolled, setIsScrolled] = useState(false);
   const [mobileMenuOpen, setMobileMenuOpen] = useState(false);
 
@@ -81,6 +86,29 @@ export const LandingNavbar: React.FC = () => {
 
         {/* Action Buttons */}
         <div className="hidden sm:flex items-center gap-3">
+          {/* PWA Install Button — shown when not yet installed */}
+          {!isInstalled && (
+            <button
+              onClick={async () => {
+                if (canInstall) {
+                  await install();
+                } else {
+                  setShowInstallModal(true);
+                }
+              }}
+              className="inline-flex items-center gap-1.5 px-3.5 py-2 rounded-xl text-xs font-semibold text-[#C1F76B] border border-[#C1F76B]/30 hover:bg-[#C1F76B]/10 transition-all cursor-pointer"
+              title="Instalar app no dispositivo"
+            >
+              <Download className="w-3.5 h-3.5" />
+              <span>Instalar App</span>
+            </button>
+          )}
+          {isInstalled && (
+            <span className="inline-flex items-center gap-1 text-xs text-[#C1F76B]/70 font-medium">
+              <span>✓</span> App instalada
+            </span>
+          )}
+
           {isAuthenticated && user ? (
             <Link
               to="/cockpit"
@@ -111,6 +139,23 @@ export const LandingNavbar: React.FC = () => {
 
         {/* Mobile Menu Button */}
         <div className="flex sm:hidden items-center gap-2">
+          {!isInstalled && (
+            <button
+              type="button"
+              onClick={async () => {
+                if (canInstall) {
+                  await install();
+                } else {
+                  setShowInstallModal(true);
+                }
+              }}
+              className="p-2 rounded-xl text-[#C1F76B] bg-[#14382F] border border-[#235447] cursor-pointer"
+              title="Instalar App"
+            >
+              <Download className="w-4 h-4" />
+            </button>
+          )}
+
           {isAuthenticated ? (
             <Link
               to="/cockpit"
@@ -156,6 +201,29 @@ export const LandingNavbar: React.FC = () => {
           </div>
 
           <div className="flex flex-col gap-2 pt-1">
+            {/* PWA Install */}
+            {!isInstalled && (
+              <button
+                onClick={async () => {
+                  setMobileMenuOpen(false);
+                  if (canInstall) {
+                    await install();
+                  } else {
+                    setShowInstallModal(true);
+                  }
+                }}
+                className="w-full py-2.5 rounded-xl text-xs font-semibold text-[#C1F76B] border border-[#C1F76B]/30 bg-[#C1F76B]/5 flex items-center justify-center gap-2 cursor-pointer"
+              >
+                <Download className="w-4 h-4" />
+                <span>Instalar App no Dispositivo</span>
+              </button>
+            )}
+            {isInstalled && (
+              <div className="w-full py-2 text-center text-xs text-[#C1F76B]/70 font-medium">
+                ✓ App já instalada
+              </div>
+            )}
+
             {isAuthenticated ? (
               <Link
                 to="/cockpit"
@@ -188,6 +256,12 @@ export const LandingNavbar: React.FC = () => {
           </div>
         </div>
       )}
+
+      {/* PWA Installation Instructions Modal */}
+      <InstallPwaModal
+        isOpen={showInstallModal}
+        onClose={() => setShowInstallModal(false)}
+      />
     </header>
   );
 };
