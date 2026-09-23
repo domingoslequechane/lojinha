@@ -1,75 +1,81 @@
-// Lojinha PWA Service Worker
-const CACHE_NAME = 'lojinha-pwa-v1';
-const STATIC_ASSETS = [
-  '/',
-  '/index.html',
-  '/manifest.json',
-  '/favicon.png',
-  '/pwa-192x192.png',
-  '/pwa-512x512.png',
-  '/apple-touch-icon.png'
-];
+/* =========================================================
+   Lojinha Service Worker — Push Notifications
+   ========================================================= */
 
-self.addEventListener('install', (event) => {
+const APP_URL = self.location.origin;
+
+self.addEventListener('push', (event) => {
+  if (!event.data) return;
+
+  let payload;
+  try {
+    payload = event.data.json();
+  } catch {
+    payload = { title: 'Lojinha', body: event.data.text() };
+  }
+
+  const {
+    title = 'Lojinha',
+    body = 'Nova notificação',
+    icon = '/icon-192.png',
+    badge = '/favicon-32x32.png',
+    tag,
+    data = {},
+  } = payload;
+
+  const options = {
+    body,
+    icon,
+    badge,
+    tag: tag || 'lojinha-notification',
+    renotify: true,
+    requireInteraction: false,
+    silent: false,
+    vibrate: [200, 100, 200],
+    data,
+    actions: data.leadId
+      ? [{ action: 'open', title: 'Abrir Chat' }]
+      : [],
+  };
+
+  event.waitUntil(self.registration.showNotification(title, options));
+});
+
+self.addEventListener('notificationclick', (event) => {
+  event.notification.close();
+
+  const { leadId } = event.notification.data || {};
+
+  let targetUrl = APP_URL;
+  if (leadId) {
+    // Store leadId so the app can open the right chat on focus
+    targetUrl = `${APP_URL}/?open_lead=${leadId}`;
+  }
+
   event.waitUntil(
-    caches.open(CACHE_NAME).then((cache) => {
-      return cache.addAll(STATIC_ASSETS).catch((err) => {
-        console.warn('PWA: Some static assets failed to precache:', err);
-      });
+    clients.matchAll({ type: 'window', includeUncontrolled: true }).then((clientList) => {
+      // If app is already open, focus it and send a message
+      for (const client of clientList) {
+        if (client.url.startsWith(APP_URL)) {
+          client.focus();
+          if (leadId) {
+            client.postMessage({ type: 'OPEN_LEAD', leadId });
+          }
+          return;
+        }
+      }
+      // Otherwise open a new window
+      return clients.openWindow(targetUrl);
     })
   );
-  self.skipWaiting();
 });
 
-self.addEventListener('activate', (event) => {
+self.addEventListener('pushsubscriptionchange', (event) => {
+  // Re-subscribe when subscription expires
   event.waitUntil(
-    caches.keys().then((keys) => {
-      return Promise.all(
-        keys.map((key) => {
-          if (key !== CACHE_NAME) {
-            return caches.delete(key);
-          }
-        })
-      );
-    }).then(() => self.clients.claim())
-  );
-});
-
-self.addEventListener('fetch', (event) => {
-  const { request } = event;
-  
-  if (request.method !== 'GET') return;
-  
-  const url = new URL(request.url);
-  if (
-    url.pathname.startsWith('/api') || 
-    url.hostname.includes('supabase.co') || 
-    url.hostname.includes('evolution') ||
-    request.headers.get('upgrade') === 'websocket'
-  ) {
-    return;
-  }
-
-  if (request.mode === 'navigate') {
-    event.respondWith(
-      fetch(request).catch(() => caches.match('/index.html') || caches.match('/'))
-    );
-    return;
-  }
-
-  event.respondWith(
-    caches.match(request).then((cached) => {
-      const networked = fetch(request)
-        .then((response) => {
-          if (response && response.status === 200 && response.type === 'basic') {
-            const copy = response.clone();
-            caches.open(CACHE_NAME).then((cache) => cache.put(request, copy));
-          }
-          return response;
-        })
-        .catch(() => cached);
-
-      return cached || networked;
+    self.registration.pushManager.subscribe({
+      userVisibleOnly: true,
+      applicationServerKey: event.oldSubscription?.options?.applicationServerKey,
     })
   );
 });

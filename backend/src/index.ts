@@ -2,12 +2,16 @@ import 'dotenv/config';
 import path from 'path';
 import express from 'express';
 import cors from 'cors';
+import { createClient } from '@supabase/supabase-js';
 import { handleWebhook } from './webhookHandler';
 import instancesRouter from './routes/instances';
 import messagesRouter from './routes/messages';
 import leadsRouter from './routes/leads';
 import { requireInternalSecret } from './middleware/auth';
 import { startMediaCleanupJob } from './cleanup';
+import { startFollowUpCron } from './followUpCron';
+
+const supabase = createClient(process.env.SUPABASE_URL!, process.env.SUPABASE_ANON_KEY!);
 
 const app = express();
 const PORT = process.env.PORT ?? 3001;
@@ -97,6 +101,35 @@ app.use('/api/messages', requireInternalSecret, messagesRouter);
 app.use('/api/leads', requireInternalSecret, leadsRouter);
 
 // ----------------------------------------------------------------
+// Push Notification Subscriptions (público — chamado pelo frontend)
+// ----------------------------------------------------------------
+app.post('/api/push/subscribe', async (req, res) => {
+  const { storeId, endpoint, p256dh, auth, userAgent } = req.body;
+  if (!storeId || !endpoint || !p256dh || !auth) {
+    res.status(400).json({ error: 'Missing required fields' });
+    return;
+  }
+  const { error } = await supabase.from('push_subscriptions').upsert(
+    { store_id: storeId, endpoint, p256dh, auth, user_agent: userAgent },
+    { onConflict: 'store_id,endpoint' }
+  );
+  if (error) {
+    console.error('[Push] Save subscription error:', error.message);
+    res.status(500).json({ error: error.message });
+    return;
+  }
+  res.json({ ok: true });
+});
+
+app.delete('/api/push/unsubscribe', async (req, res) => {
+  const { storeId, endpoint } = req.body;
+  if (!storeId || !endpoint) { res.status(400).json({ error: 'Missing fields' }); return; }
+  await supabase.from('push_subscriptions').delete()
+    .eq('store_id', storeId).eq('endpoint', endpoint);
+  res.json({ ok: true });
+});
+
+// ----------------------------------------------------------------
 // 404 handler
 // ----------------------------------------------------------------
 app.use((_req, res) => {
@@ -123,6 +156,9 @@ app.listen(PORT, () => {
 
   // Start scheduled cleanup job (removes media_url for messages older than 48h)
   startMediaCleanupJob();
+
+  // Start follow-up alert cron (checks every minute for upcoming follow-ups)
+  startFollowUpCron();
 });
 
 export default app;

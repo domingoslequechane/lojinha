@@ -205,6 +205,11 @@ export const kanbanService = {
       productInterest: l.product_interest,
       followUpDate: l.follow_up_date,
       followUpNotes: l.follow_up_notes,
+      followUpType: (l.follow_up_type as 'followup' | 'entrega') || 'followup',
+      deliveryAddress: l.delivery_address || undefined,
+      deliveryProduct: l.delivery_product || undefined,
+      deliveryQuantity: l.delivery_quantity || undefined,
+      deliveryValue: l.delivery_value ? Number(l.delivery_value) : undefined,
       assignedTo: l.assigned_to,
       stageHistory: (l.stage_history as StageHistoryEntry[]) || [],
     }));
@@ -292,12 +297,23 @@ export const kanbanService = {
   },
 
   // Update lead follow up
-  async updateFollowUp(leadId: string, followUpDate?: string, followUpNotes?: string): Promise<boolean> {
+  async updateFollowUp(
+    leadId: string,
+    followUpDate?: string,
+    followUpNotes?: string,
+    followUpType?: 'followup' | 'entrega',
+    delivery?: { address?: string; product?: string; quantity?: string; value?: number }
+  ): Promise<boolean> {
     const { error } = await supabase
       .from('leads')
       .update({
         follow_up_date: followUpDate || null,
         follow_up_notes: followUpNotes || null,
+        follow_up_type: followUpType || 'followup',
+        delivery_address: delivery?.address || null,
+        delivery_product: delivery?.product || null,
+        delivery_quantity: delivery?.quantity || null,
+        delivery_value: delivery?.value ?? null,
         updated_at: new Date().toISOString(),
       })
       .eq('id', leadId);
@@ -342,6 +358,11 @@ export const kanbanService = {
     if (updates.productInterest !== undefined) payload.product_interest = updates.productInterest?.trim() || null;
     if (updates.followUpNotes !== undefined) payload.follow_up_notes = updates.followUpNotes?.trim() || null;
     if (updates.followUpDate !== undefined) payload.follow_up_date = updates.followUpDate || null;
+    if (updates.followUpType !== undefined) payload.follow_up_type = updates.followUpType || 'followup';
+    if (updates.deliveryAddress !== undefined) payload.delivery_address = updates.deliveryAddress || null;
+    if (updates.deliveryProduct !== undefined) payload.delivery_product = updates.deliveryProduct || null;
+    if (updates.deliveryQuantity !== undefined) payload.delivery_quantity = updates.deliveryQuantity || null;
+    if (updates.deliveryValue !== undefined) payload.delivery_value = updates.deliveryValue ?? null;
     if (updates.assignedTo !== undefined) payload.assigned_to = updates.assignedTo || null;
     if (updates.avatar !== undefined) payload.avatar = updates.avatar || null;
 
@@ -374,6 +395,11 @@ export const kanbanService = {
       productInterest: data.product_interest || undefined,
       followUpDate: data.follow_up_date || undefined,
       followUpNotes: data.follow_up_notes || undefined,
+      followUpType: (data.follow_up_type as 'followup' | 'entrega') || 'followup',
+      deliveryAddress: data.delivery_address || undefined,
+      deliveryProduct: data.delivery_product || undefined,
+      deliveryQuantity: data.delivery_quantity || undefined,
+      deliveryValue: data.delivery_value ? Number(data.delivery_value) : undefined,
       assignedTo: data.assigned_to || undefined,
       stageHistory: data.stage_history || [],
     };

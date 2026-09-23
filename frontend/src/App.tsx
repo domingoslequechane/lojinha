@@ -50,6 +50,7 @@ import { chatService } from './services/chatService';
 import { storeService } from './services/storeService';
 import { realtimeService } from './services/realtimeService';
 import { evolutionService } from './services/evolutionService';
+import { subscribeToPush, getPermissionStatus, onLeadOpenMessage, isPushSupported } from './services/pushService';
 import { ErrorBoundary } from './components/common/ErrorBoundary';
 
 // Protected Route Wrapper
@@ -180,6 +181,25 @@ function CockpitWorkspace() {
     selectedLeadIdRef.current = selectedLeadId;
   }, [selectedLeadId]);
 
+  // ── Push Notifications ──────────────────────────────────────────
+  // Auto-subscribe to push when user has already granted permission
+  useEffect(() => {
+    if (!isPushSupported() || !currentStoreId) return;
+    if (getPermissionStatus() === 'granted') {
+      subscribeToPush(currentStoreId).catch(console.error);
+    }
+  }, [currentStoreId]);
+
+  // Listen for "open lead" messages from the Service Worker (clicked notification)
+  useEffect(() => {
+    if (!isPushSupported()) return;
+    const unsub = onLeadOpenMessage((leadId) => {
+      setSelectedLeadId(leadId);
+      setViewMode('split');
+    });
+    return unsub;
+  }, []);
+
   const [viewMode, setViewMode] = useState<CockpitViewMode>('kanban-only');
   const [sidebarCollapsed, setSidebarCollapsed] = useState(false);
   const [searchTerm, setSearchTerm] = useState('');
@@ -192,6 +212,15 @@ function CockpitWorkspace() {
   const [newLeadDefaultColumn, setNewLeadDefaultColumn] = useState<string | undefined>();
   const [isFollowUpModalOpen, setIsFollowUpModalOpen] = useState(false);
   const [isFollowUpListOpen, setIsFollowUpListOpen] = useState(false);
+  const [pushPermission, setPushPermission] = useState<NotificationPermission | 'unsupported'>(
+    isPushSupported() ? getPermissionStatus() : 'unsupported'
+  );
+
+  const handleEnablePush = async () => {
+    const ok = await subscribeToPush(currentStoreId);
+    if (ok) setPushPermission('granted');
+  };
+
   const [leadForFollowUp, setLeadForFollowUp] = useState<ContactLead | null>(null);
   const [leadToDelete, setLeadToDelete] = useState<ContactLead | null>(null);
 
@@ -898,20 +927,41 @@ function CockpitWorkspace() {
     setIsFollowUpModalOpen(true);
   };
 
-  const handleSaveFollowUp = (leadId: string, followUpDate: string, notes: string) => {
+  const handleSaveFollowUp = (
+    leadId: string,
+    followUpDate: string,
+    notes: string,
+    followUpType: 'followup' | 'entrega' = 'followup',
+    delivery?: { address?: string; product?: string; quantity?: string; value?: number }
+  ) => {
     setLeads((prev) =>
-      prev.map((l) => (l.id === leadId ? { ...l, followUpDate, followUpNotes: notes } : l))
+      prev.map((l) =>
+        l.id === leadId
+          ? {
+              ...l,
+              followUpDate,
+              followUpNotes: notes,
+              followUpType,
+              deliveryAddress: delivery?.address,
+              deliveryProduct: delivery?.product,
+              deliveryQuantity: delivery?.quantity,
+              deliveryValue: delivery?.value,
+            }
+          : l
+      )
     );
-    kanbanService.updateFollowUp(leadId, followUpDate, notes);
+    kanbanService.updateFollowUp(leadId, followUpDate, notes, followUpType, delivery);
   };
 
   const handleClearFollowUp = (leadId: string) => {
     setLeads((prev) =>
       prev.map((l) =>
-        l.id === leadId ? { ...l, followUpDate: undefined, followUpNotes: undefined } : l
+        l.id === leadId
+          ? { ...l, followUpDate: undefined, followUpNotes: undefined, followUpType: undefined }
+          : l
       )
     );
-    kanbanService.updateFollowUp(leadId, undefined, undefined);
+    kanbanService.updateFollowUp(leadId, undefined, undefined, 'followup', undefined);
   };
 
   const handleUpdateLead = (updatedLead: ContactLead) => {
@@ -1112,6 +1162,22 @@ function CockpitWorkspace() {
           onNavigateToWhatsApp={() => navigate('/whatsapp')}
         />
 
+
+        {/* Push Notification Permission Banner */}
+        {pushPermission === 'default' && isPushSupported() && (
+          <div className="mx-3 mt-2 mb-0 flex items-center justify-between gap-3 bg-[#0F2D26] border border-[#C1F76B]/30 rounded-2xl px-4 py-2.5 animate-in fade-in">
+            <div className="flex items-center gap-2 text-xs text-[#D1EAE0]">
+              <span className="text-lg">🔔</span>
+              <span>Ative as notificações para receber alertas de mensagens e agendamentos mesmo com o app fechado.</span>
+            </div>
+            <button
+              onClick={handleEnablePush}
+              className="flex-shrink-0 px-3 py-1.5 rounded-xl text-xs font-bold bg-[#C1F76B] text-[#0F2D26] hover:bg-[#b0ec53] transition-all cursor-pointer whitespace-nowrap"
+            >
+              Ativar
+            </button>
+          </div>
+        )}
 
         {/* 3. Dynamic Views based on active route */}
         {activeTab === 'metrics' ? (

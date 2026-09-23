@@ -54,6 +54,12 @@ export interface ContactLead {
   productInterest?: string; // ex: "Tablet 7' Rosa"
   followUpDate?: string; // Data ISO ou texto ex: "2026-09-17T10:00"
   followUpNotes?: string;
+  followUpType?: 'followup' | 'entrega'; // Tipo de agendamento
+  // Campos extra para tipo "Entrega"
+  deliveryAddress?: string;
+  deliveryProduct?: string;
+  deliveryQuantity?: string;
+  deliveryValue?: number;
   assignedTo?: string;
   stageHistory?: StageHistoryEntry[]; // Rastreamento de etapas percorridas
 }

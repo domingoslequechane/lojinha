@@ -19,6 +19,7 @@
 // ============================================================
 
 import { createClient } from '@supabase/supabase-js';
+import webpush from 'web-push';
 
 const supabaseUrl = process.env.VITE_SUPABASE_URL || process.env.SUPABASE_URL || 'https://nijlwzqxsgmutpstujoz.supabase.co';
 const supabaseKey =
@@ -32,6 +33,12 @@ const EVOLUTION_API_KEY = process.env.EVOLUTION_API_KEY || '4296ef44b1c351a61c01
 
 const supabase = createClient(supabaseUrl, supabaseKey);
 
+// VAPID push notification config
+webpush.setVapidDetails(
+  'mailto:admin@lojinha.my',
+  process.env.VAPID_PUBLIC_KEY  || 'BMPkxDQtiyMN9Mn2pweNIhrfjcaywqYZccvlqxOE6rYpWP6HqU_AhbWKtuPhleHzaGodIIF0csbZeTWAM0MjfXs',
+  process.env.VAPID_PRIVATE_KEY || 'DYw7VJVWffC0Aa-HTOY69NXyeGiUK6t84GPlP0-33pw'
+);
 
 export default async function handler(req: any, res: any) {
   // Allow CORS
@@ -416,6 +423,47 @@ async function handleIncomingMessage(instanceId?: string, data?: Record<string, 
         supabase.removeChannel(leadChannel);
       } catch (e) {
         // non-fatal
+      }
+    }
+
+    // 📲 PUSH NOTIFICATION — only for incoming messages (not sent by us)
+    if (!fromMe) {
+      try {
+        const { data: subs } = await supabase
+          .from('push_subscriptions')
+          .select('endpoint, p256dh, auth')
+          .eq('store_id', storeId);
+
+        if (subs && subs.length > 0) {
+          const leadName = updatedLead?.name || existingLead?.name || 'Novo Lead';
+          const preview = text
+            ? (text.length > 80 ? text.slice(0, 80) + '…' : text)
+            : type === 'image' ? '📷 Foto' : type === 'video' ? '🎥 Vídeo' : type === 'audio' ? '🎙️ Áudio' : '💬 Mensagem';
+
+          const payload = JSON.stringify({
+            title: `💬 ${leadName}`,
+            body: preview,
+            icon: '/icon-192.png',
+            badge: '/favicon-32x32.png',
+            tag: `msg-${leadId}`,
+            data: { leadId },
+          });
+
+          await Promise.allSettled(
+            subs.map(async (sub: any) => {
+              try {
+                await webpush.sendNotification({ endpoint: sub.endpoint, keys: { p256dh: sub.p256dh, auth: sub.auth } }, payload, { TTL: 3600 });
+              } catch (err: any) {
+                if (err?.statusCode === 410) {
+                  // Expired — remove
+                  await supabase.from('push_subscriptions').delete().eq('endpoint', sub.endpoint);
+                }
+              }
+            })
+          );
+        }
+      } catch (pushErr) {
+        console.warn('[Vercel Webhook] Push notification failed (non-fatal):', pushErr);
       }
     }
   }
