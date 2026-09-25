@@ -7,6 +7,7 @@ import { handleWebhook } from './webhookHandler';
 import instancesRouter from './routes/instances';
 import messagesRouter from './routes/messages';
 import leadsRouter from './routes/leads';
+import teamRouter from './routes/team';
 import { requireInternalSecret } from './middleware/auth';
 import { startMediaCleanupJob } from './cleanup';
 import { startFollowUpCron } from './followUpCron';
@@ -99,6 +100,7 @@ app.post('/webhook/evolution', handleWebhook);
 app.use('/api/instances', requireInternalSecret, instancesRouter);
 app.use('/api/messages', requireInternalSecret, messagesRouter);
 app.use('/api/leads', requireInternalSecret, leadsRouter);
+app.use('/api/team', teamRouter);
 
 // ----------------------------------------------------------------
 // Push Notification Subscriptions (público — chamado pelo frontend)

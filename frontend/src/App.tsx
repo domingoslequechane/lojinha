@@ -38,6 +38,7 @@ import { QuickRepliesView } from './components/quickreplies/QuickRepliesView';
 import { WhatsAppInstancesView } from './components/whatsapp/WhatsAppInstancesView';
 import { StoreSettingsView } from './components/settings/StoreSettingsView';
 import { MyStoreView } from './components/settings/MyStoreView';
+import { TeamView } from './components/team/TeamView';
 import { LoginPage } from './components/auth/LoginPage';
 import { RegisterPage } from './components/auth/RegisterPage';
 import { EmailVerificationPage } from './components/auth/EmailVerificationPage';
@@ -113,7 +114,7 @@ function CockpitWorkspace() {
 
   // Determine active tab from current URL pathname
   const currentPath = location.pathname.replace('/', '').toLowerCase();
-  const validTabs = ['cockpit', 'leads', 'quickreplies', 'metrics', 'store', 'whatsapp', 'account'];
+  const validTabs = ['cockpit', 'leads', 'quickreplies', 'metrics', 'store', 'whatsapp', 'team', 'account'];
   const activeTab = validTabs.includes(currentPath) ? currentPath : 'cockpit';
 
   const handleSelectTab = (tab: string) => {
@@ -713,6 +714,36 @@ function CockpitWorkspace() {
   // Unread chats count (for sidebar badge)
   const unreadLeadsCount = leads.filter((l) => (l.unreadCount || 0) > 0).length;
 
+  // Permission & Column Filtering for Team Members
+  const isOwner = user?.isOwner !== false;
+  const userPermissions = user?.permissions;
+  const allowedColumnIds = user?.allowedColumnIds;
+
+  // Filtered columns based on member permissions
+  const visibleColumns = (!isOwner && allowedColumnIds && allowedColumnIds.length > 0)
+    ? columns.filter((c) => allowedColumnIds.includes(c.id))
+    : columns;
+
+  // Filtered leads based on member permissions
+  const visibleFilteredLeads = (!isOwner && allowedColumnIds && allowedColumnIds.length > 0)
+    ? filteredLeads.filter((l) => allowedColumnIds.includes(l.columnId))
+    : filteredLeads;
+
+  const visibleLeads = (!isOwner && allowedColumnIds && allowedColumnIds.length > 0)
+    ? leads.filter((l) => allowedColumnIds.includes(l.columnId))
+    : leads;
+
+  // Auto-redirect team member if activeTab is not allowed for them
+  useEffect(() => {
+    if (!isOwner && userPermissions && userPermissions.length > 0) {
+      const isAllowed = userPermissions.includes(activeTab as any) || activeTab === 'account';
+      if (!isAllowed) {
+        const fallback = userPermissions[0] || 'cockpit';
+        handleSelectTab(fallback);
+      }
+    }
+  }, [activeTab, isOwner, userPermissions]);
+
   // Handlers with Supabase Realtime Persistence
   const handleMoveLead = (leadId: string, targetColumnId: string) => {
     const lead = leads.find((l) => l.id === leadId);
@@ -1184,11 +1215,13 @@ function CockpitWorkspace() {
         onToggleCollapse={() => setSidebarCollapsed(!sidebarCollapsed)}
         activeTab={activeTab}
         onSelectTab={handleSelectTab}
-        totalLeads={leads.length}
+        totalLeads={visibleLeads.length}
         totalRevenue={totalRevenue}
         pendingFollowUps={alertFollowUpsCount}
         unreadLeadsCount={unreadLeadsCount}
         connectedInstancesCount={instances.filter((i) => i.status === 'connected').length}
+        isOwner={isOwner}
+        userPermissions={userPermissions}
         storeName={storeSettings.storeName}
         storeLogoUrl={storeSettings.logoUrl}
         onLogout={handleLogout}
@@ -1209,7 +1242,7 @@ function CockpitWorkspace() {
           onOpenDeduplicate={() => setIsDeduplicateOpen(true)}
           onOpenFollowUpList={() => setIsFollowUpListOpen(true)}
           pendingFollowUpsCount={alertFollowUpsCount}
-          totalFilteredLeads={filteredLeads.length}
+          totalFilteredLeads={visibleFilteredLeads.length}
           activeInstanceName={defaultInstance?.name}
           activeInstanceStatus={defaultInstance?.status}
           onNavigateToWhatsApp={() => navigate('/whatsapp')}
@@ -1250,13 +1283,13 @@ function CockpitWorkspace() {
 
         {/* 3. Dynamic Views based on active route */}
         {activeTab === 'metrics' ? (
-          <MetricsView columns={columns} leads={leads} />
+          <MetricsView columns={visibleColumns} leads={visibleLeads} />
         ) : activeTab === 'leads' ? (
           <div className="w-full md:flex-1 md:flex md:flex-row md:h-full md:overflow-hidden relative">
             <div className={`w-full md:flex-1 md:h-full md:overflow-hidden md:flex md:flex-col ${selectedLeadId && activeLead ? 'hidden md:flex' : 'block'}`}>
               <LeadsListView
-                leads={leads}
-                columns={columns}
+                leads={visibleLeads}
+                columns={visibleColumns}
                 selectedLeadId={selectedLeadId}
                 onOpenImportCsv={() => setIsImportCsvOpen(true)}
                 onOpenDeduplicate={() => setIsDeduplicateOpen(true)}
@@ -1307,7 +1340,7 @@ function CockpitWorkspace() {
               >
                 <ChatPanel
                   lead={activeLead}
-                  columns={columns}
+                  columns={visibleColumns}
                   messages={activeChatMessages}
                   quickReplies={quickReplies}
                   storeSettings={storeSettings}
@@ -1340,6 +1373,11 @@ function CockpitWorkspace() {
             store={storeSettings}
             onSaveStore={handleSaveStoreSettings}
           />
+        ) : activeTab === 'team' ? (
+          <TeamView
+            storeId={currentStoreId}
+            columns={columns}
+          />
         ) : activeTab === 'account' ? (
           <StoreSettingsView
             store={storeSettings}
@@ -1352,8 +1390,8 @@ function CockpitWorkspace() {
             {/* Center Kanban Board */}
             <div className={`w-full md:flex-1 md:h-full md:overflow-hidden md:flex md:flex-col ${viewMode === 'split' ? 'hidden md:flex' : 'block'}`}>
               <KanbanBoard
-                columns={columns}
-                leads={filteredLeads}
+                columns={visibleColumns}
+                leads={visibleFilteredLeads}
                 selectedLeadId={viewMode === 'split' ? selectedLeadId : null}
                 onSelectLead={handleSelectLead}
                 onMoveLead={handleMoveLead}
@@ -1372,7 +1410,7 @@ function CockpitWorkspace() {
               >
                 <ChatPanel
                   lead={activeLead}
-                  columns={columns}
+                  columns={visibleColumns}
                   messages={activeChatMessages}
                   quickReplies={quickReplies}
                   storeSettings={storeSettings}
@@ -1412,9 +1450,11 @@ function CockpitWorkspace() {
       <MobileNav
         activeTab={activeTab}
         onSelectTab={handleSelectTab}
-        totalLeads={leads.length}
+        totalLeads={visibleLeads.length}
         unreadLeadsCount={leads.filter((l) => (l.unreadCount || 0) > 0).length}
         connectedInstancesCount={instances.filter((i) => i.status === 'connected').length}
+        isOwner={isOwner}
+        userPermissions={userPermissions}
         storeName={storeSettings.storeName}
         storeLogoUrl={storeSettings.logoUrl}
         onOpenImportCsv={() => setIsImportCsvOpen(true)}
@@ -1579,6 +1619,14 @@ export function App() {
       />
       <Route
         path="/whatsapp"
+        element={
+          <ProtectedRoute>
+            <CockpitWorkspace />
+          </ProtectedRoute>
+        }
+      />
+      <Route
+        path="/team"
         element={
           <ProtectedRoute>
             <CockpitWorkspace />

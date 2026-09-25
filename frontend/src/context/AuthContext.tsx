@@ -13,6 +13,10 @@ export interface AuthUser {
   slogan?: string;
   city?: string;
   role?: string;
+  isOwner?: boolean;
+  memberId?: string;
+  permissions?: ('cockpit' | 'quickreplies' | 'leads' | 'metrics' | 'store' | 'whatsapp')[];
+  allowedColumnIds?: string[] | null;
   avatarUrl?: string;
   emailVerified?: boolean;
   twoFactorWhatsAppEnabled?: boolean;
@@ -138,6 +142,7 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
   // Load tenant store for user
   async function loadUserStore(sbUser: any) {
     try {
+      // 1. Check if user is the Store Owner
       const { data: store, error: storeError } = await supabase
         .from('stores')
         .select('*')
@@ -149,7 +154,7 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
       }
 
       if (store) {
-        // User has a registered tenant store
+        // User is the Store Owner
         const { data: settings } = await supabase
           .from('store_settings')
           .select('*')
@@ -166,24 +171,126 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
           slogan: store.slogan,
           city: store.city,
           role: 'Proprietário',
+          isOwner: true,
+          permissions: ['cockpit', 'quickreplies', 'leads', 'metrics', 'store', 'whatsapp'],
+          allowedColumnIds: null,
           avatarUrl: store.logo_url,
           emailVerified: !!sbUser.email_confirmed_at,
           twoFactorWhatsAppEnabled: settings?.two_factor_whatsapp_enabled ?? false,
           twoFactorPhone: settings?.two_factor_phone || '',
           onboardingCompleted: true,
         });
-      } else {
-        // User exists in auth but has not completed onboarding
+        return;
+      }
+
+      // 2. Check if user is a Team Member in store_members
+      const userEmail = (sbUser.email || '').trim().toLowerCase();
+      let memberRecord: any = null;
+
+      try {
+        const { data: memberByUid } = await supabase
+          .from('store_members')
+          .select('*')
+          .eq('user_id', sbUser.id)
+          .eq('is_active', true)
+          .maybeSingle();
+
+        if (memberByUid) {
+          memberRecord = memberByUid;
+        } else if (userEmail) {
+          const { data: memberByEmail } = await supabase
+            .from('store_members')
+            .select('*')
+            .eq('email', userEmail)
+            .eq('is_active', true)
+            .maybeSingle();
+
+          if (memberByEmail) {
+            memberRecord = memberByEmail;
+            // Link user_id to store_members record if pending
+            await supabase
+              .from('store_members')
+              .update({ user_id: sbUser.id, accepted_at: new Date().toISOString() })
+              .eq('id', memberByEmail.id);
+          }
+        }
+      } catch (e) {
+        console.warn('[AuthContext] Error querying store_members table:', e);
+      }
+
+      // Fallback check from localStorage team cache if DB table not present
+      if (!memberRecord && userEmail) {
+        try {
+          for (let i = 0; i < localStorage.length; i++) {
+            const key = localStorage.key(i);
+            if (key?.startsWith('lojinha_team_members_')) {
+              const members = JSON.parse(localStorage.getItem(key) || '[]');
+              const found = members.find((m: any) => m.email?.toLowerCase() === userEmail && m.isActive !== false);
+              if (found) {
+                memberRecord = {
+                  id: found.id,
+                  store_id: found.storeId,
+                  name: found.name,
+                  email: found.email,
+                  phone: found.phone,
+                  role: found.role,
+                  permissions: found.permissions,
+                  allowed_column_ids: found.allowedColumnIds,
+                };
+                break;
+              }
+            }
+          }
+        } catch (e) {
+          console.warn('[AuthContext] Local team cache check error:', e);
+        }
+      }
+
+      if (memberRecord) {
+        // Fetch the store details for this member
+        let memberStore: any = null;
+        try {
+          const { data: st } = await supabase
+            .from('stores')
+            .select('*')
+            .eq('id', memberRecord.store_id)
+            .maybeSingle();
+          memberStore = st;
+        } catch {}
+
         setUser({
           id: sbUser.id,
-          name: sbUser.user_metadata?.name || 'Novo Lojista',
-          email: sbUser.email || '',
-          storeName: '',
-          role: 'Proprietário',
+          name: memberRecord.name || sbUser.user_metadata?.name || 'Membro da Equipe',
+          email: sbUser.email || memberRecord.email,
+          phone: memberRecord.phone || memberStore?.phone,
+          storeId: memberRecord.store_id,
+          storeName: memberStore?.name || 'Loja',
+          slogan: memberStore?.slogan,
+          city: memberStore?.city,
+          role: memberRecord.role || 'vendedor',
+          isOwner: false,
+          memberId: memberRecord.id,
+          permissions: memberRecord.permissions || ['cockpit'],
+          allowedColumnIds: memberRecord.allowed_column_ids || null,
+          avatarUrl: memberStore?.logo_url,
           emailVerified: !!sbUser.email_confirmed_at,
-          onboardingCompleted: false,
+          twoFactorWhatsAppEnabled: false,
+          onboardingCompleted: true,
         });
+        return;
       }
+
+      // 3. User exists in auth but has no store and is not a member
+      setUser({
+        id: sbUser.id,
+        name: sbUser.user_metadata?.name || 'Novo Lojista',
+        email: sbUser.email || '',
+        storeName: '',
+        role: 'Proprietário',
+        isOwner: true,
+        emailVerified: !!sbUser.email_confirmed_at,
+        onboardingCompleted: false,
+      });
     } catch (err) {
       console.error('Error loading store for authenticated user:', err);
     } finally {
@@ -233,7 +340,7 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
         }
 
         await loadUserStore(data.user);
-        return { success: true, requires2FA: false, onboardingCompleted: !!store };
+        return { success: true, requires2FA: false, onboardingCompleted: true };
       }
 
       return { success: false, error: 'Usuário não encontrado.' };

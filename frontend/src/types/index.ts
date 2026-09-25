@@ -142,3 +142,47 @@ export interface StoreSettings {
 }
 
 export type CockpitViewMode = 'split' | 'kanban-only';
+
+export type ModulePermission =
+  | 'cockpit'
+  | 'quickreplies'
+  | 'leads'
+  | 'metrics'
+  | 'store'
+  | 'whatsapp';
+
+export interface StoreMember {
+  id: string;
+  storeId: string;
+  userId?: string;
+  name: string;
+  email: string;
+  phone?: string;
+  role: 'admin' | 'gerente' | 'vendedor';
+  permissions: ModulePermission[];
+  allowedColumnIds: string[] | null; // null = todas as colunas; array = colunas específicas
+  isActive: boolean;
+  createdAt: string;
+  acceptedAt?: string;
+}
+
+export interface AuthUser {
+  id: string;
+  name: string;
+  email: string;
+  phone?: string;
+  storeId?: string;
+  storeName: string;
+  slogan?: string;
+  city?: string;
+  role?: string;
+  isOwner?: boolean;
+  memberId?: string;
+  permissions?: ModulePermission[];
+  allowedColumnIds?: string[] | null;
+  avatarUrl?: string;
+  emailVerified?: boolean;
+  twoFactorWhatsAppEnabled?: boolean;
+  twoFactorPhone?: string;
+  onboardingCompleted?: boolean;
+}

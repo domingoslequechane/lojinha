@@ -5,21 +5,23 @@ import {
   TrendingUp, 
   Smartphone, 
   Menu, 
-  Settings,
+  Settings, 
   X, 
   Zap, 
   Store, 
   FileSpreadsheet, 
   CopySlash, 
   SlidersHorizontal, 
-  LogOut,
-  ChevronRight,
-  Wifi,
-  Download,
-  User
+  LogOut, 
+  ChevronRight, 
+  Wifi, 
+  Download, 
+  User,
+  ShieldCheck
 } from 'lucide-react';
 import { usePwaInstall } from '../../hooks/usePwaInstall';
 import { LoginhaLogo } from '../common/LoginhaLogo';
+import { ModulePermission } from '../../types';
 
 interface MobileNavProps {
   activeTab: string;
@@ -27,6 +29,8 @@ interface MobileNavProps {
   totalLeads: number;
   unreadLeadsCount?: number;
   connectedInstancesCount: number;
+  isOwner?: boolean;
+  userPermissions?: ModulePermission[];
   storeName?: string;
   storeLogoUrl?: string;
   onOpenImportCsv?: () => void;
@@ -43,6 +47,8 @@ export const MobileNav: React.FC<MobileNavProps> = ({
   totalLeads,
   unreadLeadsCount = 0,
   connectedInstancesCount,
+  isOwner = true,
+  userPermissions,
   storeName = 'Minha Loja',
   storeLogoUrl,
   onOpenImportCsv,
@@ -55,7 +61,7 @@ export const MobileNav: React.FC<MobileNavProps> = ({
   const { canInstall, isInstalled, install } = usePwaInstall();
   const [isMenuOpen, setIsMenuOpen] = useState(false);
 
-  const mainTabs = [
+  const allMainTabs = [
     {
       id: 'cockpit',
       label: 'Funil',
@@ -83,9 +89,20 @@ export const MobileNav: React.FC<MobileNavProps> = ({
     },
   ];
 
+  const mainTabs = isOwner
+    ? allMainTabs
+    : allMainTabs.filter((t) =>
+        userPermissions ? userPermissions.includes(t.id as ModulePermission) : t.id === 'cockpit'
+      );
+
   const handleTabClick = (tabId: string) => {
     setIsMenuOpen(false);
     onSelectTab(tabId);
+  };
+
+  const hasPermission = (module: ModulePermission) => {
+    if (isOwner) return true;
+    return userPermissions ? userPermissions.includes(module) : false;
   };
 
   return (
@@ -139,7 +156,7 @@ export const MobileNav: React.FC<MobileNavProps> = ({
           type="button"
           onClick={() => setIsMenuOpen(!isMenuOpen)}
           className={`flex flex-col items-center justify-center flex-1 min-w-0 h-full relative transition-all duration-150 active:scale-95 cursor-pointer px-0.5 ${
-            isMenuOpen || ['quickreplies', 'store', 'account'].includes(activeTab)
+            isMenuOpen || ['quickreplies', 'store', 'team', 'account'].includes(activeTab)
               ? 'text-[#C1F76B]'
               : 'text-[#95BDB0] hover:text-[#FDFEF8]'
           }`}
@@ -195,47 +212,75 @@ export const MobileNav: React.FC<MobileNavProps> = ({
 
             {/* Navigation Actions */}
             <div className="space-y-1.5 py-1">
-              <button
-                type="button"
-                onClick={() => handleTabClick('quickreplies')}
-                className={`w-full flex items-center justify-between p-3 rounded-2xl transition-all ${
-                  activeTab === 'quickreplies'
-                    ? 'bg-[#14382F] text-[#C1F76B] border border-[#235447]'
-                    : 'bg-[#14382F]/60 hover:bg-[#14382F] text-[#FDFEF8] border border-transparent'
-                }`}
-              >
-                <div className="flex items-center gap-3">
-                  <div className="w-8 h-8 rounded-xl bg-amber-500/15 text-amber-400 flex items-center justify-center">
-                    <Zap className="w-4 h-4" />
+              {hasPermission('quickreplies') && (
+                <button
+                  type="button"
+                  onClick={() => handleTabClick('quickreplies')}
+                  className={`w-full flex items-center justify-between p-3 rounded-2xl transition-all ${
+                    activeTab === 'quickreplies'
+                      ? 'bg-[#14382F] text-[#C1F76B] border border-[#235447]'
+                      : 'bg-[#14382F]/60 hover:bg-[#14382F] text-[#FDFEF8] border border-transparent'
+                  }`}
+                >
+                  <div className="flex items-center gap-3">
+                    <div className="w-8 h-8 rounded-xl bg-amber-500/15 text-amber-400 flex items-center justify-center">
+                      <Zap className="w-4 h-4" />
+                    </div>
+                    <div className="text-left">
+                      <p className="text-xs font-bold">Respostas Rápidas</p>
+                      <p className="text-[10px] text-[#95BDB0]">Atalhos de texto e catálogo</p>
+                    </div>
                   </div>
-                  <div className="text-left">
-                    <p className="text-xs font-bold">Respostas Rápidas</p>
-                    <p className="text-[10px] text-[#95BDB0]">Atalhos de texto e catálogo</p>
-                  </div>
-                </div>
-                <ChevronRight className="w-4 h-4 text-[#95BDB0]" />
-              </button>
+                  <ChevronRight className="w-4 h-4 text-[#95BDB0]" />
+                </button>
+              )}
 
-              <button
-                type="button"
-                onClick={() => handleTabClick('store')}
-                className={`w-full flex items-center justify-between p-3 rounded-2xl transition-all ${
-                  activeTab === 'store'
-                    ? 'bg-[#14382F] text-[#C1F76B] border border-[#235447]'
-                    : 'bg-[#14382F]/60 hover:bg-[#14382F] text-[#FDFEF8] border border-transparent'
-                }`}
-              >
-                <div className="flex items-center gap-3">
-                  <div className="w-8 h-8 rounded-xl bg-[#C1F76B]/15 text-[#C1F76B] flex items-center justify-center">
-                    <Store className="w-4 h-4" />
+              {hasPermission('store') && (
+                <button
+                  type="button"
+                  onClick={() => handleTabClick('store')}
+                  className={`w-full flex items-center justify-between p-3 rounded-2xl transition-all ${
+                    activeTab === 'store'
+                      ? 'bg-[#14382F] text-[#C1F76B] border border-[#235447]'
+                      : 'bg-[#14382F]/60 hover:bg-[#14382F] text-[#FDFEF8] border border-transparent'
+                  }`}
+                >
+                  <div className="flex items-center gap-3">
+                    <div className="w-8 h-8 rounded-xl bg-[#C1F76B]/15 text-[#C1F76B] flex items-center justify-center">
+                      <Store className="w-4 h-4" />
+                    </div>
+                    <div className="text-left">
+                      <p className="text-xs font-bold">Minha Loja & Catálogo</p>
+                      <p className="text-[10px] text-[#95BDB0]">Produtos, fotos e preços</p>
+                    </div>
                   </div>
-                  <div className="text-left">
-                    <p className="text-xs font-bold">Minha Loja & Catálogo</p>
-                    <p className="text-[10px] text-[#95BDB0]">Produtos, fotos e preços</p>
+                  <ChevronRight className="w-4 h-4 text-[#95BDB0]" />
+                </button>
+              )}
+
+              {/* Equipe & Acessos (Owner only) */}
+              {isOwner && (
+                <button
+                  type="button"
+                  onClick={() => handleTabClick('team')}
+                  className={`w-full flex items-center justify-between p-3 rounded-2xl transition-all ${
+                    activeTab === 'team'
+                      ? 'bg-[#14382F] text-[#C1F76B] border border-[#235447]'
+                      : 'bg-[#14382F]/60 hover:bg-[#14382F] text-[#FDFEF8] border border-transparent'
+                  }`}
+                >
+                  <div className="flex items-center gap-3">
+                    <div className="w-8 h-8 rounded-xl bg-emerald-500/15 text-emerald-400 flex items-center justify-center">
+                      <ShieldCheck className="w-4 h-4" />
+                    </div>
+                    <div className="text-left">
+                      <p className="text-xs font-bold">Equipe & Permissões</p>
+                      <p className="text-[10px] text-[#95BDB0]">Vendedores, acessos e colunas</p>
+                    </div>
                   </div>
-                </div>
-                <ChevronRight className="w-4 h-4 text-[#95BDB0]" />
-              </button>
+                  <ChevronRight className="w-4 h-4 text-[#95BDB0]" />
+                </button>
+              )}
 
               <button
                 type="button"
@@ -293,7 +338,7 @@ export const MobileNav: React.FC<MobileNavProps> = ({
                 </p>
 
                 <div className="grid grid-cols-3 gap-2">
-                  {onOpenImportCsv && (
+                  {onOpenImportCsv && hasPermission('leads') && (
                     <button
                       type="button"
                       onClick={() => {
@@ -307,7 +352,7 @@ export const MobileNav: React.FC<MobileNavProps> = ({
                     </button>
                   )}
 
-                  {onOpenDeduplicate && (
+                  {onOpenDeduplicate && hasPermission('leads') && (
                     <button
                       type="button"
                       onClick={() => {
@@ -321,7 +366,7 @@ export const MobileNav: React.FC<MobileNavProps> = ({
                     </button>
                   )}
 
-                  {onOpenColumnManager && (
+                  {onOpenColumnManager && hasPermission('cockpit') && isOwner && (
                     <button
                       type="button"
                       onClick={() => {

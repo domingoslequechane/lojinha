@@ -1,11 +1,12 @@
 import React, { useState } from 'react';
 import { 
   LayoutDashboard, Users, Zap, TrendingUp, ChevronLeft, ChevronRight,
-  BellRing, Smartphone, Store, User, LogOut
+  BellRing, Smartphone, Store, User, LogOut, ShieldCheck
 } from 'lucide-react';
 import { ConfirmModal } from '../common/ConfirmModal';
 import { LoginhaLogo, LoginhaIcon } from '../common/LoginhaLogo';
 import { formatMoney } from '../../utils/formatters';
+import { ModulePermission } from '../../types';
 
 interface SidebarProps {
   collapsed: boolean;
@@ -17,6 +18,8 @@ interface SidebarProps {
   pendingFollowUps: number;
   unreadLeadsCount?: number;
   connectedInstancesCount: number;
+  isOwner?: boolean;
+  userPermissions?: ModulePermission[];
   storeName?: string;
   storeLogoUrl?: string;
   onLogout?: () => void;
@@ -25,11 +28,12 @@ interface SidebarProps {
 export const Sidebar: React.FC<SidebarProps> = ({
   collapsed, onToggleCollapse, activeTab, onSelectTab,
   totalLeads, totalRevenue, pendingFollowUps, unreadLeadsCount = 0,
-  connectedInstancesCount, storeName, storeLogoUrl, onLogout,
+  connectedInstancesCount, isOwner = true, userPermissions,
+  storeName, storeLogoUrl, onLogout,
 }) => {
   const [showLogoutConfirm, setShowLogoutConfirm] = useState(false);
 
-  const navItems = [
+  const allNavItems = [
     {
       id: 'cockpit', label: 'Cockpit Vendas', icon: LayoutDashboard,
       iconColor: '#C1F76B',
@@ -86,7 +90,30 @@ export const Sidebar: React.FC<SidebarProps> = ({
       indicatorColor: '#27AE60',
       counter: connectedInstancesCount,
     },
+    ...(isOwner
+      ? [
+          {
+            id: 'team',
+            label: 'Equipe & Acessos',
+            icon: ShieldCheck,
+            iconColor: '#10b981',
+            badgeBg: 'rgba(16, 185, 129, 0.15)',
+            badgeBorder: 'rgba(16, 185, 129, 0.3)',
+            activeBg: '#10b981',
+            activeText: '#0F2D26',
+            indicatorColor: '#10b981',
+          },
+        ]
+      : []),
   ];
+
+  // Filter based on member permissions if not owner
+  const navItems = isOwner
+    ? allNavItems
+    : allNavItems.filter((item) =>
+        userPermissions ? userPermissions.includes(item.id as ModulePermission) : item.id === 'cockpit'
+      );
+
 
   return (
     <aside
