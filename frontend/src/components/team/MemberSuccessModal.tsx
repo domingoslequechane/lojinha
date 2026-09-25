@@ -2,19 +2,16 @@ import React, { useState } from 'react';
 import { 
   Check, 
   Copy, 
-  Share2, 
   ExternalLink, 
   X, 
   Sparkles, 
   ShieldCheck, 
-  Lock, 
-  Mail, 
-  User, 
   Columns, 
   ArrowRight,
   Smartphone
 } from 'lucide-react';
 import { StoreMember, KanbanColumn, ModulePermission } from '../../types';
+import { cleanPhoneNumber } from '../../utils/phoneUtils';
 
 interface MemberSuccessModalProps {
   isOpen: boolean;
@@ -58,19 +55,27 @@ export const MemberSuccessModal: React.FC<MemberSuccessModalProps> = ({
     ? columns.filter((c) => member.allowedColumnIds!.includes(c.id)).map((c) => c.title)
     : ['Todas as etapas do funil'];
 
-  // Prepared instruction text for WhatsApp/Email
-  const messageText = `*Olá, ${member.name}!* 👋\n\n` +
-    `Você foi adicionado(a) à equipe da loja *${storeName}* no *Lojinha*.\n\n` +
-    `*Seus dados de acesso:*\n` +
-    `🌐 Link de Acesso: ${appUrl}\n` +
-    `📧 E-mail: ${member.email}\n` +
-    (temporaryPassword ? `🔑 Senha de Acesso: ${temporaryPassword}\n` : '') +
-    `💼 Papel: ${member.role.toUpperCase()}\n\n` +
-    `*O que você deve fazer agora:*\n` +
-    `1. Acesse o link acima no seu celular ou computador.\n` +
-    `2. Digite seu e-mail e senha.\n` +
-    `3. Pronto! Você terá acesso imediato aos clientes e conversas autorizados.\n\n` +
-    `Boas vendas! 🚀`;
+  // Texto formatado sem caracteres especiais que causem erros de codificação no WhatsApp
+  const messageLines = [
+    `*Olá, ${member.name}!*`,
+    ``,
+    `Você foi adicionado(a) à equipe da loja *${storeName}* no *Lojinha*.`,
+    ``,
+    `*Seus dados de acesso:*`,
+    `• Link de Acesso: ${appUrl}`,
+    `• E-mail: ${member.email}`,
+    temporaryPassword ? `• Senha de Acesso: ${temporaryPassword}` : null,
+    `• Papel: ${member.role.toUpperCase()}`,
+    ``,
+    `*O que você deve fazer agora:*`,
+    `1. Acesse o link acima no seu celular ou computador.`,
+    `2. Digite seu e-mail e senha.`,
+    `3. Pronto! Você terá acesso imediato aos clientes e conversas autorizados.`,
+    ``,
+    `Boas vendas!`,
+  ];
+
+  const messageText = messageLines.filter((line): line is string => line !== null).join('\n');
 
   const handleCopyMessage = async () => {
     try {
@@ -94,12 +99,12 @@ export const MemberSuccessModal: React.FC<MemberSuccessModalProps> = ({
   };
 
   const handleSendWhatsApp = () => {
-    const cleanPhone = (member.phone || '').replace(/\D/g, '');
+    const rawPhone = member.phone ? cleanPhoneNumber(member.phone).replace(/\D/g, '') : '';
     const encoded = encodeURIComponent(messageText);
-    const url = cleanPhone.length >= 8
-      ? `https://wa.me/${cleanPhone}?text=${encoded}`
+    const url = rawPhone && rawPhone.length >= 8
+      ? `https://api.whatsapp.com/send?phone=${rawPhone}&text=${encoded}`
       : `https://api.whatsapp.com/send?text=${encoded}`;
-    window.open(url, '_blank');
+    window.open(url, '_blank', 'noopener,noreferrer');
   };
 
   return (
