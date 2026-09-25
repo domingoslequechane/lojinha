@@ -1,6 +1,8 @@
 import { supabase } from '../lib/supabase';
 import { StoreMember, ModulePermission } from '../types';
 
+// ─── Cache local (offline / fallback de leitura) ──────────────────────────────
+
 function getLocalCacheKey(storeId: string): string {
   return `lojinha_team_members_${storeId}`;
 }
@@ -8,10 +10,8 @@ function getLocalCacheKey(storeId: string): string {
 function loadLocalMembers(storeId: string): StoreMember[] {
   try {
     const raw = localStorage.getItem(getLocalCacheKey(storeId));
-    if (!raw) return [];
-    return JSON.parse(raw);
-  } catch (e) {
-    console.warn('[TeamService] Error loading local members cache:', e);
+    return raw ? JSON.parse(raw) : [];
+  } catch {
     return [];
   }
 }
@@ -19,38 +19,40 @@ function loadLocalMembers(storeId: string): StoreMember[] {
 function saveLocalMembers(storeId: string, members: StoreMember[]) {
   try {
     localStorage.setItem(getLocalCacheKey(storeId), JSON.stringify(members));
-  } catch (e) {
-    console.warn('[TeamService] Error saving local members cache:', e);
-  }
+  } catch {}
 }
+
+// ─── URL do backend (Railway em produção, 3001 em dev) ────────────────────────
 
 function getBackendUrl(): string {
   if (import.meta.env.VITE_BACKEND_URL) {
     return (import.meta.env.VITE_BACKEND_URL as string).replace(/\/$/, '');
   }
   if (typeof window !== 'undefined') {
-    const protocol = window.location.protocol;
-    const hostname = window.location.hostname;
+    const { protocol, hostname } = window.location;
     return `${protocol}//${hostname}:3001`;
   }
   return 'http://localhost:3001';
 }
 
+// ─── Serviço de equipa ────────────────────────────────────────────────────────
+
 export const teamService = {
   /**
-   * Obtém todos os membros cadastrados na equipe da loja
+   * Lista todos os membros da loja.
+   * Tenta Supabase primeiro; usa cache local como fallback.
    */
   async getTeamMembers(storeId: string): Promise<StoreMember[]> {
     const local = loadLocalMembers(storeId);
     try {
       const { data, error } = await supabase
         .from('store_members')
-        .select('*')
+        .select('id, store_id, user_id, name, email, phone, role, permissions, allowed_column_ids, is_active, created_at, accepted_at')
         .eq('store_id', storeId)
         .order('created_at', { ascending: true });
 
       if (error) {
-        console.warn('[TeamService] Could not fetch from store_members table:', error.message);
+        console.warn('[TeamService] store_members fetch error:', error.message);
         return local;
       }
 
@@ -75,13 +77,22 @@ export const teamService = {
 
       return local;
     } catch (err) {
-      console.warn('[TeamService] Network error fetching team members, using cache:', err);
+      console.warn('[TeamService] Network error, using cache:', err);
       return local;
     }
   },
 
   /**
-   * Salva ou atualiza um membro da equipe e cria o login correspondente
+   * Cria ou actualiza um membro da equipa.
+   *
+   * Fluxo:
+   * 1. Chama POST /api/team/create-member no backend (que tem a SERVICE_ROLE_KEY)
+   * 2. O backend cria a conta real no Supabase Auth + regista em store_members
+   * 3. O frontend actualiza o cache local
+   *
+   * SEGURANÇA: A senha do colaborador nunca passa pelo frontend — vai directamente
+   * para o backend via HTTPS e é entregue ao Supabase Auth. O frontend nunca vê
+   * nem armazena a senha em nenhum estado ou localStorage.
    */
   async saveTeamMember(
     member: Partial<StoreMember> & { name: string; email: string; password?: string },
@@ -89,41 +100,39 @@ export const teamService = {
   ): Promise<{ success: boolean; member?: StoreMember; error?: string }> {
     const id = member.id || crypto.randomUUID();
     const now = new Date().toISOString();
-    let authUserId = member.userId;
 
-    // 1. Tenta criar pelo backend (admin & criptografia de senha)
-    try {
-      const resp = await fetch(`${getBackendUrl()}/api/team/create-member`, {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({
-          id,
-          storeId,
-          name: member.name.trim(),
-          email: member.email.trim().toLowerCase(),
-          phone: member.phone?.trim() || null,
-          password: member.password?.trim() || undefined,
-          role: member.role || 'vendedor',
-          permissions: member.permissions || ['cockpit'],
-          allowedColumnIds: member.allowedColumnIds ?? null,
-          isActive: member.isActive ?? true,
-        }),
-      });
+    // ── Criação via backend (único caminho — exige SERVICE_ROLE_KEY) ──────────
+    const resp = await fetch(`${getBackendUrl()}/api/team/create-member`, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({
+        id,
+        storeId,
+        name: member.name.trim(),
+        email: member.email.trim().toLowerCase(),
+        phone: member.phone?.trim() || null,
+        password: member.password?.trim() || undefined,
+        role: member.role || 'vendedor',
+        permissions: member.permissions || ['cockpit'],
+        allowedColumnIds: member.allowedColumnIds ?? null,
+        isActive: member.isActive ?? true,
+      }),
+    });
 
-      if (resp.ok) {
-        const data = await resp.json();
-        if (data.userId) {
-          authUserId = data.userId;
-        }
-      }
-    } catch (backendErr) {
-      console.warn('[TeamService] Backend create-member notice:', backendErr);
+    const data = await resp.json();
+
+    if (!resp.ok || !data.success) {
+      return {
+        success: false,
+        error: data.error || 'Erro ao criar colaborador no servidor.',
+      };
     }
 
+    // ── Monta o objecto local com o que o backend devolveu ────────────────────
     const newMember: StoreMember = {
-      id,
+      id: data.member?.id || id,
       storeId,
-      userId: authUserId,
+      userId: data.userId || data.member?.user_id || undefined,
       name: member.name.trim(),
       email: member.email.trim().toLowerCase(),
       phone: member.phone?.trim(),
@@ -132,68 +141,35 @@ export const teamService = {
       allowedColumnIds: member.allowedColumnIds ?? null,
       isActive: member.isActive ?? true,
       createdAt: member.createdAt || now,
-      acceptedAt: member.acceptedAt,
+      acceptedAt: now,
     };
 
-    // Atualiza cache local imediatamente
+    // Actualiza cache local
     const local = loadLocalMembers(storeId);
-    const existingIndex = local.findIndex((m) => m.id === id || m.email === newMember.email);
-    let updatedLocal: StoreMember[];
-    if (existingIndex >= 0) {
-      updatedLocal = [...local];
-      updatedLocal[existingIndex] = { ...updatedLocal[existingIndex], ...newMember };
-    } else {
-      updatedLocal = [...local, newMember];
-    }
-    saveLocalMembers(storeId, updatedLocal);
-
-    // Persistência direta no Supabase
-    try {
-      const payload: any = {
-        id: newMember.id,
-        store_id: storeId,
-        user_id: newMember.userId || null,
-        name: newMember.name,
-        email: newMember.email,
-        phone: newMember.phone || null,
-        role: newMember.role,
-        permissions: newMember.permissions,
-        allowed_column_ids: newMember.allowedColumnIds,
-        is_active: newMember.isActive,
-      };
-
-      const { data, error } = await supabase
-        .from('store_members')
-        .upsert(payload, { onConflict: 'id' })
-        .select()
-        .single();
-
-      if (error) {
-        console.warn('[TeamService] Error saving to Supabase store_members:', error.message);
-      } else if (data) {
-        newMember.id = data.id;
-      }
-    } catch (err: any) {
-      console.warn('[TeamService] Exception saving to store_members:', err.message);
-    }
+    const idx = local.findIndex((m) => m.id === newMember.id || m.email === newMember.email);
+    const updated = idx >= 0
+      ? local.map((m, i) => (i === idx ? { ...m, ...newMember } : m))
+      : [...local, newMember];
+    saveLocalMembers(storeId, updated);
 
     return { success: true, member: newMember };
   },
 
   /**
-   * Remove um membro da equipe (do banco de dados e do cache local)
+   * Remove um membro da equipa.
+   * O backend apaga de auth.users (conta Supabase real) + store_members.
    */
   async deleteTeamMember(
     memberId: string,
     storeId: string,
     email?: string
   ): Promise<{ success: boolean; error?: string }> {
-    // 1. Remove do cache local
+    // Remove do cache local imediatamente
     const local = loadLocalMembers(storeId);
-    const updated = local.filter((m) => m.id !== memberId && (email ? m.email !== email : true));
+    const updated = local.filter((m) => m.id !== memberId && (!email || m.email !== email));
     saveLocalMembers(storeId, updated);
 
-    // 2. Remove do backend (inclui exclusão de auth.users e banco)
+    // Deleta via backend (tem permissão para apagar auth.users)
     try {
       await fetch(`${getBackendUrl()}/api/team/delete-member`, {
         method: 'POST',
@@ -204,33 +180,29 @@ export const teamService = {
       console.warn('[TeamService] Backend delete notice:', e);
     }
 
-    // 3. Remove diretamente da tabela store_members no Supabase
+    // Garante remoção directa em store_members via Supabase (fallback)
     try {
-      let del = supabase.from('store_members').delete().eq('store_id', storeId);
-      if (memberId) {
-        await del.eq('id', memberId);
-      } else if (email) {
-        await del.eq('email', email.trim().toLowerCase());
-      }
-    } catch (err: any) {
-      console.warn('[TeamService] Exception deleting from store_members:', err.message);
-    }
+      let q = supabase.from('store_members').delete().eq('store_id', storeId);
+      if (memberId) await (q as any).eq('id', memberId);
+      else if (email) await (q as any).eq('email', email.trim().toLowerCase());
+    } catch {}
 
     return { success: true };
   },
 
   /**
-   * Alterna o status ativo/inativo de um membro
+   * Alterna o estado ativo/inativo de um membro.
    */
   async toggleMemberStatus(
     memberId: string,
     isActive: boolean,
     storeId: string
   ): Promise<{ success: boolean; error?: string }> {
+    // Cache local
     const local = loadLocalMembers(storeId);
-    const updated = local.map((m) => (m.id === memberId ? { ...m, isActive } : m));
-    saveLocalMembers(storeId, updated);
+    saveLocalMembers(storeId, local.map((m) => (m.id === memberId ? { ...m, isActive } : m)));
 
+    // Backend
     try {
       await fetch(`${getBackendUrl()}/api/team/${storeId}/${memberId}/status`, {
         method: 'PATCH',
@@ -239,95 +211,13 @@ export const teamService = {
       });
     } catch {}
 
-    try {
-      await supabase
-        .from('store_members')
-        .update({ is_active: isActive })
-        .eq('id', memberId)
-        .eq('store_id', storeId);
-    } catch (err) {
-      console.warn('[TeamService] Error updating status in Supabase:', err);
-    }
+    // Supabase directo (fallback)
+    await supabase
+      .from('store_members')
+      .update({ is_active: isActive })
+      .eq('id', memberId)
+      .eq('store_id', storeId);
 
     return { success: true };
-  },
-
-  /**
-   * Autentica um colaborador da equipe através do endpoint dedicado
-   */
-  async memberLogin(
-    email: string,
-    password: string
-  ): Promise<{ success: boolean; member?: StoreMember; store?: any; error?: string }> {
-    try {
-      const resp = await fetch(`${getBackendUrl()}/api/team/login`, {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({
-          email: email.trim().toLowerCase(),
-          password: password.trim(),
-        }),
-      });
-
-      const data = await resp.json();
-      if (!resp.ok || !data.success) {
-        return {
-          success: false,
-          error: data.error || 'Credenciais de colaborador inválidas.',
-        };
-      }
-
-      return {
-        success: true,
-        member: data.member,
-        store: data.store,
-      };
-    } catch (err: any) {
-      console.warn('[TeamService] Backend member login unreachable, trying direct DB check:', err);
-
-      // Fallback direto via Supabase se o backend não estiver respondendo
-      try {
-        const { data: member, error } = await supabase
-          .from('store_members')
-          .select('*')
-          .eq('email', email.trim().toLowerCase())
-          .maybeSingle();
-
-        if (error || !member) {
-          return { success: false, error: 'E-mail ou senha incorretos.' };
-        }
-
-        if (member.is_active === false) {
-          return { success: false, error: 'Sua conta de colaborador foi desativada pelo administrador.' };
-        }
-
-        const { data: store } = await supabase
-          .from('stores')
-          .select('*')
-          .eq('id', member.store_id)
-          .maybeSingle();
-
-        return {
-          success: true,
-          member: {
-            id: member.id,
-            storeId: member.store_id,
-            userId: member.user_id,
-            name: member.name,
-            email: member.email,
-            phone: member.phone,
-            role: member.role || 'vendedor',
-            permissions: member.permissions || ['cockpit'],
-            allowedColumnIds: member.allowed_column_ids || null,
-            isActive: member.is_active ?? true,
-            createdAt: member.created_at || new Date().toISOString(),
-            acceptedAt: member.accepted_at,
-          },
-          store: store || { id: member.store_id, name: 'Minha Loja' },
-        };
-      } catch (e: any) {
-        return { success: false, error: 'Erro ao verificar credenciais de colaborador.' };
-      }
-    }
   },
 };

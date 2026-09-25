@@ -2,7 +2,6 @@ import React, { createContext, useContext, useState, useEffect } from 'react';
 import { supabase } from '../lib/supabase';
 import { initialColumns, defaultQuickReplies } from '../mock/mockData';
 import { DEFAULT_STORE_ID } from '../services/kanbanService';
-import { teamService } from '../services/teamService';
 
 export interface AuthUser {
   id: string;
@@ -88,7 +87,7 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
   const [pending2FAUser, setPending2FAUser] = useState<AuthUser | null>(null);
   const [isLoading, setIsLoading] = useState(true);
 
-  // Sync auth session from Supabase / localStorage
+  // Verifica sessão activa e mantém o utilizador autenticado ao recarregar a página
   useEffect(() => {
     let isMounted = true;
 
@@ -96,39 +95,12 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
       try {
         const { data: { session } } = await supabase.auth.getSession();
         if (session?.user && isMounted) {
-          localStorage.setItem('lojinha_auth_type', 'supabase');
           await loadUserStore(session.user);
         } else if (isMounted) {
-          // Check if user is logged in as a team member
-          const authType = localStorage.getItem('lojinha_auth_type');
-          const savedUserRaw = localStorage.getItem('lojinha_auth_user');
-          if (authType === 'member' && savedUserRaw) {
-            try {
-              const savedMember = JSON.parse(savedUserRaw);
-              if (savedMember?.email) {
-                // Background verify if still active
-                const { data: dbMember } = await supabase
-                  .from('store_members')
-                  .select('is_active')
-                  .eq('email', savedMember.email.toLowerCase())
-                  .maybeSingle();
-
-                if (dbMember && dbMember.is_active === false) {
-                  setUser(null);
-                  localStorage.removeItem('lojinha_auth_user');
-                  localStorage.removeItem('lojinha_auth_type');
-                } else {
-                  setUser(savedMember);
-                }
-              }
-            } catch (e) {
-              console.warn('[AuthContext] Session restore error:', e);
-            }
-          }
           setIsLoading(false);
         }
       } catch (err) {
-        console.error('Error checking auth session:', err);
+        console.error('[AuthContext] Error checking session:', err);
         if (isMounted) setIsLoading(false);
       }
     }
@@ -136,15 +108,12 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
     checkSession();
 
     const { data: { subscription } } = supabase.auth.onAuthStateChange(async (event, session) => {
-      if (session?.user && isMounted) {
-        localStorage.setItem('lojinha_auth_type', 'supabase');
+      if (!isMounted) return;
+      if (session?.user) {
         await loadUserStore(session.user);
-      } else if (isMounted && event === 'SIGNED_OUT') {
-        const authType = localStorage.getItem('lojinha_auth_type');
-        if (authType !== 'member') {
-          setUser(null);
-          setIsLoading(false);
-        }
+      } else if (event === 'SIGNED_OUT') {
+        setUser(null);
+        setIsLoading(false);
       }
     });
 
@@ -330,9 +299,10 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
     }
   }
 
-  // Login with Supabase / Team Member credentials
-  // NOTE: Does NOT call setIsLoading() — that would remount PublicOnlyRoute and destroy LoginPage local state.
-  // The LoginPage manages its own `isSubmitting` spinner independently.
+  // Login via Supabase Auth — funciona para Proprietários e Colaboradores.
+  // Cada colaborador tem uma conta real em auth.users, criada pelo backend com a service_role_key.
+  // Após o login Supabase, loadUserStore() detecta automaticamente se é Proprietário ou Colaborador.
+  // NOTE: Não chama setIsLoading() — evita desmontar PublicOnlyRoute e apagar errorMessage local.
   const login = async (email: string, password: string): Promise<{ success: boolean; error?: string; requires2FA?: boolean; onboardingCompleted?: boolean }> => {
     try {
       if (!email.trim() || !password.trim()) {
@@ -341,94 +311,58 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
 
       const cleanEmail = email.trim().toLowerCase();
 
-      // 1. Tenta login como Proprietário / Usuário Supabase Auth padrão
       const { data, error } = await supabase.auth.signInWithPassword({
         email: cleanEmail,
         password: password.trim(),
       });
 
-      if (!error && data?.user) {
-        localStorage.setItem('lojinha_auth_type', 'supabase');
-
-        // Check if 2FA WhatsApp is active for this tenant
-        const { data: store } = await supabase
-          .from('stores')
-          .select('id, name, store_settings(two_factor_whatsapp_enabled, two_factor_phone)')
-          .eq('user_id', data.user.id)
-          .maybeSingle();
-
-        const settings = (store as any)?.store_settings?.[0] || (store as any)?.store_settings;
-        if (settings?.two_factor_whatsapp_enabled) {
-          const authUser: AuthUser = {
-            id: data.user.id,
-            name: data.user.user_metadata?.name || 'Lojista',
-            email: data.user.email || '',
-            storeId: store?.id,
-            storeName: store?.name || '',
-            twoFactorWhatsAppEnabled: true,
-            twoFactorPhone: settings?.two_factor_phone,
-            onboardingCompleted: true,
-          };
-          setPending2FAUser(authUser);
-          return { success: true, requires2FA: true, onboardingCompleted: true };
-        }
-
-        await loadUserStore(data.user);
-        return { success: true, requires2FA: false, onboardingCompleted: true };
-      }
-
-      // 2. Se falhar no Supabase Auth, tenta autenticação como Colaborador da Equipe
-      console.log('[AuthContext] Trying team member credentials for:', cleanEmail);
-      const memberAuth = await teamService.memberLogin(cleanEmail, password.trim());
-
-      if (memberAuth.success && memberAuth.member) {
-        const m = memberAuth.member;
-        const st = memberAuth.store;
-
-        const memberUser: AuthUser = {
-          id: m.userId || m.id,
-          memberId: m.id,
-          name: m.name || 'Colaborador',
-          email: m.email,
-          phone: m.phone || st?.phone,
-          storeId: m.storeId,
-          storeName: st?.name || 'Loja',
-          slogan: st?.slogan,
-          city: st?.city,
-          role: m.role || 'vendedor',
-          isOwner: false,
-          permissions: m.permissions || ['cockpit'],
-          allowedColumnIds: m.allowedColumnIds || null,
-          avatarUrl: st?.logo_url,
-          emailVerified: true,
-          twoFactorWhatsAppEnabled: false,
-          onboardingCompleted: true,
-        };
-
-        setUser(memberUser);
-        localStorage.setItem('lojinha_auth_user', JSON.stringify(memberUser));
-        localStorage.setItem('lojinha_auth_type', 'member');
-
-        return { success: true, requires2FA: false, onboardingCompleted: true };
-      }
-
-      // 3. Caso ambos falhem, retorna mensagem amigável apropriada
-      if (memberAuth.error && memberAuth.error.includes('desativada')) {
-        return { success: false, error: memberAuth.error };
-      }
-
-      let friendlyMessage = 'E-mail ou senha incorretos. Por favor, verifique suas credenciais.';
       if (error) {
         const lower = (error.message || '').toLowerCase();
+        let friendlyMessage = 'E-mail ou senha incorretos. Verifique suas credenciais e tente novamente.';
         if (lower.includes('too many requests') || lower.includes('rate limit')) {
-          friendlyMessage = 'Muitas tentativas consecutivas. Aguarde alguns instantes e tente novamente.';
+          friendlyMessage = 'Muitas tentativas seguidas. Aguarde alguns instantes e tente novamente.';
+        } else if (lower.includes('email not confirmed')) {
+          friendlyMessage = 'E-mail não confirmado. Verifique sua caixa de entrada.';
         }
+        return { success: false, error: friendlyMessage };
       }
 
-      return { success: false, error: friendlyMessage };
+      if (!data?.user) {
+        return { success: false, error: 'Não foi possível autenticar. Tente novamente.' };
+      }
+
+      localStorage.setItem('lojinha_auth_type', 'supabase');
+
+      // Verifica se 2FA WhatsApp está ativo (apenas para Proprietários)
+      const { data: store } = await supabase
+        .from('stores')
+        .select('id, name, store_settings(two_factor_whatsapp_enabled, two_factor_phone)')
+        .eq('user_id', data.user.id)
+        .maybeSingle();
+
+      const settings = (store as any)?.store_settings?.[0] || (store as any)?.store_settings;
+      if (settings?.two_factor_whatsapp_enabled) {
+        const authUser: AuthUser = {
+          id: data.user.id,
+          name: data.user.user_metadata?.name || 'Lojista',
+          email: data.user.email || '',
+          storeId: store?.id,
+          storeName: store?.name || '',
+          twoFactorWhatsAppEnabled: true,
+          twoFactorPhone: settings?.two_factor_phone,
+          onboardingCompleted: true,
+        };
+        setPending2FAUser(authUser);
+        return { success: true, requires2FA: true, onboardingCompleted: true };
+      }
+
+      // Carrega dados completos (Proprietário ou Colaborador)
+      await loadUserStore(data.user);
+      return { success: true, requires2FA: false, onboardingCompleted: true };
+
     } catch (err: any) {
       console.error('[AuthContext] Login exception:', err);
-      return { success: false, error: err.message || 'Falha ao realizar login. Verifique sua conexão.' };
+      return { success: false, error: err.message || 'Erro inesperado ao fazer login. Verifique sua conexão.' };
     }
   };
 
