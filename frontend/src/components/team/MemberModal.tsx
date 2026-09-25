@@ -196,7 +196,7 @@ export const MemberModal: React.FC<MemberModalProps> = ({
 
   return (
     <div className="fixed inset-0 bg-black/80 backdrop-blur-md flex items-center justify-center p-3 sm:p-4 z-50 animate-in fade-in duration-150">
-      <div className="bg-[#0F2D26] border border-[#235447] rounded-3xl w-full max-w-2xl max-h-[92vh] flex flex-col overflow-hidden shadow-2xl animate-in zoom-in-95 duration-200">
+      <div className="bg-[#0F2D26] border border-[#235447] rounded-3xl w-full max-w-2xl h-[88vh] sm:h-[84vh] max-h-[740px] flex flex-col overflow-hidden shadow-2xl animate-in zoom-in-95 duration-200">
         {/* Header */}
         <div className="p-4 sm:p-5 bg-[#14382F] border-b border-[#235447] flex items-center justify-between flex-shrink-0">
           <div className="flex items-center gap-3">
@@ -220,19 +220,21 @@ export const MemberModal: React.FC<MemberModalProps> = ({
           </button>
         </div>
 
-        {/* Form Body */}
-        <form onSubmit={handleSubmit} className="p-4 sm:p-6 overflow-y-auto space-y-5 flex-1 custom-scrollbar">
-          {error && (
-            <div className="p-3 bg-red-950/40 border border-red-500/40 rounded-xl text-xs text-red-300">
-              {error}
-            </div>
-          )}
+        {/* Form Container */}
+        <form onSubmit={handleSubmit} className="flex-1 flex flex-col min-h-0 overflow-hidden">
+          {/* Scrollable Form Body */}
+          <div className="p-4 sm:p-6 overflow-y-auto space-y-5 flex-1 custom-scrollbar">
+            {error && (
+              <div className="p-3 bg-red-950/40 border border-red-500/40 rounded-xl text-xs text-red-300">
+                {error}
+              </div>
+            )}
 
-          {/* Basic Info */}
-          <div className="space-y-3.5">
-            <h4 className="text-xs font-bold uppercase tracking-wider text-[#C1F76B] flex items-center gap-1.5">
-              <User className="w-3.5 h-3.5" /> Informações do Colaborador
-            </h4>
+            {/* Basic Info */}
+            <div className="space-y-3.5">
+              <h4 className="text-xs font-bold uppercase tracking-wider text-[#C1F76B] flex items-center gap-1.5">
+                <User className="w-3.5 h-3.5" /> Informações do Colaborador
+              </h4>
 
             <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
               <div>
@@ -485,9 +487,10 @@ export const MemberModal: React.FC<MemberModalProps> = ({
               )}
             </div>
           )}
+          </div>
 
-          {/* Footer Buttons */}
-          <div className="pt-3 flex items-center justify-end gap-2.5 border-t border-[#235447]/60">
+          {/* Fixed Footer Buttons */}
+          <div className="p-4 sm:p-5 bg-[#0B241D] border-t border-[#235447] flex items-center justify-end gap-2.5 flex-shrink-0">
             <button
               type="button"
               onClick={onClose}
