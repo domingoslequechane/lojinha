@@ -312,7 +312,19 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
       });
 
       if (error) {
-        return { success: false, error: error.message };
+        console.warn('[AuthContext] Supabase signIn error:', error);
+        let friendlyMessage = error.message;
+        const lower = (error.message || '').toLowerCase();
+        if (lower.includes('invalid login credentials') || lower.includes('invalid_credentials')) {
+          friendlyMessage = 'E-mail ou senha incorretos. Por favor, verifique suas credenciais.';
+        } else if (lower.includes('email not confirmed')) {
+          friendlyMessage = 'O e-mail cadastrado ainda não foi confirmado. Verifique sua caixa de entrada.';
+        } else if (lower.includes('user not found')) {
+          friendlyMessage = 'Nenhuma conta encontrada com este e-mail.';
+        } else if (lower.includes('too many requests') || lower.includes('rate limit')) {
+          friendlyMessage = 'Muitas tentativas consecutivas. Aguarde alguns instantes e tente novamente.';
+        }
+        return { success: false, error: friendlyMessage };
       }
 
       if (data.user) {

@@ -1376,6 +1376,7 @@ function CockpitWorkspace() {
         ) : activeTab === 'team' ? (
           <TeamView
             storeId={currentStoreId}
+            storeName={storeSettings.storeName}
             columns={columns}
           />
         ) : activeTab === 'account' ? (

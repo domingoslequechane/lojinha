@@ -12,7 +12,8 @@ import {
   Sparkles, 
   ArrowLeft,
   Zap,
-  Check
+  Check,
+  X
 } from 'lucide-react';
 import { useAuth } from '../../context/AuthContext';
 
@@ -30,6 +31,7 @@ export const LoginPage: React.FC = () => {
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
+    e.stopPropagation();
     setErrorMessage(null);
     try {
       const result = await login(email, password);
@@ -133,11 +135,21 @@ export const LoginPage: React.FC = () => {
             </p>
           </div>
 
-          {/* Error Message */}
+          {/* Error Message Alert */}
           {errorMessage && (
-            <div className="p-3.5 rounded-2xl bg-red-500/15 border border-red-500/30 text-red-300 text-xs flex items-center gap-2.5 animate-in fade-in">
-              <AlertCircle className="w-4 h-4 flex-shrink-0 text-red-400" />
-              <span>{errorMessage}</span>
+            <div className="p-4 rounded-2xl bg-red-950/60 border border-red-500/50 text-red-200 text-xs flex items-start justify-between gap-3 shadow-lg shadow-red-950/50 animate-in fade-in slide-in-from-top-1 duration-150">
+              <div className="flex items-start gap-2.5">
+                <AlertCircle className="w-4 h-4 flex-shrink-0 text-red-400 mt-0.5" />
+                <span className="leading-relaxed font-medium">{errorMessage}</span>
+              </div>
+              <button
+                type="button"
+                onClick={() => setErrorMessage(null)}
+                className="text-red-400 hover:text-red-200 p-0.5 rounded-md transition-colors"
+                title="Fechar alerta"
+              >
+                <X className="w-3.5 h-3.5" />
+              </button>
             </div>
           )}
 
@@ -154,9 +166,16 @@ export const LoginPage: React.FC = () => {
                   type="text"
                   required
                   value={email}
-                  onChange={(e) => setEmail(e.target.value)}
+                  onChange={(e) => {
+                    setEmail(e.target.value);
+                    if (errorMessage) setErrorMessage(null);
+                  }}
                   placeholder="seu.email@exemplo.com"
-                  className="w-full h-11 bg-[#14382F] text-xs sm:text-sm text-[#FDFEF8] placeholder-[#95BDB0]/60 pl-10 pr-4 rounded-xl border border-[#235447] focus:border-[#C1F76B] focus:ring-1 focus:ring-[#C1F76B]/50 focus:outline-none transition-all"
+                  className={`w-full h-11 bg-[#14382F] text-xs sm:text-sm text-[#FDFEF8] placeholder-[#95BDB0]/60 pl-10 pr-4 rounded-xl border focus:outline-none transition-all ${
+                    errorMessage
+                      ? 'border-red-500/60 focus:border-red-400'
+                      : 'border-[#235447] focus:border-[#C1F76B] focus:ring-1 focus:ring-[#C1F76B]/50'
+                  }`}
                 />
               </div>
             </div>
@@ -180,9 +199,16 @@ export const LoginPage: React.FC = () => {
                   type={showPassword ? 'text' : 'password'}
                   required
                   value={password}
-                  onChange={(e) => setPassword(e.target.value)}
+                  onChange={(e) => {
+                    setPassword(e.target.value);
+                    if (errorMessage) setErrorMessage(null);
+                  }}
                   placeholder="••••••••"
-                  className="w-full h-11 bg-[#14382F] text-xs sm:text-sm text-[#FDFEF8] placeholder-[#95BDB0]/60 pl-10 pr-10 rounded-xl border border-[#235447] focus:border-[#C1F76B] focus:ring-1 focus:ring-[#C1F76B]/50 focus:outline-none font-mono transition-all"
+                  className={`w-full h-11 bg-[#14382F] text-xs sm:text-sm text-[#FDFEF8] placeholder-[#95BDB0]/60 pl-10 pr-10 rounded-xl border font-mono focus:outline-none transition-all ${
+                    errorMessage
+                      ? 'border-red-500/60 focus:border-red-400'
+                      : 'border-[#235447] focus:border-[#C1F76B] focus:ring-1 focus:ring-[#C1F76B]/50'
+                  }`}
                 />
                 <button
                   type="button"

@@ -25,10 +25,12 @@ import {
 import { StoreMember, KanbanColumn, ModulePermission } from '../../types';
 import { teamService } from '../../services/teamService';
 import { MemberModal } from './MemberModal';
+import { MemberSuccessModal } from './MemberSuccessModal';
 import { ConfirmModal } from '../common/ConfirmModal';
 
 interface TeamViewProps {
   storeId: string;
+  storeName?: string;
   columns: KanbanColumn[];
 }
 
@@ -41,13 +43,15 @@ const MODULE_ICONS: Record<ModulePermission, { label: string; icon: React.Compon
   whatsapp: { label: 'Conexões WhatsApp', icon: Smartphone, color: '#27AE60' },
 };
 
-export const TeamView: React.FC<TeamViewProps> = ({ storeId, columns }) => {
+export const TeamView: React.FC<TeamViewProps> = ({ storeId, storeName = 'Minha Loja', columns }) => {
   const [members, setMembers] = useState<StoreMember[]>([]);
   const [loading, setLoading] = useState(true);
   const [searchTerm, setSearchTerm] = useState('');
   const [isModalOpen, setIsModalOpen] = useState(false);
   const [editingMember, setEditingMember] = useState<StoreMember | null>(null);
   const [memberToDelete, setMemberToDelete] = useState<StoreMember | null>(null);
+  const [successModalMember, setSuccessModalMember] = useState<StoreMember | null>(null);
+  const [successModalPassword, setSuccessModalPassword] = useState<string | undefined>(undefined);
 
   const loadMembers = async () => {
     setLoading(true);
@@ -77,6 +81,12 @@ export const TeamView: React.FC<TeamViewProps> = ({ storeId, columns }) => {
         }
         return [...prev, result.member!];
       });
+
+      // Abre o modal de sucesso com as instruções para o colaborador
+      setSuccessModalMember(result.member);
+      setSuccessModalPassword(memberData.password);
+      setIsModalOpen(false);
+      setEditingMember(null);
     }
   };
 
@@ -362,6 +372,19 @@ export const TeamView: React.FC<TeamViewProps> = ({ storeId, columns }) => {
           setEditingMember(null);
         }}
         onSave={handleSaveMember}
+      />
+
+      {/* Member Success & Instructions Modal */}
+      <MemberSuccessModal
+        isOpen={!!successModalMember}
+        member={successModalMember}
+        temporaryPassword={successModalPassword}
+        storeName={storeName}
+        columns={columns}
+        onClose={() => {
+          setSuccessModalMember(null);
+          setSuccessModalPassword(undefined);
+        }}
       />
 
       {/* Delete Confirmation Modal */}

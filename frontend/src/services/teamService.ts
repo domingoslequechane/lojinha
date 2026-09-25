@@ -24,6 +24,10 @@ function saveLocalMembers(storeId: string, members: StoreMember[]) {
   }
 }
 
+const BACKEND_URL =
+  (import.meta.env.VITE_BACKEND_URL as string) ||
+  'https://practical-contentment-production-b0e4.up.railway.app';
+
 export const teamService = {
   /**
    * Obtém todos os membros cadastrados na equipe da loja
@@ -69,19 +73,70 @@ export const teamService = {
   },
 
   /**
-   * Salva ou atualiza um membro da equipe
+   * Salva ou atualiza um membro da equipe e cria o login correspondente
    */
   async saveTeamMember(
-    member: Partial<StoreMember> & { name: string; email: string },
+    member: Partial<StoreMember> & { name: string; email: string; password?: string },
     storeId: string
   ): Promise<{ success: boolean; member?: StoreMember; error?: string }> {
     const id = member.id || crypto.randomUUID();
     const now = new Date().toISOString();
+    let authUserId = member.userId;
+
+    // Se uma senha foi fornecida para este novo colaborador, cria a conta no Supabase Auth
+    if (member.password && member.password.trim().length >= 6) {
+      try {
+        // 1. Tenta criar pelo backend (admin)
+        const resp = await fetch(`${BACKEND_URL}/api/team/create-user`, {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({
+            email: member.email.trim().toLowerCase(),
+            password: member.password.trim(),
+            name: member.name.trim(),
+            storeId,
+            role: member.role || 'vendedor',
+          }),
+        });
+        if (resp.ok) {
+          const data = await resp.json();
+          if (data.userId) {
+            authUserId = data.userId;
+          }
+        }
+      } catch (backendErr) {
+        console.warn('[TeamService] Backend create-user endpoint notice:', backendErr);
+      }
+
+      // 2. Fallback de criação direta via Supabase Auth SignUp se ainda não tiver ID
+      if (!authUserId) {
+        try {
+          const { data: signUpData, error: signUpErr } = await supabase.auth.signUp({
+            email: member.email.trim().toLowerCase(),
+            password: member.password.trim(),
+            options: {
+              data: {
+                name: member.name.trim(),
+                store_id: storeId,
+                role: member.role || 'vendedor',
+              },
+            },
+          });
+          if (signUpData?.user) {
+            authUserId = signUpData.user.id;
+          } else if (signUpErr && !signUpErr.message.includes('already registered')) {
+            console.warn('[TeamService] Supabase signUp notice:', signUpErr.message);
+          }
+        } catch (e) {
+          console.warn('[TeamService] Supabase signUp exception:', e);
+        }
+      }
+    }
 
     const newMember: StoreMember = {
       id,
       storeId,
-      userId: member.userId,
+      userId: authUserId,
       name: member.name.trim(),
       email: member.email.trim().toLowerCase(),
       phone: member.phone?.trim(),
