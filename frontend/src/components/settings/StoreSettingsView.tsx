@@ -769,9 +769,12 @@ export const StoreSettingsView: React.FC<StoreSettingsViewProps> = ({
             <button
               type="button"
               onClick={async () => {
-                if (canInstall) {
-                  await install();
-                } else {
+                if (isInstalled) {
+                  setShowInstallModal(true);
+                  return;
+                }
+                const res = await install();
+                if (res === 'manual') {
                   setShowInstallModal(true);
                 }
               }}

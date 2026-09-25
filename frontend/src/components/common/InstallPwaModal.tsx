@@ -24,11 +24,9 @@ export const InstallPwaModal: React.FC<InstallPwaModalProps> = ({ isOpen, onClos
   if (!isOpen) return null;
 
   const handleInstallClick = async () => {
-    if (canInstall) {
-      const success = await install();
-      if (success) {
-        onClose();
-      }
+    const outcome = await install();
+    if (outcome === 'installed' || outcome === 'dismissed') {
+      onClose();
     }
   };
 

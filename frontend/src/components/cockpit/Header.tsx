@@ -179,9 +179,8 @@ export const Header: React.FC<HeaderProps> = ({
               <button
                 type="button"
                 onClick={async () => {
-                  if (canInstall) {
-                    await install();
-                  } else {
+                  const res = await install();
+                  if (res === 'manual') {
                     onOpenPwaModal?.();
                   }
                 }}
@@ -216,9 +215,8 @@ export const Header: React.FC<HeaderProps> = ({
               <button
                 type="button"
                 onClick={async () => {
-                  if (canInstall) {
-                    await install();
-                  } else {
+                  const res = await install();
+                  if (res === 'manual') {
                     onOpenPwaModal?.();
                   }
                 }}

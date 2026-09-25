@@ -263,9 +263,8 @@ export const MobileNav: React.FC<MobileNavProps> = ({
                 type="button"
                 onClick={async () => {
                   setIsMenuOpen(false);
-                  if (canInstall) {
-                    await install();
-                  } else {
+                  const res = await install();
+                  if (res === 'manual') {
                     onOpenPwaModal?.();
                   }
                 }}

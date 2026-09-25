@@ -1,8 +1,16 @@
 /* =========================================================
-   Lojinha Service Worker — Push Notifications
+   Lojinha Service Worker — Push Notifications & PWA Support
    ========================================================= */
 
 const APP_URL = self.location.origin;
+
+self.addEventListener('install', (event) => {
+  self.skipWaiting();
+});
+
+self.addEventListener('activate', (event) => {
+  event.waitUntil(self.clients.claim());
+});
 
 self.addEventListener('push', (event) => {
   if (!event.data) return;
@@ -17,7 +25,7 @@ self.addEventListener('push', (event) => {
   const {
     title = 'Lojinha',
     body = 'Nova notificação',
-    icon = '/icon-192.png',
+    icon = '/pwa-192x192.png',
     badge = '/favicon-32x32.png',
     tag,
     data = {},
@@ -25,8 +33,8 @@ self.addEventListener('push', (event) => {
 
   const options = {
     body,
-    icon,
-    badge,
+    icon: icon || '/pwa-192x192.png',
+    badge: badge || '/favicon-32x32.png',
     tag: tag || 'lojinha-notification',
     renotify: true,
     requireInteraction: false,
@@ -48,13 +56,11 @@ self.addEventListener('notificationclick', (event) => {
 
   let targetUrl = APP_URL;
   if (leadId) {
-    // Store leadId so the app can open the right chat on focus
     targetUrl = `${APP_URL}/?open_lead=${leadId}`;
   }
 
   event.waitUntil(
-    clients.matchAll({ type: 'window', includeUncontrolled: true }).then((clientList) => {
-      // If app is already open, focus it and send a message
+    self.clients.matchAll({ type: 'window', includeUncontrolled: true }).then((clientList) => {
       for (const client of clientList) {
         if (client.url.startsWith(APP_URL)) {
           client.focus();
@@ -64,14 +70,12 @@ self.addEventListener('notificationclick', (event) => {
           return;
         }
       }
-      // Otherwise open a new window
-      return clients.openWindow(targetUrl);
+      return self.clients.openWindow(targetUrl);
     })
   );
 });
 
 self.addEventListener('pushsubscriptionchange', (event) => {
-  // Re-subscribe when subscription expires
   event.waitUntil(
     self.registration.pushManager.subscribe({
       userVisibleOnly: true,

@@ -90,9 +90,8 @@ export const LandingNavbar: React.FC = () => {
           {!isInstalled && (
             <button
               onClick={async () => {
-                if (canInstall) {
-                  await install();
-                } else {
+                const res = await install();
+                if (res === 'manual') {
                   setShowInstallModal(true);
                 }
               }}
@@ -206,9 +205,8 @@ export const LandingNavbar: React.FC = () => {
               <button
                 onClick={async () => {
                   setMobileMenuOpen(false);
-                  if (canInstall) {
-                    await install();
-                  } else {
+                  const res = await install();
+                  if (res === 'manual') {
                     setShowInstallModal(true);
                   }
                 }}
