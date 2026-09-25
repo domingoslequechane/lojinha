@@ -87,35 +87,27 @@ export const kanbanService = {
         localStorage.setItem(key, JSON.stringify(meta));
       } catch {}
 
-      // 2. Persist to Supabase
-      // First attempt: update both include_in_pipeline_total and default_template_id
-      const payload: any = {
-        include_in_pipeline_total: isIncluded,
-        default_template_id: isIncluded ? null : 'pipeline_excluded',
-      };
-
-      let { error } = await supabase
+      // 2. Persist directly to Supabase kanban_columns
+      // default_template_id is a verified column in the Supabase schema
+      const { error } = await supabase
         .from('kanban_columns')
-        .update(payload)
-        .eq('id', columnId)
-        .eq('store_id', storeId);
-
-      // If column include_in_pipeline_total does not exist yet in DB schema, fallback to default_template_id
-      if (error && (error.code === 'PGRST204' || error.message?.includes('include_in_pipeline_total'))) {
-        const retry = await supabase
-          .from('kanban_columns')
-          .update({
-            default_template_id: isIncluded ? null : 'pipeline_excluded',
-          })
-          .eq('id', columnId)
-          .eq('store_id', storeId);
-        error = retry.error;
-      }
+        .update({
+          default_template_id: isIncluded ? null : 'pipeline_excluded',
+        })
+        .eq('id', columnId);
 
       if (error) {
-        console.warn('[kanbanService] Warning persisting column pipeline toggle to Supabase:', error.message);
+        console.warn('[kanbanService] Error persisting column pipeline toggle to Supabase:', error.message);
         return false;
       }
+
+      // 3. Also try updating include_in_pipeline_total column if migration was run
+      try {
+        await supabase
+          .from('kanban_columns')
+          .update({ include_in_pipeline_total: isIncluded })
+          .eq('id', columnId);
+      } catch {}
 
       return true;
     } catch (err) {

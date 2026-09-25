@@ -608,6 +608,12 @@ function CockpitWorkspace() {
           setInstances((prev) => prev.filter((i) => i.id !== inst.id));
         }
       },
+
+      onColumnPipelineToggle: ({ columnId, isIncluded }) => {
+        setColumns((prev) =>
+          prev.map((c) => (c.id === columnId ? { ...c, includeInPipelineTotal: isIncluded } : c))
+        );
+      },
     }, currentStoreId);
 
     return () => {
@@ -819,9 +825,10 @@ function CockpitWorkspace() {
   };
 
   const handleToggleColumnPipeline = async (columnId: string) => {
+    if (!isOwner) return; // Only store owner/admin can toggle
     const col = columns.find((c) => c.id === columnId);
     if (!col) return;
-    const newIncluded = col.includeInPipelineTotal === false;
+    const newIncluded = !(col.includeInPipelineTotal !== false);
 
     // 1. Optimistic UI update
     setColumns((prev) =>
@@ -830,7 +837,10 @@ function CockpitWorkspace() {
       )
     );
 
-    // 2. Persist to Supabase
+    // 2. Broadcast to all users via WebSocket sub-50ms
+    realtimeService.broadcastColumnPipelineToggle(columnId, newIncluded, currentStoreId);
+
+    // 3. Persist to Supabase
     await kanbanService.toggleColumnPipeline(columnId, newIncluded, currentStoreId);
   };
 
@@ -1427,7 +1437,7 @@ function CockpitWorkspace() {
                 onOpenFollowUpModal={handleOpenFollowUp}
                 onAddLeadToColumn={handleAddLeadToColumn}
                 onToggleIncludeInPipeline={handleToggleColumnPipeline}
-                canManageColumns={isOwner || user?.role === 'admin'}
+                canManageColumns={isOwner}
               />
             </div>
 

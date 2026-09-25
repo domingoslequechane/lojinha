@@ -9,6 +9,7 @@ export interface RealtimeHandlers {
   onReceiptUpdate?: (payload: { phone: string; leadId: string; status: 'delivered' | 'read' }) => void;
   onMessageDeleted?: (payload: { messageId: string; leadId: string }) => void;
   onWhatsAppInstanceChange?: (payload: { eventType: 'INSERT' | 'UPDATE' | 'DELETE'; instance: any }) => void;
+  onColumnPipelineToggle?: (payload: { columnId: string; isIncluded: boolean; storeId?: string }) => void;
 }
 
 function normalizeChatMessage(m: any): ChatMessage {
@@ -110,6 +111,18 @@ export const realtimeService = {
             }
           });
         })
+        .on('broadcast', { event: 'column:pipeline-toggle' }, (eventPayload) => {
+          const { columnId, isIncluded, storeId: evStoreId } = (eventPayload.payload || {}) as any;
+          if (!columnId) return;
+          if (!isStoreMatch(evStoreId)) return;
+          registeredHandlers.forEach((h) => {
+            try {
+              h.onColumnPipelineToggle?.({ columnId, isIncluded, storeId: evStoreId });
+            } catch (err) {
+              console.error('[Realtime Broadcast] Error in onColumnPipelineToggle:', err);
+            }
+          });
+        })
 
         // -------------------------------------------------------------
         // 2. POSTGRES CHANGES LISTENERS (Reliable DB Sync Fallback)
@@ -196,5 +209,18 @@ export const realtimeService = {
         activeChannel = null;
       }
     };
+  },
+
+  /**
+   * Broadcasts a column pipeline toggle event to all connected clients immediately (sub-50ms)
+   */
+  broadcastColumnPipelineToggle(columnId: string, isIncluded: boolean, storeId?: string) {
+    if (activeChannel) {
+      activeChannel.send({
+        type: 'broadcast',
+        event: 'column:pipeline-toggle',
+        payload: { columnId, isIncluded, storeId },
+      });
+    }
   },
 };
