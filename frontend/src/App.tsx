@@ -700,17 +700,49 @@ function CockpitWorkspace() {
     );
   });
 
-  // Financial and follow-up aggregations (pipeline forecast only sums active pipeline columns)
-  const totalRevenue = leads
-    .filter((l) => {
-      const col = columns.find((c) => c.id === l.columnId);
-      return col ? col.includeInPipelineTotal !== false : true;
-    })
-    .reduce((acc, curr) => acc + (curr.dealValue || 0), 0);
+  // Permission & Column Filtering for Team Members
+  const isOwner = user?.isOwner !== false;
+  const userPermissions = user?.permissions;
+  const allowedColumnIds = user?.allowedColumnIds;
 
-  // Follow-up segmentation: only leads due in next 24h or overdue trigger the bell
+  // Filtered columns based on member permissions (columns this user is allowed to access)
+  const visibleColumns = (!isOwner && allowedColumnIds && allowedColumnIds.length > 0)
+    ? columns.filter((c) => allowedColumnIds.includes(c.id))
+    : columns;
+
+  // Filtered leads based on member permissions (leads this user has access to)
+  const visibleFilteredLeads = (!isOwner && allowedColumnIds && allowedColumnIds.length > 0)
+    ? filteredLeads.filter((l) => allowedColumnIds.includes(l.columnId))
+    : filteredLeads;
+
+  const visibleLeads = (!isOwner && allowedColumnIds && allowedColumnIds.length > 0)
+    ? leads.filter((l) => allowedColumnIds.includes(l.columnId))
+    : leads;
+
+  // Colunas contabilizáveis para este usuário (acessíveis pelo usuário E ativas na previsão do funil)
+  const countableColumnIds = new Set(
+    visibleColumns
+      .filter((c) => c.includeInPipelineTotal !== false)
+      .map((c) => c.id)
+  );
+
+  // Leads que estão em colunas contabilizáveis que o usuário tem acesso
+  const countableLeads = visibleLeads.filter((l) =>
+    countableColumnIds.has(l.columnId)
+  );
+
+  // 1. "Leads Ativos": apenas leads em colunas contabilizáveis que o usuário tem acesso
+  const activeCountableLeadsCount = countableLeads.length;
+
+  // 2. "Valor no Funil": soma total dos valores das colunas contabilizáveis que o usuário tem acesso
+  const totalRevenue = countableLeads.reduce(
+    (acc, curr) => acc + (curr.dealValue || 0),
+    0
+  );
+
+  // Follow-up segmentation: apenas leads acessíveis a este usuário
   const now24hMs = Date.now() + 24 * 60 * 60 * 1000;
-  const leadsWithFollowUp = leads.filter((l) => l.followUpDate);
+  const leadsWithFollowUp = visibleLeads.filter((l) => l.followUpDate);
   const overdueFollowUps = leadsWithFollowUp.filter((l) => {
     const d = new Date(l.followUpDate!).getTime();
     return d < Date.now();
@@ -727,27 +759,8 @@ function CockpitWorkspace() {
     ...urgentFollowUps.sort((a, b) => new Date(a.followUpDate!).getTime() - new Date(b.followUpDate!).getTime()),
   ];
 
-  // Unread chats count (for sidebar badge)
-  const unreadLeadsCount = leads.filter((l) => (l.unreadCount || 0) > 0).length;
-
-  // Permission & Column Filtering for Team Members
-  const isOwner = user?.isOwner !== false;
-  const userPermissions = user?.permissions;
-  const allowedColumnIds = user?.allowedColumnIds;
-
-  // Filtered columns based on member permissions
-  const visibleColumns = (!isOwner && allowedColumnIds && allowedColumnIds.length > 0)
-    ? columns.filter((c) => allowedColumnIds.includes(c.id))
-    : columns;
-
-  // Filtered leads based on member permissions
-  const visibleFilteredLeads = (!isOwner && allowedColumnIds && allowedColumnIds.length > 0)
-    ? filteredLeads.filter((l) => allowedColumnIds.includes(l.columnId))
-    : filteredLeads;
-
-  const visibleLeads = (!isOwner && allowedColumnIds && allowedColumnIds.length > 0)
-    ? leads.filter((l) => allowedColumnIds.includes(l.columnId))
-    : leads;
+  // Unread chats count (for sidebar badge) - apenas leads acessíveis a este usuário
+  const unreadLeadsCount = visibleLeads.filter((l) => (l.unreadCount || 0) > 0).length;
 
   // Auto-redirect team member if activeTab is not allowed for them
   useEffect(() => {
@@ -1251,7 +1264,7 @@ function CockpitWorkspace() {
         onToggleCollapse={() => setSidebarCollapsed(!sidebarCollapsed)}
         activeTab={activeTab}
         onSelectTab={handleSelectTab}
-        totalLeads={visibleLeads.length}
+        totalLeads={activeCountableLeadsCount}
         totalRevenue={totalRevenue}
         pendingFollowUps={alertFollowUpsCount}
         unreadLeadsCount={unreadLeadsCount}
@@ -1489,8 +1502,8 @@ function CockpitWorkspace() {
       <MobileNav
         activeTab={activeTab}
         onSelectTab={handleSelectTab}
-        totalLeads={visibleLeads.length}
-        unreadLeadsCount={leads.filter((l) => (l.unreadCount || 0) > 0).length}
+        totalLeads={activeCountableLeadsCount}
+        unreadLeadsCount={unreadLeadsCount}
         connectedInstancesCount={instances.filter((i) => i.status === 'connected').length}
         isOwner={isOwner}
         userPermissions={userPermissions}
