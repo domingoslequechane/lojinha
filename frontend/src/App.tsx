@@ -690,7 +690,28 @@ function CockpitWorkspace() {
       return col ? col.includeInPipelineTotal !== false : true;
     })
     .reduce((acc, curr) => acc + (curr.dealValue || 0), 0);
+
+  // Follow-up segmentation: only leads due in next 24h or overdue trigger the bell
+  const now24hMs = Date.now() + 24 * 60 * 60 * 1000;
   const leadsWithFollowUp = leads.filter((l) => l.followUpDate);
+  const overdueFollowUps = leadsWithFollowUp.filter((l) => {
+    const d = new Date(l.followUpDate!).getTime();
+    return d < Date.now();
+  });
+  const urgentFollowUps = leadsWithFollowUp.filter((l) => {
+    const d = new Date(l.followUpDate!).getTime();
+    return d >= Date.now() && d <= now24hMs;
+  });
+  // Bell count = overdue + next-24h only
+  const alertFollowUpsCount = overdueFollowUps.length + urgentFollowUps.length;
+  // Leads shown in modal = overdue + next-24h (the rest are future, hidden)
+  const alertFollowUpLeads = [
+    ...overdueFollowUps.sort((a, b) => new Date(a.followUpDate!).getTime() - new Date(b.followUpDate!).getTime()),
+    ...urgentFollowUps.sort((a, b) => new Date(a.followUpDate!).getTime() - new Date(b.followUpDate!).getTime()),
+  ];
+
+  // Unread chats count (for sidebar badge)
+  const unreadLeadsCount = leads.filter((l) => (l.unreadCount || 0) > 0).length;
 
   // Handlers with Supabase Realtime Persistence
   const handleMoveLead = (leadId: string, targetColumnId: string) => {
@@ -1165,7 +1186,8 @@ function CockpitWorkspace() {
         onSelectTab={handleSelectTab}
         totalLeads={leads.length}
         totalRevenue={totalRevenue}
-        pendingFollowUps={leadsWithFollowUp.length}
+        pendingFollowUps={alertFollowUpsCount}
+        unreadLeadsCount={unreadLeadsCount}
         connectedInstancesCount={instances.filter((i) => i.status === 'connected').length}
         storeName={storeSettings.storeName}
         storeLogoUrl={storeSettings.logoUrl}
@@ -1186,7 +1208,7 @@ function CockpitWorkspace() {
           onOpenImportCsv={() => setIsImportCsvOpen(true)}
           onOpenDeduplicate={() => setIsDeduplicateOpen(true)}
           onOpenFollowUpList={() => setIsFollowUpListOpen(true)}
-          pendingFollowUpsCount={leadsWithFollowUp.length}
+          pendingFollowUpsCount={alertFollowUpsCount}
           totalFilteredLeads={filteredLeads.length}
           activeInstanceName={defaultInstance?.name}
           activeInstanceStatus={defaultInstance?.status}
@@ -1417,7 +1439,8 @@ function CockpitWorkspace() {
 
       <FollowUpListModal
         isOpen={isFollowUpListOpen}
-        leadsWithFollowUp={leadsWithFollowUp}
+        leadsWithFollowUp={alertFollowUpLeads}
+        overdueLeads={overdueFollowUps}
         onClose={() => setIsFollowUpListOpen(false)}
         onSelectLeadForChat={handleSelectLead}
         onResolveFollowUp={handleClearFollowUp}

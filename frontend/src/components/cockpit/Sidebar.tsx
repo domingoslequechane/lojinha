@@ -15,6 +15,7 @@ interface SidebarProps {
   totalLeads: number;
   totalRevenue: number;
   pendingFollowUps: number;
+  unreadLeadsCount?: number;
   connectedInstancesCount: number;
   storeName?: string;
   storeLogoUrl?: string;
@@ -23,8 +24,8 @@ interface SidebarProps {
 
 export const Sidebar: React.FC<SidebarProps> = ({
   collapsed, onToggleCollapse, activeTab, onSelectTab,
-  totalLeads, totalRevenue, pendingFollowUps, connectedInstancesCount,
-  storeName, storeLogoUrl, onLogout,
+  totalLeads, totalRevenue, pendingFollowUps, unreadLeadsCount = 0,
+  connectedInstancesCount, storeName, storeLogoUrl, onLogout,
 }) => {
   const [showLogoutConfirm, setShowLogoutConfirm] = useState(false);
 
@@ -37,6 +38,7 @@ export const Sidebar: React.FC<SidebarProps> = ({
       activeBg: '#C1F76B',
       activeText: '#0F2D26',
       indicatorColor: '#C1F76B',
+      unreadBadge: unreadLeadsCount,
     },
     {
       id: 'quickreplies', label: 'Respostas Rápidas', icon: Zap,
@@ -152,6 +154,7 @@ export const Sidebar: React.FC<SidebarProps> = ({
         {navItems.map((item) => {
           const Icon = item.icon;
           const isActive = activeTab === item.id;
+          const hasUnread = (item.unreadBadge ?? 0) > 0;
           return (
             <button
               key={item.id}
@@ -175,7 +178,7 @@ export const Sidebar: React.FC<SidebarProps> = ({
 
               {/* Icon Badge */}
               <div
-                className="w-8 h-8 rounded-lg flex items-center justify-center flex-shrink-0 transition-all duration-200"
+                className="w-8 h-8 rounded-lg flex items-center justify-center flex-shrink-0 transition-all duration-200 relative"
                 style={{
                   backgroundColor: isActive ? item.activeBg : item.badgeBg,
                   color: isActive ? item.activeText : item.iconColor,
@@ -184,6 +187,12 @@ export const Sidebar: React.FC<SidebarProps> = ({
                 }}
               >
                 <Icon className="w-4 h-4" />
+                {/* Unread chat badge (red dot on icon when collapsed) */}
+                {hasUnread && collapsed && (
+                  <span className="absolute -top-1 -right-1 min-w-4 h-4 px-1 rounded-full bg-red-500 text-white font-extrabold text-[9px] flex items-center justify-center ring-2 ring-[#0F2D26]">
+                    {(item.unreadBadge ?? 0) > 99 ? '99+' : item.unreadBadge}
+                  </span>
+                )}
               </div>
 
               {!collapsed && (
@@ -191,14 +200,22 @@ export const Sidebar: React.FC<SidebarProps> = ({
                   <span className={`truncate ${isActive ? 'font-semibold text-[#FDFEF8]' : ''}`}>
                     {item.label}
                   </span>
-                  {item.counter !== undefined && (
-                    <span
-                      className="text-[10px] px-1.5 py-0.5 rounded-full font-bold"
-                      style={{ backgroundColor: 'rgba(193, 247, 107, 0.15)', color: '#C1F76B' }}
-                    >
-                      {item.counter}
-                    </span>
-                  )}
+                  <div className="flex items-center gap-1.5 flex-shrink-0">
+                    {/* Unread chats badge (expanded sidebar) */}
+                    {hasUnread && (
+                      <span className="min-w-[1.25rem] h-5 px-1.5 rounded-full bg-red-500 text-white font-extrabold text-[9px] flex items-center justify-center">
+                        {(item.unreadBadge ?? 0) > 99 ? '99+' : item.unreadBadge}
+                      </span>
+                    )}
+                    {item.counter !== undefined && (
+                      <span
+                        className="text-[10px] px-1.5 py-0.5 rounded-full font-bold"
+                        style={{ backgroundColor: 'rgba(193, 247, 107, 0.15)', color: '#C1F76B' }}
+                      >
+                        {item.counter}
+                      </span>
+                    )}
+                  </div>
                 </div>
               )}
             </button>

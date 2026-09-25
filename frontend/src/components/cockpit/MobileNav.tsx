@@ -60,7 +60,7 @@ export const MobileNav: React.FC<MobileNavProps> = ({
       id: 'cockpit',
       label: 'Funil',
       icon: LayoutDashboard,
-      badge: null,
+      badge: unreadLeadsCount > 0 ? unreadLeadsCount : null,
     },
     {
       id: 'leads',
