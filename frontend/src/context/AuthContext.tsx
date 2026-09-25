@@ -331,8 +331,9 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
   }
 
   // Login with Supabase / Team Member credentials
+  // NOTE: Does NOT call setIsLoading() — that would remount PublicOnlyRoute and destroy LoginPage local state.
+  // The LoginPage manages its own `isSubmitting` spinner independently.
   const login = async (email: string, password: string): Promise<{ success: boolean; error?: string; requires2FA?: boolean; onboardingCompleted?: boolean }> => {
-    setIsLoading(true);
     try {
       if (!email.trim() || !password.trim()) {
         return { success: false, error: 'Por favor, preencha o e-mail e a senha.' };
@@ -426,9 +427,8 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
 
       return { success: false, error: friendlyMessage };
     } catch (err: any) {
-      return { success: false, error: err.message || 'Falha ao realizar login.' };
-    } finally {
-      setIsLoading(false);
+      console.error('[AuthContext] Login exception:', err);
+      return { success: false, error: err.message || 'Falha ao realizar login. Verifique sua conexão.' };
     }
   };
 
@@ -451,9 +451,8 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
     return { success: false, error: 'Sessão expirada. Por favor, faça login novamente.' };
   };
 
-  // SaaS Sign Up
+  // SaaS Sign Up — NOTE: Does NOT call setIsLoading() to avoid remounting RegisterPage during submission.
   const startRegistration = async (data: { name: string; email: string; password: string }): Promise<{ success: boolean; error?: string }> => {
-    setIsLoading(true);
     try {
       if (!data.name.trim() || !data.email.trim() || !data.password.trim()) {
         return { success: false, error: 'Preencha todos os campos obrigatórios (Nome, E-mail e Senha).' };
@@ -484,8 +483,6 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
       return { success: true };
     } catch (err: any) {
       return { success: false, error: err.message || 'Erro ao registrar usuário.' };
-    } finally {
-      setIsLoading(false);
     }
   };
 
