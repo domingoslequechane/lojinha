@@ -40,12 +40,20 @@ export const MetricsView: React.FC<MetricsViewProps> = ({ columns, leads }) => {
 
   // Computed Core Metrics
   const totalLeads = leads.length;
-  const totalValue = leads.reduce((acc, curr) => acc + curr.dealValue, 0);
-  const wonLeads = leads.filter((l) => l.columnId === 'col-won');
+  // Pipeline forecast value includes only columns where includeInPipelineTotal !== false
+  const pipelineLeads = leads.filter((l) => {
+    const col = columns.find((c) => c.id === l.columnId);
+    return col ? col.includeInPipelineTotal !== false : true;
+  });
+  const totalValue = pipelineLeads.reduce((acc, curr) => acc + curr.dealValue, 0);
+  const wonLeads = leads.filter((l) => {
+    const col = columns.find((c) => c.id === l.columnId);
+    return l.columnId === 'col-won' || (col && col.title.toLowerCase().includes('concluíd') || col?.title.toLowerCase().includes('fechad') || col?.title.toLowerCase().includes('ganh'));
+  });
   const wonValue = wonLeads.reduce((acc, curr) => acc + curr.dealValue, 0);
   const leadsWithFollowUp = leads.filter((l) => l.followUpDate);
   const conversionRate = totalLeads > 0 ? ((wonLeads.length / totalLeads) * 100).toFixed(1) : '0.0';
-  const avgTicket = wonLeads.length > 0 ? Math.round(wonValue / wonLeads.length) : 3800;
+  const avgTicket = wonLeads.length > 0 ? Math.round(wonValue / wonLeads.length) : (totalLeads > 0 ? Math.round(totalValue / totalLeads) : 0);
 
   // Funnel Stages Aggregations
   const funnelStages = columns.map((col, index) => {
@@ -66,6 +74,7 @@ export const MetricsView: React.FC<MetricsViewProps> = ({ columns, leads }) => {
       dropOffPercent,
       isBottleneck,
       avgHoursInStage: col.slaHours * 0.75,
+      isIncludedInPipeline: col.includeInPipelineTotal !== false,
     };
   });
 

@@ -31,6 +31,13 @@ export interface SaveColumnsResult {
 export const kanbanService = {
   // Fetch columns ordered by order_index
   async getColumns(storeId: string = DEFAULT_STORE_ID): Promise<KanbanColumn[]> {
+    // Read local cache for column metadata fallback
+    let localMeta: Record<string, Partial<KanbanColumn>> = {};
+    try {
+      const cached = localStorage.getItem(`lojinha_column_meta_${storeId}`);
+      if (cached) localMeta = JSON.parse(cached);
+    } catch {}
+
     const { data, error } = await supabase
       .from('kanban_columns')
       .select('*')
@@ -42,16 +49,24 @@ export const kanbanService = {
       return [];
     }
 
-    return (data || []).map((col) => ({
-      id: col.id,
-      title: col.order_index === 0 && (col.title === 'Novo Lead (WhatsApp)' || col.title === 'Novo Lead')
-        ? 'Novo Contacto'
-        : col.title,
-      color: col.color,
-      order: col.order_index,
-      slaHours: col.sla_hours,
-      defaultTemplateId: col.default_template_id,
-    }));
+    return (data || []).map((col) => {
+      const meta = localMeta[col.id] || {};
+      const includeInPipelineTotal = col.include_in_pipeline_total !== undefined
+        ? col.include_in_pipeline_total
+        : (meta.includeInPipelineTotal !== undefined ? meta.includeInPipelineTotal : true);
+
+      return {
+        id: col.id,
+        title: col.order_index === 0 && (col.title === 'Novo Lead (WhatsApp)' || col.title === 'Novo Lead')
+          ? 'Novo Contacto'
+          : col.title,
+        color: col.color,
+        order: col.order_index,
+        slaHours: col.sla_hours,
+        defaultTemplateId: col.default_template_id,
+        includeInPipelineTotal,
+      };
+    });
   },
 
   // Save/reorder/delete/create columns permanently for a specific tenant store
@@ -71,7 +86,17 @@ export const kanbanService = {
         order: idx,
         slaHours: idx === 0 ? (col.slaHours || 1) : (Number(col.slaHours) || 24),
         title: idx === 0 ? 'Novo Contacto' : col.title.trim(),
+        includeInPipelineTotal: col.includeInPipelineTotal !== false,
       }));
+
+      // Cache metadata locally
+      try {
+        const metaToCache: Record<string, Partial<KanbanColumn>> = {};
+        normalizedColumns.forEach((c) => {
+          metaToCache[c.id] = { includeInPipelineTotal: c.includeInPipelineTotal };
+        });
+        localStorage.setItem(`lojinha_column_meta_${storeId}`, JSON.stringify(metaToCache));
+      } catch {}
 
       const activeIds = new Set(normalizedColumns.map((c) => c.id));
       const fallbackColumnId = normalizedColumns[0].id;
@@ -119,7 +144,7 @@ export const kanbanService = {
       }
 
       // 4. Upsert all normalized columns (every item has a valid UUID)
-      const upsertData = normalizedColumns.map((col) => ({
+      const upsertDataWithMeta = normalizedColumns.map((col) => ({
         id: col.id,
         store_id: storeId,
         title: col.title,
@@ -127,12 +152,32 @@ export const kanbanService = {
         order_index: col.order,
         sla_hours: col.slaHours,
         default_template_id: col.defaultTemplateId || null,
+        include_in_pipeline_total: col.includeInPipelineTotal !== false,
       }));
 
-      const { data: upsertedRows, error: upsertErr } = await supabase
+      let { data: upsertedRows, error: upsertErr } = await supabase
         .from('kanban_columns')
-        .upsert(upsertData)
+        .upsert(upsertDataWithMeta)
         .select();
+
+      // If column include_in_pipeline_total does not exist in DB table schema yet, fallback to standard fields
+      if (upsertErr && upsertErr.message?.includes('include_in_pipeline_total')) {
+        const fallbackUpsertData = normalizedColumns.map((col) => ({
+          id: col.id,
+          store_id: storeId,
+          title: col.title,
+          color: col.color,
+          order_index: col.order,
+          sla_hours: col.slaHours,
+          default_template_id: col.defaultTemplateId || null,
+        }));
+        const retryResult = await supabase
+          .from('kanban_columns')
+          .upsert(fallbackUpsertData)
+          .select();
+        upsertedRows = retryResult.data;
+        upsertErr = retryResult.error;
+      }
 
       if (upsertErr) {
         console.error('Error upserting kanban columns:', upsertErr);
@@ -148,14 +193,20 @@ export const kanbanService = {
       const finalColumns: KanbanColumn[] = (upsertedRows && upsertedRows.length > 0)
         ? upsertedRows
             .sort((a, b) => a.order_index - b.order_index)
-            .map((col) => ({
-              id: col.id,
-              title: col.title,
-              color: col.color,
-              order: col.order_index,
-              slaHours: col.sla_hours,
-              defaultTemplateId: col.default_template_id,
-            }))
+            .map((col) => {
+              const matchingNormalized = normalizedColumns.find((n) => n.id === col.id);
+              return {
+                id: col.id,
+                title: col.title,
+                color: col.color,
+                order: col.order_index,
+                slaHours: col.sla_hours,
+                defaultTemplateId: col.default_template_id,
+                includeInPipelineTotal: col.include_in_pipeline_total !== undefined
+                  ? col.include_in_pipeline_total
+                  : (matchingNormalized ? matchingNormalized.includeInPipelineTotal : true),
+              };
+            })
         : normalizedColumns;
 
       return {

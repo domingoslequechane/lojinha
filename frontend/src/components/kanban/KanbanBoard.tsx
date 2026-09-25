@@ -211,9 +211,14 @@ export const KanbanBoard: React.FC<KanbanBoardProps> = ({
                 {activeMobileLeads.length} {activeMobileLeads.length === 1 ? 'cliente' : 'clientes'}
               </span>
               <span>•</span>
-              <span className="font-bold text-[#C1F76B]">
+              <span className={`font-bold ${activeMobileCol.includeInPipelineTotal !== false ? 'text-[#C1F76B]' : 'text-[#95BDB0]/80'}`}>
                 {formatMoney(activeMobileTotalValue)}
               </span>
+              {activeMobileCol.includeInPipelineTotal === false && (
+                <span className="text-[9px] font-semibold text-amber-300/90 bg-amber-500/15 border border-amber-500/30 px-1.5 py-0.2 rounded">
+                  Fora do funil
+                </span>
+              )}
               {activeMobileUnreadCount > 0 && (
                 <span className="flex items-center gap-1 text-[10px] font-bold text-[#C1F76B] bg-[#27AE60]/20 border border-[#27AE60]/40 px-2 py-0.5 rounded-full">
                   <MessageSquare className="w-2.5 h-2.5" />
@@ -275,17 +280,6 @@ export const KanbanBoard: React.FC<KanbanBoardProps> = ({
                 onOpenFollowUpModal={onOpenFollowUpModal}
               />
             ))
-          )}
-
-          {activeMobileLeads.length > 0 && activeMobileCol && (
-            <button
-              type="button"
-              onClick={() => onAddLeadToColumn(activeMobileCol.id)}
-              className="w-full py-2.5 px-4 rounded-2xl bg-[#0F2D26] hover:bg-[#14382F] border border-dashed border-[#235447] hover:border-[#C1F76B]/50 text-xs text-[#95BDB0] hover:text-[#C1F76B] font-semibold flex items-center justify-center gap-1.5 transition-all active:scale-[0.98] mt-2 cursor-pointer"
-            >
-              <Plus className="w-4 h-4 text-[#C1F76B] stroke-[2.5]" />
-              <span>Adicionar cliente em {activeMobileCol.title}</span>
-            </button>
           )}
         </div>
       </div>

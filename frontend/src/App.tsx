@@ -683,8 +683,13 @@ function CockpitWorkspace() {
     );
   });
 
-  // Financial and follow-up aggregations
-  const totalRevenue = leads.reduce((acc, curr) => acc + curr.dealValue, 0);
+  // Financial and follow-up aggregations (pipeline forecast only sums active pipeline columns)
+  const totalRevenue = leads
+    .filter((l) => {
+      const col = columns.find((c) => c.id === l.columnId);
+      return col ? col.includeInPipelineTotal !== false : true;
+    })
+    .reduce((acc, curr) => acc + (curr.dealValue || 0), 0);
   const leadsWithFollowUp = leads.filter((l) => l.followUpDate);
 
   // Handlers with Supabase Realtime Persistence
@@ -1428,6 +1433,7 @@ function CockpitWorkspace() {
       <NewLeadModal
         isOpen={isNewLeadOpen}
         columns={columns}
+        products={storeSettings.products}
         defaultColumnId={newLeadDefaultColumn}
         onClose={() => setIsNewLeadOpen(false)}
         onCreateLead={handleCreateLead}

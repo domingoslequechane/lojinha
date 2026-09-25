@@ -16,7 +16,7 @@ import {
   MapPin, 
   Phone, 
   MoreVertical,
-  Baby,
+  ShoppingBag,
   X,
   Plus,
   Image as ImageIcon,
@@ -1064,11 +1064,11 @@ export const ChatPanel: React.FC<ChatPanelProps> = ({
         title="Clique para editar informações do cliente"
       >
         <div className="flex items-center gap-2 truncate">
-          <Baby className="w-3.5 h-3.5 text-pink-400 flex-shrink-0" />
+          <ShoppingBag className="w-3.5 h-3.5 text-[#C1F76B] flex-shrink-0" />
           <span className="truncate text-[#FDFEF8] font-medium group-hover:text-[#C1F76B] transition-colors">
-            {lead.childInfo || 'Sem dados da criança'}
+            {lead.productInterest || 'Interesse não informado'}
           </span>
-          <span className="text-[#C2DDD4]">• {lead.productInterest || 'Tablet'}</span>
+          {lead.location && <span className="text-[#95BDB0]">• {lead.location}</span>}
         </div>
         <div className="flex items-center gap-2 flex-shrink-0">
           <span className="font-bold text-[#C1F76B] bg-[#C1F76B]/15 px-2 py-0.5 rounded text-[11px]">
@@ -1083,6 +1083,7 @@ export const ChatPanel: React.FC<ChatPanelProps> = ({
         isOpen={isEditModalOpen}
         lead={lead}
         columns={columns}
+        products={storeSettings?.products}
         onClose={() => setIsEditModalOpen(false)}
         onSave={(updated) => onUpdateLead?.(updated)}
       />

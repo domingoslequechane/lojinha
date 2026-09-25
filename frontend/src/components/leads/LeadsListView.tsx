@@ -1,5 +1,5 @@
 import React, { useState } from 'react';
-import { Users, Search, MessageSquare, Clock, MapPin, Tag, Baby, FileSpreadsheet, Trash2, CopySlash, Phone } from 'lucide-react';
+import { Users, Search, MessageSquare, Clock, MapPin, Tag, ShoppingBag, FileSpreadsheet, Trash2, CopySlash, Phone } from 'lucide-react';
 import { ContactLead, KanbanColumn } from '../../types';
 import { CustomSelect } from '../common/CustomSelect';
 import { formatPhoneForCall, formatMoney, formatFollowUpDate } from '../../utils/phoneUtils';
@@ -107,7 +107,7 @@ export const LeadsListView: React.FC<LeadsListViewProps> = ({
             <thead className="bg-[#14382F] text-[#95BDB0] uppercase text-[10px] tracking-wider border-b border-[#235447]">
               <tr>
                 <th className="p-3.5">Cliente</th>
-                <th className="p-3.5">Produto / Criança</th>
+                <th className="p-3.5">Produto de Interesse</th>
                 <th className="p-3.5">Etapa Funil</th>
                 <th className="p-3.5">Localização</th>
                 <th className="p-3.5">Valor (MT)</th>
@@ -172,11 +172,13 @@ export const LeadsListView: React.FC<LeadsListViewProps> = ({
                     </td>
 
                     <td className="p-3.5">
-                      <p className="text-[#FDFEF8] font-medium">{lead.productInterest || 'Tablet'}</p>
-                      {lead.childInfo && (
-                        <p className="text-[10px] text-[#95BDB0] flex items-center gap-1 mt-0.5">
-                          <Baby className="w-3 h-3 text-pink-400" />
-                          {lead.childInfo}
+                      <p className="text-[#FDFEF8] font-medium flex items-center gap-1.5">
+                        <ShoppingBag className="w-3.5 h-3.5 text-[#C1F76B] flex-shrink-0" />
+                        <span>{lead.productInterest || '—'}</span>
+                      </p>
+                      {lead.followUpNotes && (
+                        <p className="text-[10px] text-[#95BDB0] line-clamp-1 mt-0.5 max-w-[200px]">
+                          {lead.followUpNotes}
                         </p>
                       )}
                     </td>
@@ -342,12 +344,12 @@ export const LeadsListView: React.FC<LeadsListViewProps> = ({
                 </div>
 
                 {/* Sub info */}
-                {(lead.childInfo || lead.location) && (
+                {(lead.productInterest || lead.location) && (
                   <div className="flex flex-wrap items-center gap-2 text-xs text-[#D1EAE0] mb-3 bg-[#14382F]/60 px-2.5 py-1.5 rounded-xl border border-[#235447]/60">
-                    {lead.childInfo && (
+                    {lead.productInterest && (
                       <span className="flex items-center gap-1">
-                        <Baby className="w-3 h-3 text-pink-400" />
-                        <span>{lead.childInfo}</span>
+                        <ShoppingBag className="w-3 h-3 text-[#C1F76B]" />
+                        <span>{lead.productInterest}</span>
                       </span>
                     )}
                     {lead.location && (

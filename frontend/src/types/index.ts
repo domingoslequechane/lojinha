@@ -5,6 +5,7 @@ export interface KanbanColumn {
   order: number;
   slaHours: number; // Horas máximas antes de emitir alerta de inatividade
   defaultTemplateId?: string;
+  includeInPipelineTotal?: boolean; // Controla se o valor dos leads nesta coluna é somado na previsão/total do funil (default: true)
 }
 
 export type MessageType = 'text' | 'image' | 'video' | 'audio' | 'document' | 'location';

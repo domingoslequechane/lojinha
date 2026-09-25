@@ -4,7 +4,7 @@ import {
   MapPin, 
   AlertTriangle, 
   CheckCheck, 
-  Baby,
+  ShoppingBag,
   MessageSquare,
   FileText,
   Edit3,
@@ -122,11 +122,11 @@ export const KanbanCard: React.FC<KanbanCardProps> = ({
         </div>
       )}
 
-      {/* Child info / Product note */}
-      {lead.childInfo && (
-        <div className="flex items-center gap-1.5 text-[11px] text-[#D1EAE0] mb-2 bg-[#0F2D26]/80 px-2 py-1 rounded-lg border border-[#235447]/60">
-          <Baby className="w-3.5 h-3.5 text-pink-400 flex-shrink-0" />
-          <span className="truncate">{lead.childInfo} • {lead.productInterest}</span>
+      {/* Product Interest Badge */}
+      {lead.productInterest && (
+        <div className="flex items-center gap-1.5 text-[11px] text-[#D1EAE0] mb-2 bg-[#0F2D26]/90 px-2 py-1 rounded-lg border border-[#235447]/80">
+          <ShoppingBag className="w-3.5 h-3.5 text-[#C1F76B] flex-shrink-0" />
+          <span className="truncate font-medium">{lead.productInterest}</span>
         </div>
       )}
 

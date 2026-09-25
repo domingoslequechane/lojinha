@@ -113,9 +113,19 @@ export const KanbanColumnComponent: React.FC<KanbanColumnComponentProps> = ({
         <span>
           {leads.length} {leads.length === 1 ? 'cliente' : 'clientes'}
         </span>
-        <span className="font-bold text-[#C1F76B]">
-          {formatMoney(totalValue)}
-        </span>
+        <div className="flex items-center gap-1.5">
+          <span className={`font-bold ${column.includeInPipelineTotal !== false ? 'text-[#C1F76B]' : 'text-[#95BDB0]/80'}`}>
+            {formatMoney(totalValue)}
+          </span>
+          {column.includeInPipelineTotal === false && (
+            <span
+              className="text-[9px] font-semibold text-amber-300/90 bg-amber-500/15 border border-amber-500/30 px-1.5 py-0.2 rounded"
+              title="O valor desta etapa não é somado à previsão total do funil"
+            >
+              Fora do funil
+            </span>
+          )}
+        </div>
       </div>
 
       {/* Cards Container with smooth vertical scroll */}

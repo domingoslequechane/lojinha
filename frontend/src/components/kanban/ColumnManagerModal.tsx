@@ -51,12 +51,14 @@ export const ColumnManagerModal: React.FC<ColumnManagerModalProps> = ({
   const [newTitle, setNewTitle] = useState('');
   const [newColor, setNewColor] = useState(colorPalette[1]);
   const [newSla, setNewSla] = useState(4);
+  const [newIncludeInPipelineTotal, setNewIncludeInPipelineTotal] = useState(true);
 
   // Inline editing state for an existing column
   const [editingColId, setEditingColId] = useState<string | null>(null);
   const [editTitle, setEditTitle] = useState('');
   const [editColor, setEditColor] = useState(colorPalette[0]);
   const [editSla, setEditSla] = useState(4);
+  const [editIncludeInPipelineTotal, setEditIncludeInPipelineTotal] = useState(true);
 
   // Save loading state
   const [isSaving, setIsSaving] = useState(false);
@@ -69,6 +71,7 @@ export const ColumnManagerModal: React.FC<ColumnManagerModalProps> = ({
     setEditTitle(col.title);
     setEditColor(col.color);
     setEditSla(col.slaHours || 4);
+    setEditIncludeInPipelineTotal(col.includeInPipelineTotal !== false);
   };
 
   const handleSaveEdit = (colId: string) => {
@@ -81,11 +84,25 @@ export const ColumnManagerModal: React.FC<ColumnManagerModalProps> = ({
               title: editTitle.trim(),
               color: editColor,
               slaHours: Number(editSla) || 4,
+              includeInPipelineTotal: editIncludeInPipelineTotal,
             }
           : c
       )
     );
     setEditingColId(null);
+  };
+
+  const handleToggleColumnPipeline = (colId: string) => {
+    setCols((prev) =>
+      prev.map((c) =>
+        c.id === colId
+          ? {
+              ...c,
+              includeInPipelineTotal: c.includeInPipelineTotal === false ? true : false,
+            }
+          : c
+      )
+    );
   };
 
   const handleCancelEdit = () => {
@@ -187,11 +204,13 @@ export const ColumnManagerModal: React.FC<ColumnManagerModalProps> = ({
       color: newColor,
       order: cols.length,
       slaHours: Number(newSla) || 4,
+      includeInPipelineTotal: newIncludeInPipelineTotal,
     };
 
     setCols([...cols, newCol]);
     setNewTitle('');
     setNewSla(4);
+    setNewIncludeInPipelineTotal(true);
   };
 
   const handleSave = async () => {
@@ -205,6 +224,7 @@ export const ColumnManagerModal: React.FC<ColumnManagerModalProps> = ({
               title: editTitle.trim(),
               color: editColor,
               slaHours: Number(editSla) || 4,
+              includeInPipelineTotal: editIncludeInPipelineTotal,
             }
           : c
       );
@@ -239,7 +259,7 @@ export const ColumnManagerModal: React.FC<ColumnManagerModalProps> = ({
             </div>
             <div>
               <h3 className="font-bold text-sm text-[#FDFEF8]">Gerenciar Colunas do Funil</h3>
-              <p className="text-xs text-[#95BDB0]">Personalize as etapas do seu processo comercial</p>
+              <p className="text-xs text-[#95BDB0]">Personalize as etapas e o cálculo de valor do seu funil</p>
             </div>
           </div>
           <button
@@ -284,6 +304,33 @@ export const ColumnManagerModal: React.FC<ColumnManagerModalProps> = ({
                       />
                       <span className="text-[10px] text-[#95BDB0]">h</span>
                     </div>
+                  </div>
+
+                  {/* Toggle Pipeline in Inline Edit */}
+                  <div className="flex items-center justify-between p-2 rounded-xl bg-[#14382F] border border-[#2D6B5A]">
+                    <div className="text-left pr-2">
+                      <p className="text-[11px] font-bold text-[#FDFEF8]">
+                        Contabilizar Valor na Previsão do Funil
+                      </p>
+                      <p className="text-[9px] text-[#95BDB0]">
+                        {editIncludeInPipelineTotal
+                          ? '✓ O valor dos leads nesta coluna é somado ao total previsto do funil'
+                          : '✕ Excluído do total do funil (ideal para Vendas Concluídas ou Perdidos)'}
+                      </p>
+                    </div>
+                    <button
+                      type="button"
+                      onClick={() => setEditIncludeInPipelineTotal(!editIncludeInPipelineTotal)}
+                      className={`relative inline-flex h-5 w-9 flex-shrink-0 cursor-pointer rounded-full border-2 border-transparent transition-colors duration-200 ease-in-out focus:outline-none ${
+                        editIncludeInPipelineTotal ? 'bg-[#C1F76B]' : 'bg-[#235447]'
+                      }`}
+                    >
+                      <span
+                        className={`inline-block h-4 w-4 transform rounded-full bg-white transition duration-200 ease-in-out ${
+                          editIncludeInPipelineTotal ? 'translate-x-4' : 'translate-x-0'
+                        }`}
+                      />
+                    </button>
                   </div>
 
                   <div className="flex items-center justify-between">
@@ -351,11 +398,30 @@ export const ColumnManagerModal: React.FC<ColumnManagerModalProps> = ({
                         </span>
                       )}
                     </div>
-                    <p className="text-[10px] text-[#95BDB0] flex items-center gap-1 mt-0.5">
-                      <Clock className="w-2.5 h-2.5 text-amber-400" />
-                      <span>SLA: {col.slaHours}h sem resposta</span>
-                      {isDefaultCol && <span className="text-[#95BDB0]/70">• Entrada de novos contactos</span>}
-                    </p>
+                    <div className="flex items-center gap-2 mt-0.5">
+                      <p className="text-[10px] text-[#95BDB0] flex items-center gap-1">
+                        <Clock className="w-2.5 h-2.5 text-amber-400" />
+                        <span>SLA: {col.slaHours}h</span>
+                      </p>
+
+                      {/* Quick Pipeline Toggle Badge */}
+                      <button
+                        type="button"
+                        onClick={() => handleToggleColumnPipeline(col.id)}
+                        className={`px-1.5 py-0.2 rounded-md text-[9px] font-bold border transition-all cursor-pointer ${
+                          col.includeInPipelineTotal !== false
+                            ? 'bg-[#C1F76B]/15 text-[#C1F76B] border-[#C1F76B]/30 hover:bg-[#C1F76B]/25'
+                            : 'bg-[#0F2D26] text-amber-400 border-amber-400/40 hover:bg-amber-500/10'
+                        }`}
+                        title={
+                          col.includeInPipelineTotal !== false
+                            ? 'Valor entra na previsão total do funil (Clique para desativar)'
+                            : 'Valor fora da previsão total do funil (Clique para ativar)'
+                        }
+                      >
+                        {col.includeInPipelineTotal !== false ? '✓ No Funil' : '✕ Fora do Funil'}
+                      </button>
+                    </div>
                   </div>
                 </div>
 
@@ -388,7 +454,7 @@ export const ColumnManagerModal: React.FC<ColumnManagerModalProps> = ({
                       <button
                         onClick={() => startEditing(col)}
                         className="p-1.5 text-[#95BDB0] hover:text-[#C1F76B] rounded-lg hover:bg-[#184339] transition-colors"
-                        title="Editar nome, cor ou SLA desta etapa"
+                        title="Editar nome, cor, SLA ou inclusão no funil"
                       >
                         <Pencil className="w-3.5 h-3.5" />
                       </button>
@@ -419,7 +485,7 @@ export const ColumnManagerModal: React.FC<ColumnManagerModalProps> = ({
               type="text"
               value={newTitle}
               onChange={(e) => setNewTitle(e.target.value)}
-              placeholder="Ex: Aguardando Estoque"
+              placeholder="Ex: Aguardando Estoque ou Venda Concluída"
               className="flex-1 bg-[#14382F] text-xs text-[#FDFEF8] px-3 py-2 rounded-xl border border-[#2D6B5A] focus:border-[#C1F76B] focus:outline-none"
             />
 
@@ -435,6 +501,33 @@ export const ColumnManagerModal: React.FC<ColumnManagerModalProps> = ({
               />
               <span className="text-[10px] text-[#95BDB0]">h</span>
             </div>
+          </div>
+
+          {/* New Column Funnel Toggle */}
+          <div className="flex items-center justify-between p-2 rounded-xl bg-[#0F2D26] border border-[#235447]">
+            <div className="text-left pr-2">
+              <p className="text-[11px] font-semibold text-[#FDFEF8]">
+                Contabilizar no Valor do Funil
+              </p>
+              <p className="text-[9px] text-[#95BDB0]">
+                {newIncludeInPipelineTotal
+                  ? 'Soma os valores desta etapa na previsão total do funil'
+                  : 'Não soma na previsão (ex: Vendas Concluídas ou Cancelados)'}
+              </p>
+            </div>
+            <button
+              type="button"
+              onClick={() => setNewIncludeInPipelineTotal(!newIncludeInPipelineTotal)}
+              className={`relative inline-flex h-5 w-9 flex-shrink-0 cursor-pointer rounded-full border-2 border-transparent transition-colors duration-200 ease-in-out focus:outline-none ${
+                newIncludeInPipelineTotal ? 'bg-[#C1F76B]' : 'bg-[#235447]'
+              }`}
+            >
+              <span
+                className={`inline-block h-4 w-4 transform rounded-full bg-white transition duration-200 ease-in-out ${
+                  newIncludeInPipelineTotal ? 'translate-x-4' : 'translate-x-0'
+                }`}
+              />
+            </button>
           </div>
 
           <div className="flex items-center justify-between">
@@ -456,7 +549,7 @@ export const ColumnManagerModal: React.FC<ColumnManagerModalProps> = ({
             <button
               type="submit"
               disabled={!newTitle.trim()}
-              className="px-3 py-1.5 bg-[#C1F76B] text-[#0F2D26] hover:bg-[#b0ec53] disabled:opacity-40 rounded-xl text-xs font-semibold transition-colors flex items-center gap-1"
+              className="px-3 py-1.5 bg-[#C1F76B] text-[#0F2D26] hover:bg-[#b0ec53] disabled:opacity-40 rounded-xl text-xs font-semibold transition-colors flex items-center gap-1 cursor-pointer"
             >
               <Plus className="w-3.5 h-3.5" />
               <span>Inserir</span>
