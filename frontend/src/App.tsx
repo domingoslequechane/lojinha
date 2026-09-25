@@ -126,6 +126,16 @@ function CockpitWorkspace() {
     navigate('/login');
   };
 
+  // Redireciona membro caso tente acessar aba não autorizada
+  useEffect(() => {
+    if (user && !user.isOwner && user.permissions && user.permissions.length > 0) {
+      if (activeTab !== 'account' && !user.permissions.includes(activeTab as any)) {
+        const fallbackTab = user.permissions[0] || 'cockpit';
+        navigate('/' + fallbackTab, { replace: true });
+      }
+    }
+  }, [activeTab, user, navigate]);
+
   // Clean legacy mock data AND stale column/lead caches that may have mock IDs (col-new, etc.)
   useEffect(() => {
     localStorage.removeItem('lojinha_leads');

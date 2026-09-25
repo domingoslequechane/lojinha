@@ -11,6 +11,7 @@ CREATE TABLE IF NOT EXISTS public.store_members (
     name TEXT NOT NULL,
     email TEXT NOT NULL,
     phone TEXT,
+    password_hash TEXT,
     role TEXT NOT NULL DEFAULT 'vendedor', -- 'admin' | 'gerente' | 'vendedor'
     permissions TEXT[] NOT NULL DEFAULT '{"cockpit"}',
     allowed_column_ids TEXT[] DEFAULT NULL, -- NULL = todas as colunas, ou array de UUIDs de colunas
@@ -19,6 +20,11 @@ CREATE TABLE IF NOT EXISTS public.store_members (
     accepted_at TIMESTAMPTZ,
     UNIQUE(store_id, email)
 );
+
+-- Garantir que a coluna password_hash exista caso a tabela já tenha sido criada antes
+ALTER TABLE public.store_members ADD COLUMN IF NOT EXISTS password_hash TEXT;
+ALTER TABLE public.store_members ADD COLUMN IF NOT EXISTS permissions TEXT[] DEFAULT '{"cockpit"}';
+ALTER TABLE public.store_members ADD COLUMN IF NOT EXISTS allowed_column_ids TEXT[] DEFAULT NULL;
 
 CREATE INDEX IF NOT EXISTS idx_store_members_store_id ON public.store_members(store_id);
 CREATE INDEX IF NOT EXISTS idx_store_members_user_id ON public.store_members(user_id);

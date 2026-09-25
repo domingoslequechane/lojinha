@@ -92,7 +92,7 @@ export const TeamView: React.FC<TeamViewProps> = ({ storeId, storeName = 'Minha 
 
   const handleDeleteMember = async () => {
     if (!memberToDelete) return;
-    await teamService.deleteTeamMember(memberToDelete.id, storeId);
+    await teamService.deleteTeamMember(memberToDelete.id, storeId, memberToDelete.email);
     setMembers((prev) => prev.filter((m) => m.id !== memberToDelete.id));
     setMemberToDelete(null);
   };

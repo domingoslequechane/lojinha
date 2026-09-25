@@ -2,6 +2,7 @@ import React, { createContext, useContext, useState, useEffect } from 'react';
 import { supabase } from '../lib/supabase';
 import { initialColumns, defaultQuickReplies } from '../mock/mockData';
 import { DEFAULT_STORE_ID } from '../services/kanbanService';
+import { teamService } from '../services/teamService';
 
 export interface AuthUser {
   id: string;
@@ -87,7 +88,7 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
   const [pending2FAUser, setPending2FAUser] = useState<AuthUser | null>(null);
   const [isLoading, setIsLoading] = useState(true);
 
-  // Sync auth session from Supabase
+  // Sync auth session from Supabase / localStorage
   useEffect(() => {
     let isMounted = true;
 
@@ -95,12 +96,39 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
       try {
         const { data: { session } } = await supabase.auth.getSession();
         if (session?.user && isMounted) {
+          localStorage.setItem('lojinha_auth_type', 'supabase');
           await loadUserStore(session.user);
         } else if (isMounted) {
+          // Check if user is logged in as a team member
+          const authType = localStorage.getItem('lojinha_auth_type');
+          const savedUserRaw = localStorage.getItem('lojinha_auth_user');
+          if (authType === 'member' && savedUserRaw) {
+            try {
+              const savedMember = JSON.parse(savedUserRaw);
+              if (savedMember?.email) {
+                // Background verify if still active
+                const { data: dbMember } = await supabase
+                  .from('store_members')
+                  .select('is_active')
+                  .eq('email', savedMember.email.toLowerCase())
+                  .maybeSingle();
+
+                if (dbMember && dbMember.is_active === false) {
+                  setUser(null);
+                  localStorage.removeItem('lojinha_auth_user');
+                  localStorage.removeItem('lojinha_auth_type');
+                } else {
+                  setUser(savedMember);
+                }
+              }
+            } catch (e) {
+              console.warn('[AuthContext] Session restore error:', e);
+            }
+          }
           setIsLoading(false);
         }
       } catch (err) {
-        console.error('Error checking Supabase auth session:', err);
+        console.error('Error checking auth session:', err);
         if (isMounted) setIsLoading(false);
       }
     }
@@ -109,10 +137,14 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
 
     const { data: { subscription } } = supabase.auth.onAuthStateChange(async (event, session) => {
       if (session?.user && isMounted) {
+        localStorage.setItem('lojinha_auth_type', 'supabase');
         await loadUserStore(session.user);
       } else if (isMounted && event === 'SIGNED_OUT') {
-        setUser(null);
-        setIsLoading(false);
+        const authType = localStorage.getItem('lojinha_auth_type');
+        if (authType !== 'member') {
+          setUser(null);
+          setIsLoading(false);
+        }
       }
     });
 
@@ -298,7 +330,7 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
     }
   }
 
-  // Login with Supabase
+  // Login with Supabase / Team Member credentials
   const login = async (email: string, password: string): Promise<{ success: boolean; error?: string; requires2FA?: boolean; onboardingCompleted?: boolean }> => {
     setIsLoading(true);
     try {
@@ -306,28 +338,17 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
         return { success: false, error: 'Por favor, preencha o e-mail e a senha.' };
       }
 
+      const cleanEmail = email.trim().toLowerCase();
+
+      // 1. Tenta login como Proprietário / Usuário Supabase Auth padrão
       const { data, error } = await supabase.auth.signInWithPassword({
-        email: email.trim(),
+        email: cleanEmail,
         password: password.trim(),
       });
 
-      if (error) {
-        console.warn('[AuthContext] Supabase signIn error:', error);
-        let friendlyMessage = error.message;
-        const lower = (error.message || '').toLowerCase();
-        if (lower.includes('invalid login credentials') || lower.includes('invalid_credentials')) {
-          friendlyMessage = 'E-mail ou senha incorretos. Por favor, verifique suas credenciais.';
-        } else if (lower.includes('email not confirmed')) {
-          friendlyMessage = 'O e-mail cadastrado ainda não foi confirmado. Verifique sua caixa de entrada.';
-        } else if (lower.includes('user not found')) {
-          friendlyMessage = 'Nenhuma conta encontrada com este e-mail.';
-        } else if (lower.includes('too many requests') || lower.includes('rate limit')) {
-          friendlyMessage = 'Muitas tentativas consecutivas. Aguarde alguns instantes e tente novamente.';
-        }
-        return { success: false, error: friendlyMessage };
-      }
+      if (!error && data?.user) {
+        localStorage.setItem('lojinha_auth_type', 'supabase');
 
-      if (data.user) {
         // Check if 2FA WhatsApp is active for this tenant
         const { data: store } = await supabase
           .from('stores')
@@ -355,7 +376,55 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
         return { success: true, requires2FA: false, onboardingCompleted: true };
       }
 
-      return { success: false, error: 'Usuário não encontrado.' };
+      // 2. Se falhar no Supabase Auth, tenta autenticação como Colaborador da Equipe
+      console.log('[AuthContext] Trying team member credentials for:', cleanEmail);
+      const memberAuth = await teamService.memberLogin(cleanEmail, password.trim());
+
+      if (memberAuth.success && memberAuth.member) {
+        const m = memberAuth.member;
+        const st = memberAuth.store;
+
+        const memberUser: AuthUser = {
+          id: m.userId || m.id,
+          memberId: m.id,
+          name: m.name || 'Colaborador',
+          email: m.email,
+          phone: m.phone || st?.phone,
+          storeId: m.storeId,
+          storeName: st?.name || 'Loja',
+          slogan: st?.slogan,
+          city: st?.city,
+          role: m.role || 'vendedor',
+          isOwner: false,
+          permissions: m.permissions || ['cockpit'],
+          allowedColumnIds: m.allowedColumnIds || null,
+          avatarUrl: st?.logo_url,
+          emailVerified: true,
+          twoFactorWhatsAppEnabled: false,
+          onboardingCompleted: true,
+        };
+
+        setUser(memberUser);
+        localStorage.setItem('lojinha_auth_user', JSON.stringify(memberUser));
+        localStorage.setItem('lojinha_auth_type', 'member');
+
+        return { success: true, requires2FA: false, onboardingCompleted: true };
+      }
+
+      // 3. Caso ambos falhem, retorna mensagem amigável apropriada
+      if (memberAuth.error && memberAuth.error.includes('desativada')) {
+        return { success: false, error: memberAuth.error };
+      }
+
+      let friendlyMessage = 'E-mail ou senha incorretos. Por favor, verifique suas credenciais.';
+      if (error) {
+        const lower = (error.message || '').toLowerCase();
+        if (lower.includes('too many requests') || lower.includes('rate limit')) {
+          friendlyMessage = 'Muitas tentativas consecutivas. Aguarde alguns instantes e tente novamente.';
+        }
+      }
+
+      return { success: false, error: friendlyMessage };
     } catch (err: any) {
       return { success: false, error: err.message || 'Falha ao realizar login.' };
     } finally {
@@ -626,6 +695,7 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
     setPendingRegistration(null);
     setPending2FAUser(null);
     localStorage.removeItem('lojinha_auth_user');
+    localStorage.removeItem('lojinha_auth_type');
     sessionStorage.removeItem('lojinha_pending_reg');
   };
 

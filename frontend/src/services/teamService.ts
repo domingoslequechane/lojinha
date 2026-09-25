@@ -24,9 +24,17 @@ function saveLocalMembers(storeId: string, members: StoreMember[]) {
   }
 }
 
-const BACKEND_URL =
-  (import.meta.env.VITE_BACKEND_URL as string) ||
-  'https://practical-contentment-production-b0e4.up.railway.app';
+function getBackendUrl(): string {
+  if (import.meta.env.VITE_BACKEND_URL) {
+    return (import.meta.env.VITE_BACKEND_URL as string).replace(/\/$/, '');
+  }
+  if (typeof window !== 'undefined') {
+    const protocol = window.location.protocol;
+    const hostname = window.location.hostname;
+    return `${protocol}//${hostname}:3001`;
+  }
+  return 'http://localhost:3001';
+}
 
 export const teamService = {
   /**
@@ -83,9 +91,9 @@ export const teamService = {
     const now = new Date().toISOString();
     let authUserId = member.userId;
 
-    // 1. Tenta criar pelo backend (admin & envio de convite/usuário)
+    // 1. Tenta criar pelo backend (admin & criptografia de senha)
     try {
-      const resp = await fetch(`${BACKEND_URL}/api/team/create-member`, {
+      const resp = await fetch(`${getBackendUrl()}/api/team/create-member`, {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({
@@ -112,30 +120,6 @@ export const teamService = {
       console.warn('[TeamService] Backend create-member notice:', backendErr);
     }
 
-    // 2. Fallback de criação direta via Supabase Auth se uma senha foi informada e não temos ID ainda
-    if (!authUserId && member.password && member.password.trim().length >= 6) {
-      try {
-        const { data: signUpData, error: signUpErr } = await supabase.auth.signUp({
-          email: member.email.trim().toLowerCase(),
-          password: member.password.trim(),
-          options: {
-            data: {
-              name: member.name.trim(),
-              store_id: storeId,
-              role: member.role || 'vendedor',
-            },
-          },
-        });
-        if (signUpData?.user) {
-          authUserId = signUpData.user.id;
-        } else if (signUpErr && !signUpErr.message.includes('already registered')) {
-          console.warn('[TeamService] Supabase signUp notice:', signUpErr.message);
-        }
-      } catch (e) {
-        console.warn('[TeamService] Supabase signUp exception:', e);
-      }
-    }
-
     const newMember: StoreMember = {
       id,
       storeId,
@@ -151,7 +135,7 @@ export const teamService = {
       acceptedAt: member.acceptedAt,
     };
 
-    // Update local cache immediately (optimistic)
+    // Atualiza cache local imediatamente
     const local = loadLocalMembers(storeId);
     const existingIndex = local.findIndex((m) => m.id === id || m.email === newMember.email);
     let updatedLocal: StoreMember[];
@@ -163,7 +147,7 @@ export const teamService = {
     }
     saveLocalMembers(storeId, updatedLocal);
 
-    // Persist to Supabase
+    // Persistência direta no Supabase
     try {
       const payload: any = {
         id: newMember.id,
@@ -185,7 +169,7 @@ export const teamService = {
         .single();
 
       if (error) {
-        console.warn('[TeamService] Error saving to Supabase store_members (using local):', error.message);
+        console.warn('[TeamService] Error saving to Supabase store_members:', error.message);
       } else if (data) {
         newMember.id = data.id;
       }
@@ -197,24 +181,36 @@ export const teamService = {
   },
 
   /**
-   * Remove um membro da equipe
+   * Remove um membro da equipe (do banco de dados e do cache local)
    */
-  async deleteTeamMember(memberId: string, storeId: string): Promise<{ success: boolean; error?: string }> {
-    // Local cache removal
+  async deleteTeamMember(
+    memberId: string,
+    storeId: string,
+    email?: string
+  ): Promise<{ success: boolean; error?: string }> {
+    // 1. Remove do cache local
     const local = loadLocalMembers(storeId);
-    const updated = local.filter((m) => m.id !== memberId);
+    const updated = local.filter((m) => m.id !== memberId && (email ? m.email !== email : true));
     saveLocalMembers(storeId, updated);
 
-    // Supabase removal
+    // 2. Remove do backend (inclui exclusão de auth.users e banco)
     try {
-      const { error } = await supabase
-        .from('store_members')
-        .delete()
-        .eq('id', memberId)
-        .eq('store_id', storeId);
+      await fetch(`${getBackendUrl()}/api/team/delete-member`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ memberId, storeId, email }),
+      });
+    } catch (e) {
+      console.warn('[TeamService] Backend delete notice:', e);
+    }
 
-      if (error) {
-        console.warn('[TeamService] Error deleting from store_members:', error.message);
+    // 3. Remove diretamente da tabela store_members no Supabase
+    try {
+      let del = supabase.from('store_members').delete().eq('store_id', storeId);
+      if (memberId) {
+        await del.eq('id', memberId);
+      } else if (email) {
+        await del.eq('email', email.trim().toLowerCase());
       }
     } catch (err: any) {
       console.warn('[TeamService] Exception deleting from store_members:', err.message);
@@ -236,6 +232,14 @@ export const teamService = {
     saveLocalMembers(storeId, updated);
 
     try {
+      await fetch(`${getBackendUrl()}/api/team/${storeId}/${memberId}/status`, {
+        method: 'PATCH',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ isActive }),
+      });
+    } catch {}
+
+    try {
       await supabase
         .from('store_members')
         .update({ is_active: isActive })
@@ -246,5 +250,84 @@ export const teamService = {
     }
 
     return { success: true };
+  },
+
+  /**
+   * Autentica um colaborador da equipe através do endpoint dedicado
+   */
+  async memberLogin(
+    email: string,
+    password: string
+  ): Promise<{ success: boolean; member?: StoreMember; store?: any; error?: string }> {
+    try {
+      const resp = await fetch(`${getBackendUrl()}/api/team/login`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          email: email.trim().toLowerCase(),
+          password: password.trim(),
+        }),
+      });
+
+      const data = await resp.json();
+      if (!resp.ok || !data.success) {
+        return {
+          success: false,
+          error: data.error || 'Credenciais de colaborador inválidas.',
+        };
+      }
+
+      return {
+        success: true,
+        member: data.member,
+        store: data.store,
+      };
+    } catch (err: any) {
+      console.warn('[TeamService] Backend member login unreachable, trying direct DB check:', err);
+
+      // Fallback direto via Supabase se o backend não estiver respondendo
+      try {
+        const { data: member, error } = await supabase
+          .from('store_members')
+          .select('*')
+          .eq('email', email.trim().toLowerCase())
+          .maybeSingle();
+
+        if (error || !member) {
+          return { success: false, error: 'E-mail ou senha incorretos.' };
+        }
+
+        if (member.is_active === false) {
+          return { success: false, error: 'Sua conta de colaborador foi desativada pelo administrador.' };
+        }
+
+        const { data: store } = await supabase
+          .from('stores')
+          .select('*')
+          .eq('id', member.store_id)
+          .maybeSingle();
+
+        return {
+          success: true,
+          member: {
+            id: member.id,
+            storeId: member.store_id,
+            userId: member.user_id,
+            name: member.name,
+            email: member.email,
+            phone: member.phone,
+            role: member.role || 'vendedor',
+            permissions: member.permissions || ['cockpit'],
+            allowedColumnIds: member.allowed_column_ids || null,
+            isActive: member.is_active ?? true,
+            createdAt: member.created_at || new Date().toISOString(),
+            acceptedAt: member.accepted_at,
+          },
+          store: store || { id: member.store_id, name: 'Minha Loja' },
+        };
+      } catch (e: any) {
+        return { success: false, error: 'Erro ao verificar credenciais de colaborador.' };
+      }
+    }
   },
 };
