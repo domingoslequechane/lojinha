@@ -818,6 +818,22 @@ function CockpitWorkspace() {
     }
   };
 
+  const handleToggleColumnPipeline = async (columnId: string) => {
+    const col = columns.find((c) => c.id === columnId);
+    if (!col) return;
+    const newIncluded = col.includeInPipelineTotal === false;
+
+    // 1. Optimistic UI update
+    setColumns((prev) =>
+      prev.map((c) =>
+        c.id === columnId ? { ...c, includeInPipelineTotal: newIncluded } : c
+      )
+    );
+
+    // 2. Persist to Supabase
+    await kanbanService.toggleColumnPipeline(columnId, newIncluded, currentStoreId);
+  };
+
   const handleSelectLead = (lead: ContactLead) => {
     // Se clicar no mesmo card que já está aberto no modo Cockpit, fecha o chat e entra no modo do Kanban
     if (selectedLeadId === lead.id && viewMode === 'split') {
@@ -1410,6 +1426,8 @@ function CockpitWorkspace() {
                 onAddNewColumn={() => setIsColumnManagerOpen(true)}
                 onOpenFollowUpModal={handleOpenFollowUp}
                 onAddLeadToColumn={handleAddLeadToColumn}
+                onToggleIncludeInPipeline={handleToggleColumnPipeline}
+                canManageColumns={isOwner || user?.role === 'admin'}
               />
             </div>
 

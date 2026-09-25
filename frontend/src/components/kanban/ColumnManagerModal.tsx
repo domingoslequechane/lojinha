@@ -92,19 +92,6 @@ export const ColumnManagerModal: React.FC<ColumnManagerModalProps> = ({
     setEditingColId(null);
   };
 
-  const handleToggleColumnPipeline = (colId: string) => {
-    setCols((prev) =>
-      prev.map((c) =>
-        c.id === colId
-          ? {
-              ...c,
-              includeInPipelineTotal: c.includeInPipelineTotal === false ? true : false,
-            }
-          : c
-      )
-    );
-  };
-
   const handleCancelEdit = () => {
     setEditingColId(null);
   };
@@ -403,24 +390,6 @@ export const ColumnManagerModal: React.FC<ColumnManagerModalProps> = ({
                         <Clock className="w-2.5 h-2.5 text-amber-400" />
                         <span>SLA: {col.slaHours}h</span>
                       </p>
-
-                      {/* Quick Pipeline Toggle Badge */}
-                      <button
-                        type="button"
-                        onClick={() => handleToggleColumnPipeline(col.id)}
-                        className={`px-1.5 py-0.2 rounded-md text-[9px] font-bold border transition-all cursor-pointer ${
-                          col.includeInPipelineTotal !== false
-                            ? 'bg-[#C1F76B]/15 text-[#C1F76B] border-[#C1F76B]/30 hover:bg-[#C1F76B]/25'
-                            : 'bg-[#0F2D26] text-amber-400 border-amber-400/40 hover:bg-amber-500/10'
-                        }`}
-                        title={
-                          col.includeInPipelineTotal !== false
-                            ? 'Valor entra na previsão total do funil (Clique para desativar)'
-                            : 'Valor fora da previsão total do funil (Clique para ativar)'
-                        }
-                      >
-                        {col.includeInPipelineTotal !== false ? '✓ No Funil' : '✕ Fora do Funil'}
-                      </button>
                     </div>
                   </div>
                 </div>

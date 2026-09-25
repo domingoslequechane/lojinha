@@ -13,6 +13,8 @@ interface KanbanColumnComponentProps {
   onEditColumn: (column: KanbanColumn) => void;
   onOpenFollowUpModal: (lead: ContactLead) => void;
   onAddLeadToColumn: (columnId: string) => void;
+  onToggleIncludeInPipeline?: (columnId: string) => void;
+  canManageColumns?: boolean;
 }
 
 export const KanbanColumnComponent: React.FC<KanbanColumnComponentProps> = ({
@@ -24,6 +26,8 @@ export const KanbanColumnComponent: React.FC<KanbanColumnComponentProps> = ({
   onEditColumn,
   onOpenFollowUpModal,
   onAddLeadToColumn,
+  onToggleIncludeInPipeline,
+  canManageColumns = true,
 }) => {
   const [isDragOver, setIsDragOver] = useState(false);
 
@@ -108,23 +112,74 @@ export const KanbanColumnComponent: React.FC<KanbanColumnComponentProps> = ({
         </div>
       </div>
 
-      {/* Sub-header: Column Meta (Count & Total Value) */}
+      {/* Sub-header: Column Meta (Count & Expected Return Value with Toggle) */}
       <div className="px-3.5 py-2 bg-[#0B241D] flex items-center justify-between text-[11px] text-[#95BDB0] border-b border-[#235447]/60 flex-shrink-0">
-        <span>
+        <span className="font-medium">
           {leads.length} {leads.length === 1 ? 'cliente' : 'clientes'}
         </span>
-        <div className="flex items-center gap-1.5">
-          <span className={`font-bold ${column.includeInPipelineTotal !== false ? 'text-[#C1F76B]' : 'text-[#95BDB0]/80'}`}>
-            {formatMoney(totalValue)}
-          </span>
-          {column.includeInPipelineTotal === false && (
+
+        {/* Expected Return Value Container with Toggle */}
+        <div className="flex items-center gap-2">
+          {/* Toggle Switch */}
+          <button
+            type="button"
+            disabled={!canManageColumns}
+            onClick={(e) => {
+              e.stopPropagation();
+              if (onToggleIncludeInPipeline) {
+                onToggleIncludeInPipeline(column.id);
+              }
+            }}
+            className={`group relative inline-flex h-4 w-7 flex-shrink-0 items-center rounded-full transition-colors duration-200 ease-in-out focus:outline-none ${
+              column.includeInPipelineTotal !== false
+                ? 'bg-[#C1F76B]'
+                : 'bg-[#184339] border border-[#235447]'
+            } ${canManageColumns ? 'cursor-pointer hover:opacity-90 active:scale-95' : 'cursor-not-allowed opacity-50'}`}
+            title={
+              canManageColumns
+                ? (column.includeInPipelineTotal !== false
+                    ? 'Retorno Esperado: ATIVADO (valor contabilizado no total do funil). Clique para desativar.'
+                    : 'Retorno Esperado: DESATIVADO (valor ignorado no total do funil). Clique para ativar.')
+                : (column.includeInPipelineTotal !== false
+                    ? 'Retorno esperado ativo (alterável apenas pelo administrador)'
+                    : 'Retorno esperado inativo (alterável apenas pelo administrador)')
+            }
+          >
             <span
-              className="text-[9px] font-semibold text-amber-300/90 bg-amber-500/15 border border-amber-500/30 px-1.5 py-0.2 rounded"
-              title="O valor desta etapa não é somado à previsão total do funil"
+              className={`inline-block h-3 w-3 transform rounded-full transition duration-200 ease-in-out ${
+                column.includeInPipelineTotal !== false
+                  ? 'translate-x-3.5 bg-[#0F2D26]'
+                  : 'translate-x-0.5 bg-[#95BDB0]/70'
+              }`}
+            />
+          </button>
+
+          {/* Amount Display with active/muted state */}
+          <div className="flex items-center gap-1.5">
+            <span
+              className={`font-bold transition-all ${
+                column.includeInPipelineTotal !== false
+                  ? 'text-[#C1F76B]'
+                  : 'text-[#95BDB0]/50 line-through'
+              }`}
+              title={
+                column.includeInPipelineTotal !== false
+                  ? 'Valor esperado contabilizado no total do funil'
+                  : 'Valor ignorado no retorno esperado do funil'
+              }
             >
-              Fora do funil
+              {formatMoney(totalValue)}
             </span>
-          )}
+
+            {column.includeInPipelineTotal === false && (
+              <span
+                className="text-[8px] font-bold uppercase text-amber-300/80 bg-amber-500/10 border border-amber-500/25 px-1 py-0.2 rounded cursor-default"
+                title="Esta etapa não soma no retorno esperado total do funil"
+              >
+                Off
+              </span>
+            )}
+          </div>
         </div>
       </div>
 

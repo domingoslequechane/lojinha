@@ -53,7 +53,9 @@ export const kanbanService = {
       const meta = localMeta[col.id] || {};
       const includeInPipelineTotal = col.include_in_pipeline_total !== undefined
         ? col.include_in_pipeline_total
-        : (meta.includeInPipelineTotal !== undefined ? meta.includeInPipelineTotal : true);
+        : (col.default_template_id === 'pipeline_excluded'
+            ? false
+            : (meta.includeInPipelineTotal !== undefined ? meta.includeInPipelineTotal : true));
 
       return {
         id: col.id,
@@ -63,10 +65,63 @@ export const kanbanService = {
         color: col.color,
         order: col.order_index,
         slaHours: col.sla_hours,
-        defaultTemplateId: col.default_template_id,
+        defaultTemplateId: col.default_template_id === 'pipeline_excluded' ? undefined : col.default_template_id,
         includeInPipelineTotal,
       };
     });
+  },
+
+  // Toggle individual column pipeline inclusion directly in Supabase
+  async toggleColumnPipeline(
+    columnId: string,
+    isIncluded: boolean,
+    storeId: string = DEFAULT_STORE_ID
+  ): Promise<boolean> {
+    try {
+      // 1. Update local cache
+      try {
+        const key = `lojinha_column_meta_${storeId}`;
+        const raw = localStorage.getItem(key);
+        const meta = raw ? JSON.parse(raw) : {};
+        meta[columnId] = { ...(meta[columnId] || {}), includeInPipelineTotal: isIncluded };
+        localStorage.setItem(key, JSON.stringify(meta));
+      } catch {}
+
+      // 2. Persist to Supabase
+      // First attempt: update both include_in_pipeline_total and default_template_id
+      const payload: any = {
+        include_in_pipeline_total: isIncluded,
+        default_template_id: isIncluded ? null : 'pipeline_excluded',
+      };
+
+      let { error } = await supabase
+        .from('kanban_columns')
+        .update(payload)
+        .eq('id', columnId)
+        .eq('store_id', storeId);
+
+      // If column include_in_pipeline_total does not exist yet in DB schema, fallback to default_template_id
+      if (error && (error.code === 'PGRST204' || error.message?.includes('include_in_pipeline_total'))) {
+        const retry = await supabase
+          .from('kanban_columns')
+          .update({
+            default_template_id: isIncluded ? null : 'pipeline_excluded',
+          })
+          .eq('id', columnId)
+          .eq('store_id', storeId);
+        error = retry.error;
+      }
+
+      if (error) {
+        console.warn('[kanbanService] Warning persisting column pipeline toggle to Supabase:', error.message);
+        return false;
+      }
+
+      return true;
+    } catch (err) {
+      console.warn('[kanbanService] Exception toggling column pipeline in Supabase:', err);
+      return false;
+    }
   },
 
   // Save/reorder/delete/create columns permanently for a specific tenant store
@@ -151,7 +206,9 @@ export const kanbanService = {
         color: col.color,
         order_index: col.order,
         sla_hours: col.slaHours,
-        default_template_id: col.defaultTemplateId || null,
+        default_template_id: col.includeInPipelineTotal === false
+          ? 'pipeline_excluded'
+          : (col.defaultTemplateId || null),
         include_in_pipeline_total: col.includeInPipelineTotal !== false,
       }));
 
@@ -161,7 +218,7 @@ export const kanbanService = {
         .select();
 
       // If column include_in_pipeline_total does not exist in DB table schema yet, fallback to standard fields
-      if (upsertErr && upsertErr.message?.includes('include_in_pipeline_total')) {
+      if (upsertErr && (upsertErr.code === 'PGRST204' || upsertErr.message?.includes('include_in_pipeline_total'))) {
         const fallbackUpsertData = normalizedColumns.map((col) => ({
           id: col.id,
           store_id: storeId,
@@ -169,7 +226,9 @@ export const kanbanService = {
           color: col.color,
           order_index: col.order,
           sla_hours: col.slaHours,
-          default_template_id: col.defaultTemplateId || null,
+          default_template_id: col.includeInPipelineTotal === false
+            ? 'pipeline_excluded'
+            : (col.defaultTemplateId || null),
         }));
         const retryResult = await supabase
           .from('kanban_columns')
@@ -195,16 +254,20 @@ export const kanbanService = {
             .sort((a, b) => a.order_index - b.order_index)
             .map((col) => {
               const matchingNormalized = normalizedColumns.find((n) => n.id === col.id);
+              const isIncluded = col.include_in_pipeline_total !== undefined
+                ? col.include_in_pipeline_total
+                : (col.default_template_id === 'pipeline_excluded'
+                    ? false
+                    : (matchingNormalized ? matchingNormalized.includeInPipelineTotal : true));
+
               return {
                 id: col.id,
                 title: col.title,
                 color: col.color,
                 order: col.order_index,
                 slaHours: col.sla_hours,
-                defaultTemplateId: col.default_template_id,
-                includeInPipelineTotal: col.include_in_pipeline_total !== undefined
-                  ? col.include_in_pipeline_total
-                  : (matchingNormalized ? matchingNormalized.includeInPipelineTotal : true),
+                defaultTemplateId: col.default_template_id === 'pipeline_excluded' ? undefined : col.default_template_id,
+                includeInPipelineTotal: isIncluded,
               };
             })
         : normalizedColumns;
