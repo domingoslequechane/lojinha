@@ -9,50 +9,147 @@ const supabase = createClient(
 );
 
 /**
- * Cria ou convida um novo usuário no Supabase Auth para a equipe
+ * Cria ou convida um novo colaborador na loja
+ * POST /api/team/create-member
  */
-router.post('/create-user', async (req: Request, res: Response) => {
+router.post('/create-member', async (req: Request, res: Response) => {
   try {
-    const { email, password, name, storeId, role } = req.body;
+    const { 
+      id,
+      storeId, 
+      name, 
+      email, 
+      phone, 
+      password, 
+      role = 'vendedor', 
+      permissions = ['cockpit'], 
+      allowedColumnIds = null, 
+      isActive = true 
+    } = req.body;
 
-    if (!email || !storeId) {
-      res.status(400).json({ error: 'E-mail e storeId são obrigatórios.' });
+    if (!email || !storeId || !name) {
+      res.status(400).json({ error: 'Nome, e-mail e storeId são obrigatórios.' });
       return;
     }
 
     const cleanEmail = email.trim().toLowerCase();
-    let createdUserId: string | null = null;
+    let authUserId: string | null = null;
+    let emailSent = false;
+    let authError: string | null = null;
 
-    // Se temos SUPABASE_SERVICE_ROLE_KEY podemos criar o usuário diretamente confirmado
-    if (process.env.SUPABASE_SERVICE_ROLE_KEY && password) {
-      try {
-        const { data: adminUser, error: adminErr } = await supabase.auth.admin.createUser({
+    // 1. Criação no Supabase Auth (auth.users)
+    if (process.env.SUPABASE_SERVICE_ROLE_KEY) {
+      if (password && password.trim().length >= 6) {
+        // Cria usuário diretamente confirmado com a senha definida pelo admin
+        const { data: newUser, error: createErr } = await supabase.auth.admin.createUser({
           email: cleanEmail,
           password: password.trim(),
           email_confirm: true,
-          user_metadata: { name: name || 'Membro da Equipe', store_id: storeId, role: role || 'vendedor' },
+          user_metadata: { name: name.trim(), store_id: storeId, role },
         });
 
-        if (!adminErr && adminUser?.user) {
-          createdUserId = adminUser.user.id;
-        } else if (adminErr && !adminErr.message.includes('already exists')) {
-          console.warn('[Team Backend] Admin createUser warning:', adminErr.message);
+        if (newUser?.user) {
+          authUserId = newUser.user.id;
+        } else if (createErr) {
+          authError = createErr.message;
+          console.warn('[Team Backend] Admin createUser notice:', createErr.message);
+
+          // Se o usuário já existia, busca o ID dele
+          if (createErr.message.toLowerCase().includes('already registered') || createErr.message.toLowerCase().includes('already exists')) {
+            try {
+              const { data: listUsers } = await supabase.auth.admin.listUsers();
+              const existing = listUsers?.users?.find((u) => u.email?.toLowerCase() === cleanEmail);
+              if (existing) {
+                authUserId = existing.id;
+                // Atualiza a senha se foi enviada
+                await supabase.auth.admin.updateUserById(existing.id, {
+                  password: password.trim(),
+                  user_metadata: { name: name.trim(), store_id: storeId, role },
+                });
+              }
+            } catch {}
+          }
         }
-      } catch (adminEx: any) {
-        console.warn('[Team Backend] Admin API exception:', adminEx.message);
+      } else {
+        // Sem senha informada -> Envia e-mail de convite oficial do Supabase
+        const { data: inviteData, error: inviteErr } = await supabase.auth.admin.inviteUserByEmail(cleanEmail, {
+          data: { name: name.trim(), store_id: storeId, role },
+        });
+
+        if (inviteData?.user) {
+          authUserId = inviteData.user.id;
+          emailSent = true;
+        } else if (inviteErr) {
+          authError = inviteErr.message;
+          console.warn('[Team Backend] Invite user email error:', inviteErr.message);
+        }
       }
+    } else {
+      console.warn('[Team Backend] SUPABASE_SERVICE_ROLE_KEY not configured. Falling back to public schema operations.');
     }
 
-    // Se o usuário já existia ou service role não estava disponível, tenta buscar o ID do auth.users se possível
+    // 2. Persistência na tabela store_members
+    const memberId = id || crypto.randomUUID();
+    const payload: any = {
+      id: memberId,
+      store_id: storeId,
+      user_id: authUserId || null,
+      name: name.trim(),
+      email: cleanEmail,
+      phone: phone?.trim() || null,
+      role,
+      permissions,
+      allowed_column_ids: allowedColumnIds,
+      is_active: isActive,
+    };
+
+    const { data: memberData, error: memberErr } = await supabase
+      .from('store_members')
+      .upsert(payload, { onConflict: 'store_id,email' })
+      .select()
+      .maybeSingle();
+
+    if (memberErr) {
+      console.warn('[Team Backend] Error inserting into store_members table:', memberErr.message);
+    }
+
     res.json({
       success: true,
-      userId: createdUserId,
-      email: cleanEmail,
-      message: 'Membro registrado com sucesso no sistema.',
+      member: memberData || payload,
+      userId: authUserId,
+      emailSent,
+      authError,
+      message: emailSent
+        ? 'Convite enviado por e-mail com sucesso!'
+        : 'Colaborador cadastrado com sucesso!',
     });
   } catch (err: any) {
-    console.error('[Team Backend] Error in create-user route:', err);
-    res.status(500).json({ error: err.message || 'Erro interno ao criar membro da equipe.' });
+    console.error('[Team Backend] Error creating team member:', err);
+    res.status(500).json({ error: err.message || 'Erro interno ao cadastrar colaborador.' });
+  }
+});
+
+/**
+ * Lista os membros da equipe de uma loja
+ * GET /api/team/:storeId
+ */
+router.get('/:storeId', async (req: Request, res: Response) => {
+  try {
+    const { storeId } = req.params;
+    const { data, error } = await supabase
+      .from('store_members')
+      .select('*')
+      .eq('store_id', storeId)
+      .order('created_at', { ascending: true });
+
+    if (error) {
+      res.status(400).json({ error: error.message });
+      return;
+    }
+
+    res.json({ success: true, members: data || [] });
+  } catch (err: any) {
+    res.status(500).json({ error: err.message });
   }
 });
 

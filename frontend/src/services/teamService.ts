@@ -83,53 +83,56 @@ export const teamService = {
     const now = new Date().toISOString();
     let authUserId = member.userId;
 
-    // Se uma senha foi fornecida para este novo colaborador, cria a conta no Supabase Auth
-    if (member.password && member.password.trim().length >= 6) {
-      try {
-        // 1. Tenta criar pelo backend (admin)
-        const resp = await fetch(`${BACKEND_URL}/api/team/create-user`, {
-          method: 'POST',
-          headers: { 'Content-Type': 'application/json' },
-          body: JSON.stringify({
-            email: member.email.trim().toLowerCase(),
-            password: member.password.trim(),
-            name: member.name.trim(),
-            storeId,
-            role: member.role || 'vendedor',
-          }),
-        });
-        if (resp.ok) {
-          const data = await resp.json();
-          if (data.userId) {
-            authUserId = data.userId;
-          }
-        }
-      } catch (backendErr) {
-        console.warn('[TeamService] Backend create-user endpoint notice:', backendErr);
-      }
+    // 1. Tenta criar pelo backend (admin & envio de convite/usuário)
+    try {
+      const resp = await fetch(`${BACKEND_URL}/api/team/create-member`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          id,
+          storeId,
+          name: member.name.trim(),
+          email: member.email.trim().toLowerCase(),
+          phone: member.phone?.trim() || null,
+          password: member.password?.trim() || undefined,
+          role: member.role || 'vendedor',
+          permissions: member.permissions || ['cockpit'],
+          allowedColumnIds: member.allowedColumnIds ?? null,
+          isActive: member.isActive ?? true,
+        }),
+      });
 
-      // 2. Fallback de criação direta via Supabase Auth SignUp se ainda não tiver ID
-      if (!authUserId) {
-        try {
-          const { data: signUpData, error: signUpErr } = await supabase.auth.signUp({
-            email: member.email.trim().toLowerCase(),
-            password: member.password.trim(),
-            options: {
-              data: {
-                name: member.name.trim(),
-                store_id: storeId,
-                role: member.role || 'vendedor',
-              },
-            },
-          });
-          if (signUpData?.user) {
-            authUserId = signUpData.user.id;
-          } else if (signUpErr && !signUpErr.message.includes('already registered')) {
-            console.warn('[TeamService] Supabase signUp notice:', signUpErr.message);
-          }
-        } catch (e) {
-          console.warn('[TeamService] Supabase signUp exception:', e);
+      if (resp.ok) {
+        const data = await resp.json();
+        if (data.userId) {
+          authUserId = data.userId;
         }
+      }
+    } catch (backendErr) {
+      console.warn('[TeamService] Backend create-member notice:', backendErr);
+    }
+
+    // 2. Fallback de criação direta via Supabase Auth se uma senha foi informada e não temos ID ainda
+    if (!authUserId && member.password && member.password.trim().length >= 6) {
+      try {
+        const { data: signUpData, error: signUpErr } = await supabase.auth.signUp({
+          email: member.email.trim().toLowerCase(),
+          password: member.password.trim(),
+          options: {
+            data: {
+              name: member.name.trim(),
+              store_id: storeId,
+              role: member.role || 'vendedor',
+            },
+          },
+        });
+        if (signUpData?.user) {
+          authUserId = signUpData.user.id;
+        } else if (signUpErr && !signUpErr.message.includes('already registered')) {
+          console.warn('[TeamService] Supabase signUp notice:', signUpErr.message);
+        }
+      } catch (e) {
+        console.warn('[TeamService] Supabase signUp exception:', e);
       }
     }
 
